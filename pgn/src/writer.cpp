@@ -206,6 +206,45 @@ std::string writeGame(const Game& game) {
     return out;
 }
 
+std::string sameGameKey(const Game& game) {
+    // "Wang, Justin" and "Wang,J" give "wang"; "Justin Wang" gives "wang" too.
+    const auto surname = [](std::string_view name) {
+        std::string_view last = name;
+        if (const std::size_t comma = name.find(','); comma != std::string_view::npos) {
+            last = name.substr(0, comma);
+        } else if (const std::size_t space = name.find_last_of(' ');
+                   space != std::string_view::npos && space + 1 < name.size()) {
+            last = name.substr(space + 1);
+        }
+        std::string result;
+        for (const char c : last) {
+            if (c >= 'A' && c <= 'Z') {
+                result += static_cast<char>(c - 'A' + 'a');
+            } else if ((c >= 'a' && c <= 'z') || (static_cast<unsigned char>(c) >= 0x80)) {
+                result += c;
+            }
+        }
+        return result;
+    };
+    std::string key = surname(game.header("White")) + '|' + surname(game.header("Black")) + '|';
+    for (const char c : game.header("Date")) {
+        if (c >= '0' && c <= '9') {
+            key += c;
+        }
+    }
+    key += '|';
+    key += game.header("Result");
+    key += '|';
+    key += game.startPosition().fen();
+    for (const core::NodeId node : game.mainLine()) {
+        if (node != Game::root()) {
+            key += ' ';
+            key += game.node(node).move.uci();
+        }
+    }
+    return key;
+}
+
 std::string gameKey(const Game& game) {
     // A header as compared: trimmed, lower case, inner spaces as one.
     const auto plain = [](std::string_view value) {

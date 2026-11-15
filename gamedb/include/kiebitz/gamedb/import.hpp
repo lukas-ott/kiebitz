@@ -5,8 +5,10 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace kiebitz::gamedb {
 
@@ -37,5 +39,41 @@ struct ImportResult {
 ImportResult importPgn(DatabaseWriter& writer,
                        const std::function<std::size_t(char* buffer, std::size_t size)>& read,
                        const ImportOptions& options = {});
+
+/// Reads PGN files one after another, each plain or zstd-compressed (".zst", as Lichess's
+/// downloads are; told by its first bytes, not its name), as the input of importPgn().
+/// `bytesRead` (optional) counts the bytes read from the files so far (compressed bytes for
+/// a compressed one), for progress.
+class PgnFilesReader {
+public:
+    explicit PgnFilesReader(std::vector<std::string> paths,
+                            std::atomic<std::uint64_t>* bytesRead = nullptr);
+    ~PgnFilesReader();
+    PgnFilesReader(const PgnFilesReader&) = delete;
+    PgnFilesReader& operator=(const PgnFilesReader&) = delete;
+    PgnFilesReader(PgnFilesReader&&) = delete;
+    PgnFilesReader& operator=(PgnFilesReader&&) = delete;
+
+    /// Fills `buffer` with up to `size` bytes of PGN; 0 at the end of the last file.
+    std::size_t read(char* buffer, std::size_t size);
+    /// Empty, or why a file couldn't be read (missing, damaged, cut off).
+    [[nodiscard]] const std::string& error() const { return m_error; }
+
+private:
+    bool openNext();
+    void closeFile();
+
+    std::vector<std::string> m_paths;
+    std::size_t m_next = 0;
+    std::FILE* m_file = nullptr;
+    void* m_zstd = nullptr; ///< ZSTD_DCtx, when the file is compressed
+    bool m_frameEnded = true;
+    std::vector<char> m_input;
+    std::size_t m_inputPos = 0;
+    std::size_t m_inputSize = 0;
+    bool m_separator = false; ///< a newline still owed between two files
+    std::atomic<std::uint64_t>* m_bytesRead;
+    std::string m_error;
+};
 
 } // namespace kiebitz::gamedb

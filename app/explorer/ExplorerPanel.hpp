@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -47,6 +48,11 @@ public:
 
     /// What the gap check asks: the source chosen here, with its filter.
     [[nodiscard]] GapSource gapSource();
+    /// The references a player's lines can be compared with (preparation): the masters' and
+    /// Lichess's games (signed in), and each database; unfiltered.
+    [[nodiscard]] std::vector<GapSource> theorySources();
+    /// For tests: the theory column's text for a move ("12%"), empty if not shown.
+    [[nodiscard]] QString theoryShare(const QString& san) const;
 
     /// For tests: Lichess's explorer.
     [[nodiscard]] LichessExplorer& lichessExplorer() { return *m_online; }
@@ -86,11 +92,16 @@ private:
     /// The Lichess or masters explorer is chosen (not a database or profile).
     [[nodiscard]] bool onlineSource() const;
     /// Puts an answer in the lists; `repertoire`: your moves here, marked.
+    /// A profile's games: how often each move is played in theory, in a column of its own.
+    void askTheory(const std::vector<core::Move>& line, int request);
+    void fillTheoryColumn();
     void showAnswer(const gamedb::Explored& explored, const std::vector<gamedb::GameInfo>& games,
                     const std::vector<core::Move>& repertoire);
 
     DatabaseManager& m_databases;
     ProfileStore& m_profiles;
+    std::map<QString, quint64> m_theory; ///< the reference's games by move (UCI), here
+    quint64 m_theoryTotal = 0;
     RepertoireStore& m_repertoires;
     LichessLogin& m_lichess;
     LichessExplorer* m_online = nullptr;

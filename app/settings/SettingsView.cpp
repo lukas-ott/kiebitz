@@ -369,6 +369,9 @@ QWidget* SettingsView::boardSection() {
                                  QStringLiteral("settingsMoveMethod"))));
     play->addWidget(row(tr("Promote to a queen"), tr("Without asking which piece."),
                         toggle(Settings::kAutoQueen, QStringLiteral("settingsAutoQueen"))));
+    play->addWidget(row(tr("One-click moves"),
+                        tr("A click on a square moves the only piece that can go there."),
+                        toggle(Settings::kOneClick, QStringLiteral("settingsOneClick"))));
     play->addWidget(row(tr("Scroll through moves"),
                         tr("The mouse wheel or trackpad over the board steps back and forward."),
                         toggle(Settings::kWheel, QStringLiteral("settingsWheel"))));

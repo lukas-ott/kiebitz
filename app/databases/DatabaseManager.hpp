@@ -6,10 +6,16 @@
 #include <QObject>
 #include <QSet>
 #include <QString>
+#include <QStringList>
+#include <QUrl>
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <vector>
+
+class QNetworkAccessManager;
+class QNetworkReply;
 
 namespace kiebitz::app {
 
@@ -63,6 +69,28 @@ public:
     /// Moves a database to the Trash. Empty on success, else the error.
     QString remove(const QString& folder);
 
+    // ---- Lichess's broadcasts ---------------------------------------------------------------
+    // Every game Lichess has broadcast (over-the-board tournaments, from 2020), one file per
+    // month at database.lichess.org (CC BY-SA 4.0), with both players' FIDE ids. The monthly
+    // files are kept (in "Broadcasts" beside the databases), so an update only downloads the
+    // new months; the database is then built again from all of them.
+
+    static constexpr auto kBroadcastsSource = "Lichess broadcasts";
+    /// The broadcasts' database, or null if it isn't there (yet).
+    [[nodiscard]] std::shared_ptr<const gamedb::Database> broadcasts() const;
+    /// Where the monthly files are kept.
+    [[nodiscard]] QString broadcastMonthsFolder() const;
+    /// The months downloaded ("2026-10"), oldest first.
+    [[nodiscard]] QStringList broadcastMonths() const;
+    /// Asks Lichess how many months there are that aren't here; `done` gets that number, or
+    /// -1 and why not.
+    void checkBroadcasts(std::function<void(int newMonths, const QString& error)> done);
+    /// Downloads the months not here yet, then builds the database again (a job, shown like an
+    /// import). Returns the job's id; 0 if one is running already.
+    int updateBroadcasts();
+    /// Lichess's database server (tests point it at a fake one).
+    void setBroadcastServer(const QUrl& url) { m_broadcastServer = url; }
+
     /// About how much disk an import of this file needs (bytes), and how much is free.
     [[nodiscard]] static qint64 spaceNeeded(const QString& path);
     [[nodiscard]] qint64 spaceFree() const;
@@ -80,6 +108,12 @@ private:
         QFuture<void> future;
     };
     void update(int id, const QString& phase, double fraction, quint64 games);
+    /// Lichess's list of monthly files: those not here yet (oldest first), or an error.
+    void
+    fetchBroadcastList(std::function<void(const QStringList& missing, const QString& error)> done);
+    /// The next month of an update, or the build once all are here.
+    void downloadNextMonth(int id);
+    void buildBroadcasts(int id);
     void finished(int id, const QString& error);
 
     QString m_root;
@@ -89,6 +123,15 @@ private:
     int m_nextJob = 1;
     int m_refresh = 0;         ///< newer refreshes win
     QSet<QString> m_upgrading; ///< databases getting their ratings (once per run)
+    QUrl m_broadcastServer{QStringLiteral("https://database.lichess.org")};
+    QNetworkAccessManager* m_network = nullptr;
+    struct BroadcastUpdate {
+        int job = 0;
+        QStringList months; ///< still to download: file names ("lichess_db_broadcast_2026-10...")
+        int total = 0;      ///< months to download in all
+        QNetworkReply* reply = nullptr;
+        bool cancelled = false;
+    } m_broadcastUpdate;
 };
 
 } // namespace kiebitz::app

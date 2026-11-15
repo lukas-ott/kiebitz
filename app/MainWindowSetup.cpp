@@ -15,6 +15,7 @@
 #include "engine/EngineSettings.hpp"
 #include "engine/EnginesView.hpp"
 #include "explorer/ExplorerPanel.hpp"
+#include "kiebitz/pgn/pgn.hpp"
 #include "library/Library.hpp"
 #include "library/LibraryView.hpp"
 #include "notation/MovesCard.hpp"
@@ -49,7 +50,10 @@
 #include <QButtonGroup>
 #include <QColorDialog>
 #include <QDesktopServices>
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeySequence>
@@ -589,8 +593,37 @@ void MainWindow::buildPages() {
         const QByteArray own = m_lichess->token(username);
         return own.isEmpty() ? m_lichess->token() : own; // any login makes it faster
     });
+    // A player's games from each game database (Lichess's broadcasts by FIDE id, Caissabase
+    // and the others by name); looked for again when a database comes, goes or is updated.
+    m_profiles->setGameSources([this] {
+        std::vector<std::pair<QString, std::shared_ptr<const gamedb::Database>>> sources;
+        for (const InstalledDatabase& database : m_databases->databases()) {
+            sources.emplace_back(QString::fromStdString(database.db->info().name), database.db);
+        }
+        return sources;
+    });
+    connect(m_databases, &DatabaseManager::changed, this, [this] {
+        QStringList stamp;
+        for (const InstalledDatabase& database : m_databases->databases()) {
+            stamp << database.folder + u':' + QString::number(database.db->gameCount());
+        }
+        // The first list is as the databases were at the last start: only profiles that have
+        // no database's games yet are looked for (new, or from before databases were sources).
+        const bool first = !m_fideSourcesSeen;
+        m_fideSourcesSeen = true;
+        if (!first && stamp == m_fideSourcesStamp) {
+            return;
+        }
+        m_fideSourcesStamp = stamp;
+        for (const Profile& profile : m_profiles->profiles()) {
+            if (profile.fide && (!first || profile.sources.empty()) && !stamp.isEmpty()) {
+                m_profiles->refreshSourceGames(profile.id);
+            }
+        }
+    });
     m_profilesView = new ProfilesView(*m_profiles, *m_lichess, *m_repertoires, m_style);
     connect(m_profilesView, &ProfilesView::openGameRequested, this, &MainWindow::openGameCopy);
+    connect(m_profilesView, &ProfilesView::prepFileRequested, this, &MainWindow::savePrepFile);
     // The theory check: a game at the move that left the book, or the repertoire there.
     connect(m_profilesView, &ProfilesView::openGameAtRequested, this,
             [this](const core::Game& game, int ply) {
@@ -892,6 +925,7 @@ void MainWindow::applySetting(const QString& key) {
                               : BoardTheme::preset(theme));
         m_libraryView->setBoardLook(m_board->theme(), m_board->pieceSetName());
         m_puzzlesView->setBoardLook(m_board->theme(), m_board->pieceSetName());
+        m_profilesView->setBoardLook(m_board->theme(), m_board->pieceSetName());
         // The menus' ticks (at the start the menus aren't there yet: they read the board).
         for (auto* action : m_themeGroup != nullptr ? m_themeGroup->actions() : QList<QAction*>{}) {
             action->setChecked(theme == keys::kCustomTheme
@@ -902,12 +936,14 @@ void MainWindow::applySetting(const QString& key) {
         m_board->setPieceSet(settings.string(Settings::kPieces));
         m_libraryView->setBoardLook(m_board->theme(), m_board->pieceSetName());
         m_puzzlesView->setBoardLook(m_board->theme(), m_board->pieceSetName());
+        m_profilesView->setBoardLook(m_board->theme(), m_board->pieceSetName());
         for (auto* action :
              m_piecesGroup != nullptr ? m_piecesGroup->actions() : QList<QAction*>{}) {
             action->setChecked(action->text() == m_board->pieceSetName());
         }
     } else if (is(Settings::kCoordinates) || is(Settings::kAnimation) || is(Settings::kLegalDots) ||
-               is(Settings::kLastMove) || is(Settings::kMoveMethod) || is(Settings::kAutoQueen)) {
+               is(Settings::kLastMove) || is(Settings::kMoveMethod) || is(Settings::kAutoQueen) ||
+               is(Settings::kOneClick)) {
         BoardView::Options options;
         const QString coordinates = settings.string(Settings::kCoordinates);
         options.coordinates = BoardView::Options::Coordinates::Edge;
@@ -927,6 +963,7 @@ void MainWindow::applySetting(const QString& key) {
             options.moveMethod = BoardView::Options::MoveMethod::Click;
         }
         options.autoQueen = settings.flag(Settings::kAutoQueen);
+        options.oneClick = settings.flag(Settings::kOneClick);
         m_board->setOptions(options);
         m_puzzlesView->setBoardOptions(options);
         if (m_coordinatesAction != nullptr) {
@@ -947,6 +984,38 @@ void MainWindow::applySetting(const QString& key) {
     } else if (is(Settings::kLanguage)) {
         askToRestart();
     }
+}
+
+void MainWindow::savePrepFile(const QString& name, const core::Game& game) {
+    const QString root = m_library->folder();
+    if (root.isEmpty()) {
+        notice(this, tr("Create Prep File"),
+               tr("Choose a Library folder first: the file goes into it."));
+        return;
+    }
+    // A name of its own: "Petra Pawn – White.pgn", "Petra Pawn – White 2.pgn", ...
+    QString safe = name;
+    for (const QChar bad : {QChar(u'/'), QChar(u':'), QChar(u'\\')}) {
+        safe.replace(bad, u'-');
+    }
+    const QDir folder(QDir(root).filePath(tr("Preparation")));
+    QDir().mkpath(folder.path());
+    QString path = folder.filePath(safe + QStringLiteral(".pgn"));
+    for (int n = 2; QFileInfo::exists(path); ++n) {
+        path = folder.filePath(QStringLiteral("%1 %2.pgn").arg(safe).arg(n));
+    }
+    QFile file(path);
+    const std::string text = pgn::writeGame(game);
+    if (!file.open(QIODevice::WriteOnly) ||
+        file.write(text.data(), static_cast<qint64>(text.size())) !=
+            static_cast<qint64>(text.size())) {
+        notice(this, tr("Create Prep File"), tr("The file couldn't be saved."));
+        return;
+    }
+    file.close();
+    m_library->rescan();
+    m_documents->openFile(path);
+    showSection(Section::Board);
 }
 
 void MainWindow::askToRestart() {

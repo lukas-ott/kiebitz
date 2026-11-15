@@ -94,6 +94,8 @@ void BoardView::setPosition(const core::Position& position, std::optional<Move> 
     m_legalMoves = m_position.legalMoves();
     m_lastMove = lastMove;
     m_selected.reset();
+    m_target.reset();
+    m_targetFrom.clear();
     m_pressSquare.reset();
     m_dragging = false;
     m_promotion.reset();
@@ -322,7 +324,18 @@ void BoardView::mousePressEvent(QMouseEvent* event) {
     }
     if (!square) {
         select(std::nullopt);
+        clearTarget();
         return;
+    }
+    // A square clicked that several pieces could go to: the piece now clicked goes there.
+    if (m_target) {
+        const Square target = *m_target;
+        const bool candidate =
+            std::find(m_targetFrom.begin(), m_targetFrom.end(), *square) != m_targetFrom.end();
+        clearTarget();
+        if (candidate && tryMove(*square, target)) {
+            return;
+        }
     }
     // Click-click: the picked piece goes to the square clicked (not when only dragging is on).
     if (m_options.moveMethod != Options::MoveMethod::Drag && m_selected && *m_selected != *square &&
@@ -338,6 +351,32 @@ void BoardView::mousePressEvent(QMouseEvent* event) {
         select(square);
     } else {
         select(std::nullopt);
+        // One-click moves (as in ChessBase): a square clicked, nothing picked up, and only one
+        // piece can go there: it goes. Several can: they light up, and a click on one moves it.
+        if (m_options.oneClick && m_options.moveMethod != Options::MoveMethod::Drag) {
+            std::vector<Square> from;
+            for (const Move& move : m_legalMoves) {
+                if (move.to == *square &&
+                    std::find(from.begin(), from.end(), move.from) == from.end()) {
+                    from.push_back(move.from);
+                }
+            }
+            if (from.size() == 1) {
+                tryMove(from.front(), *square);
+            } else if (from.size() > 1) {
+                m_target = square;
+                m_targetFrom = std::move(from);
+                update();
+            }
+        }
+    }
+}
+
+void BoardView::clearTarget() {
+    if (m_target) {
+        m_target.reset();
+        m_targetFrom.clear();
+        update();
     }
 }
 
@@ -417,9 +456,11 @@ void BoardView::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void BoardView::keyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_Escape && (m_promotion || m_selected || m_dragging)) {
+    if (event->key() == Qt::Key_Escape && (m_promotion || m_selected || m_dragging || m_target)) {
         m_promotion.reset();
         m_selected.reset();
+        m_target.reset();
+        m_targetFrom.clear();
         m_pressSquare.reset();
         m_dragging = false;
         update();
@@ -473,6 +514,15 @@ void BoardView::paintHighlights(QPainter& painter) const {
         QColor selected = m_theme.highlight;
         selected.setAlphaF(std::min(1.0F, selected.alphaF() * 1.45F));
         painter.fillRect(m_geometry.squareRect(*m_selected), selected);
+    }
+    if (m_target) {
+        // One-click moves with a choice: the square clicked, and the pieces that can go there.
+        QColor choice = m_theme.highlight;
+        choice.setAlphaF(std::min(1.0F, choice.alphaF() * 1.45F));
+        painter.fillRect(m_geometry.squareRect(*m_target), m_theme.highlight);
+        for (const Square from : m_targetFrom) {
+            painter.fillRect(m_geometry.squareRect(from), choice);
+        }
     }
     // Check: a red glow under the king that is in check.
     if (m_position.inCheck()) {

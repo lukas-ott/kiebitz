@@ -1,4 +1,5 @@
-// Game databases: how fast a big PGN becomes a database, and how fast the explorer answers.
+// Game databases: how fast a big PGN becomes a database, how fast the explorer answers, and
+// how fast a search for a player is.
 // Spec: Gigabase (~10 million games) imports in minutes, and a line's statistics show in well
 // under a second. The games here are made up (an opening "book" of a few choices per move for
 // the first 12 plies, then random moves), about as long as real games.
@@ -118,5 +119,24 @@ void gamedbExplore(benchmark::State& state) {
     }
 }
 BENCHMARK(gamedbExplore)->Unit(benchmark::kMicrosecond);
+
+void gamedbSearch(benchmark::State& state) {
+    // A player by two words, in the other order than stored ("Player 123" as "123 player"),
+    // newest first: what the Databases page's search does with each pause in typing. Uses the
+    // import benchmark's database; its names are read once, before (prepareSearch()).
+    auto db = gamedb::Database::open(
+        (std::filesystem::temp_directory_path() / "kiebitz-bench-gamedb").string());
+    if (!db.ok()) {
+        state.SkipWithError("run gamedbImport first");
+        return;
+    }
+    (*db)->prepareSearch();
+    gamedb::GameQuery query;
+    query.text = "123 player";
+    for ([[maybe_unused]] const auto _ : state) {
+        benchmark::DoNotOptimize((*db)->find(query, 10000));
+    }
+}
+BENCHMARK(gamedbSearch)->Unit(benchmark::kMillisecond);
 
 } // namespace

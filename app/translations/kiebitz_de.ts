@@ -171,6 +171,33 @@
     </message>
 </context>
 <context>
+    <name>kiebitz::app::AccountFinder</name>
+    <message>
+        <source>Listed on Wikidata</source>
+        <translation>Bei Wikidata eingetragen</translation>
+    </message>
+    <message>
+        <source>Real name matches</source>
+        <translation>Klarname passt</translation>
+    </message>
+    <message>
+        <source>Surname in the real name</source>
+        <translation>Nachname im Klarnamen</translation>
+    </message>
+    <message>
+        <source>FIDE %1 in the profile</source>
+        <translation>FIDE %1 im Profil</translation>
+    </message>
+    <message>
+        <source>Verified %1</source>
+        <translation>Bestätigter %1</translation>
+    </message>
+    <message>
+        <source>Name in the username</source>
+        <translation>Name im Benutzernamen</translation>
+    </message>
+</context>
+<context>
     <name>kiebitz::app::ActivityChart</name>
     <message>
         <source>No dated games yet</source>
@@ -250,6 +277,22 @@
     <message>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Every tournament Lichess has broadcast since 2020, about a million games.</source>
+        <translation>Jedes Turnier, das Lichess seit 2020 übertragen hat, etwa eine Million Partien.</translation>
+    </message>
+    <message>
+        <source>About 770 MB to download, then a little each month</source>
+        <translation>Etwa 770 MB zum Laden, dann jeden Monat ein wenig</translation>
+    </message>
+    <message>
+        <source>CC BY-SA 4.0: free to use, credit lichess.org.</source>
+        <translation>CC BY-SA 4.0: frei nutzbar, Quelle: lichess.org.</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Laden</translation>
     </message>
     <message>
         <source>Open Download Page</source>
@@ -388,6 +431,30 @@
         <source>The database couldn't be removed.</source>
         <translation>Die Datenbank konnte nicht entfernt werden.</translation>
     </message>
+    <message>
+        <source>Lichess's database isn't answering. Try again later.</source>
+        <translation>Die Datenbank von Lichess antwortet nicht. Versuche es später erneut.</translation>
+    </message>
+    <message>
+        <source>Looking for new months</source>
+        <translation>Suche nach neuen Monaten</translation>
+    </message>
+    <message>
+        <source>Couldn't save the download.</source>
+        <translation>Der Download konnte nicht gespeichert werden.</translation>
+    </message>
+    <message>
+        <source>Downloading month %1 of %2</source>
+        <translation>Lade Monat %1 von %2</translation>
+    </message>
+    <message>
+        <source>The download didn't finish. Check the connection and try again.</source>
+        <translation>Der Download wurde nicht fertig. Prüfe die Verbindung und versuche es erneut.</translation>
+    </message>
+    <message>
+        <source>No games were found in Lichess's broadcasts.</source>
+        <translation>In den Übertragungen von Lichess wurden keine Partien gefunden.</translation>
+    </message>
 </context>
 <context>
     <name>kiebitz::app::DatabasesView</name>
@@ -428,6 +495,10 @@
         <translation>Nicht genug Platz</translation>
     </message>
     <message>
+        <source>Lichess's broadcasts need about %1 of disk space, and %2 is free.</source>
+        <translation>Die Übertragungen von Lichess brauchen etwa %1 Speicherplatz, frei sind %2.</translation>
+    </message>
+    <message>
         <source>Importing this needs about %1 of disk space, and %2 is free.</source>
         <translation>Der Import braucht etwa %1 Speicherplatz, und %2 ist frei.</translation>
     </message>
@@ -458,6 +529,22 @@
     <message>
         <source>%1 games  ·  from %2</source>
         <translation>%1 Partien  ·  von %2</translation>
+    </message>
+    <message>
+        <source>%1 games  ·  up to %2</source>
+        <translation>%1 Partien  ·  bis %2</translation>
+    </message>
+    <message>
+        <source>Lichess's broadcasts, CC BY-SA 4.0: credit lichess.org</source>
+        <translation>Übertragungen von Lichess, CC BY-SA 4.0: Quelle lichess.org</translation>
+    </message>
+    <message>
+        <source>Update: 1 new month</source>
+        <translation>Aktualisieren: 1 neuer Monat</translation>
+    </message>
+    <message>
+        <source>Update: %1 new months</source>
+        <translation>Aktualisieren: %1 neue Monate</translation>
     </message>
 </context>
 <context>
@@ -600,7 +687,7 @@
     <name>kiebitz::app::EngineSection</name>
     <message>
         <source>Start</source>
-        <translation>Start</translation>
+        <translation>Anfang</translation>
     </message>
     <message>
         <source>Stop</source>
@@ -805,6 +892,10 @@
         <translation>WERTUNG</translation>
     </message>
     <message>
+        <source>THEORY</source>
+        <translation>THEORIE</translation>
+    </message>
+    <message>
         <source>RESULT</source>
         <translation>ERGEBNIS</translation>
     </message>
@@ -903,6 +994,14 @@
     <message>
         <source>Add a database or sign in to Lichess, then choose it in the Explorer tab.</source>
         <translation>Füge eine Datenbank hinzu oder melde dich bei Lichess an, und wähle sie dann im Explorer-Tab.</translation>
+    </message>
+    <message>
+        <source>How often each move is played in %1</source>
+        <translation>Wie oft jeder Zug in %1 gespielt wird</translation>
+    </message>
+    <message>
+        <source>Sign in to Lichess to compare with its games.</source>
+        <translation>Melde dich bei Lichess an, um mit seinen Partien zu vergleichen.</translation>
     </message>
     <message>
         <source>1 game</source>
@@ -1014,6 +1113,10 @@
     <message>
         <source>Open FIDE Profile</source>
         <translation>FIDE-Profil öffnen</translation>
+    </message>
+    <message>
+        <source>Wikipedia</source>
+        <translation>Wikipedia</translation>
     </message>
     <message>
         <source>Try Again</source>
@@ -2021,6 +2124,22 @@
         <translation>Info</translation>
     </message>
     <message>
+        <source>Create Prep File</source>
+        <translation>Vorbereitungsdatei erstellen</translation>
+    </message>
+    <message>
+        <source>Choose a Library folder first: the file goes into it.</source>
+        <translation>Wähle zuerst einen Bibliotheksordner: Die Datei kommt dort hinein.</translation>
+    </message>
+    <message>
+        <source>Preparation</source>
+        <translation>Vorbereitung</translation>
+    </message>
+    <message>
+        <source>The file couldn't be saved.</source>
+        <translation>Die Datei konnte nicht gespeichert werden.</translation>
+    </message>
+    <message>
         <source>Restart Kiebitz?</source>
         <translation>Kiebitz neu starten?</translation>
     </message>
@@ -2101,6 +2220,13 @@
     <message>
         <source>↑ ↓ to choose a continuation, → to play it</source>
         <translation>↑ ↓ wählt eine Fortsetzung, → spielt sie</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::MultiChoice</name>
+    <message>
+        <source>%1 sources</source>
+        <translation>%1 Quellen</translation>
     </message>
 </context>
 <context>
@@ -2311,6 +2437,145 @@
     </message>
 </context>
 <context>
+    <name>kiebitz::app::PreparePage</name>
+    <message>
+        <source>I play</source>
+        <translation>Ich spiele</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Weiß</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>Schwarz</translation>
+    </message>
+    <message>
+        <source>Open on the board</source>
+        <translation>Auf dem Brett öffnen</translation>
+    </message>
+    <message>
+        <source>RESULTS</source>
+        <translation>ERGEBNISSE</translation>
+    </message>
+    <message>
+        <source>YOUR PREP</source>
+        <translation>DEINE VORBEREITUNG</translation>
+    </message>
+    <message>
+        <source>Create Prep File</source>
+        <translation>Vorbereitungsdatei erstellen</translation>
+    </message>
+    <message>
+        <source>MOVE</source>
+        <translation>ZUG</translation>
+    </message>
+    <message>
+        <source>Start (Home)</source>
+        <translation>Anfang (Pos1)</translation>
+    </message>
+    <message>
+        <source>Back (←)</source>
+        <translation>Zurück (←)</translation>
+    </message>
+    <message>
+        <source>Forward (→)</source>
+        <translation>Vorwärts (→)</translation>
+    </message>
+    <message>
+        <source>End (End)</source>
+        <translation>Ende (Ende)</translation>
+    </message>
+    <message>
+        <source>Reading their games…</source>
+        <translation>Lese die Partien …</translation>
+    </message>
+    <message>
+        <source>No games of theirs with Black.</source>
+        <translation>Keine Partien mit Schwarz.</translation>
+    </message>
+    <message>
+        <source>No games of theirs with White.</source>
+        <translation>Keine Partien mit Weiß.</translation>
+    </message>
+    <message>
+        <source>Their %1 games with Black</source>
+        <translation>%1 Partien mit Schwarz</translation>
+    </message>
+    <message>
+        <source>Their %1 games with White</source>
+        <translation>%1 Partien mit Weiß</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>Anfang</translation>
+    </message>
+    <message>
+        <source>YOUR MOVES</source>
+        <translation>DEINE ZÜGE</translation>
+    </message>
+    <message>
+        <source>THEIR REPLIES</source>
+        <translation>IHRE ANTWORTEN</translation>
+    </message>
+    <message>
+        <source>Your repertoire's move</source>
+        <translation>Der Zug deines Repertoires</translation>
+    </message>
+    <message>
+        <source>never met</source>
+        <translation>nie getroffen</translation>
+    </message>
+    <message>
+        <source>In your prep: click to take it out</source>
+        <translation>In deiner Vorbereitung: Klick nimmt es heraus</translation>
+    </message>
+    <message>
+        <source>Add this line to your prep</source>
+        <translation>Dieses Abspiel zur Vorbereitung hinzufügen</translation>
+    </message>
+    <message>
+        <source>None of their games go further.</source>
+        <translation>Keine ihrer Partien geht weiter.</translation>
+    </message>
+    <message>
+        <source>Take it out</source>
+        <translation>Herausnehmen</translation>
+    </message>
+    <message>
+        <source>Preparation: %1</source>
+        <translation>Vorbereitung: %1</translation>
+    </message>
+    <message>
+        <source>%1: 1 game</source>
+        <translation>%1: 1 Partie</translation>
+    </message>
+    <message>
+        <source>%1: %2 games</source>
+        <translation>%1: %2 Partien</translation>
+    </message>
+    <message>
+        <source>scores %1%</source>
+        <translation>Ergebnis %1%</translation>
+    </message>
+    <message>
+        <source>last %1</source>
+        <translation>zuletzt %1</translation>
+    </message>
+    <message>
+        <source>GAMES</source>
+        <translation>PARTIEN</translation>
+    </message>
+    <message>
+        <source>LAST</source>
+        <translation>ZULETZT</translation>
+    </message>
+    <message>
+        <source>No games here yet.</source>
+        <translation>Hier sind noch keine Partien.</translation>
+    </message>
+</context>
+<context>
     <name>kiebitz::app::ProfileStore</name>
     <message>
         <source>There is no %1 account called %2.</source>
@@ -2335,6 +2600,10 @@
     <message>
         <source>Adding games…</source>
         <translation>Partien werden hinzugefügt …</translation>
+    </message>
+    <message>
+        <source>Looking for tournament games…</source>
+        <translation>Suche Turnierpartien …</translation>
     </message>
     <message>
         <source>Couldn't reach %1 to look up %2. Try again in a moment.</source>
@@ -2456,6 +2725,10 @@
         <translation>FIDE-Elo-Liste</translation>
     </message>
     <message>
+        <source>Photo: Wikimedia Commons</source>
+        <translation>Foto: Wikimedia Commons</translation>
+    </message>
+    <message>
         <source>Overview</source>
         <translation>Übersicht</translation>
     </message>
@@ -2466,6 +2739,10 @@
     <message>
         <source>Repertoire</source>
         <translation>Repertoire</translation>
+    </message>
+    <message>
+        <source>Prepare</source>
+        <translation>Vorbereiten</translation>
     </message>
     <message>
         <source>Games from</source>
@@ -2668,8 +2945,20 @@
         <translation>Am Brett</translation>
     </message>
     <message>
-        <source>Your tournament games, from PGN files</source>
-        <translation>Deine Turnierpartien, aus PGN-Dateien</translation>
+        <source>Add a database in Databases (Lichess's broadcasts, Caissabase) to find their tournament games by themselves</source>
+        <translation>Füge unter Datenbanken eine Datenbank hinzu (Übertragungen von Lichess, Caissabase), damit Turnierpartien von selbst gefunden werden</translation>
+    </message>
+    <message>
+        <source>None of their games in your databases</source>
+        <translation>Keine ihrer Partien in deinen Datenbanken</translation>
+    </message>
+    <message>
+        <source>The player on ChessBase: copy their games there and paste them here</source>
+        <translation>Die Person bei ChessBase: Partien dort kopieren und hier einfügen</translation>
+    </message>
+    <message>
+        <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase's online database.</source>
+        <translation>In der Zwischenablage sind keine Partien. Kopiere zuerst Partien als PGN, zum Beispiel in der Online-Datenbank von ChessBase.</translation>
     </message>
     <message>
         <source>LICHESS</source>
@@ -2818,6 +3107,38 @@
     <message>
         <source>Add Account</source>
         <translation>Konto hinzufügen</translation>
+    </message>
+    <message>
+        <source>Tournament games, from PGN files or ChessBase</source>
+        <translation>Turnierpartien, aus PGN-Dateien oder ChessBase</translation>
+    </message>
+    <message>
+        <source>Paste Games</source>
+        <translation>Partien einfügen</translation>
+    </message>
+    <message>
+        <source>Games copied from ChessBase or anywhere else, as PGN (⌘V)</source>
+        <translation>Partien, als PGN aus ChessBase oder anderswo kopiert (⌘V)</translation>
+    </message>
+    <message>
+        <source>Search on ChessBase</source>
+        <translation>Bei ChessBase suchen</translation>
+    </message>
+    <message>
+        <source>MAYBE THEIRS</source>
+        <translation>VIELLEICHT DIESE PERSON</translation>
+    </message>
+    <message>
+        <source>Looking on Lichess and chess.com…</source>
+        <translation>Suche auf Lichess und chess.com …</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Hinzufügen</translation>
+    </message>
+    <message>
+        <source>Not them</source>
+        <translation>Nicht diese Person</translation>
     </message>
     <message>
         <source>There's no %1 account called “%2”.</source>
@@ -3318,6 +3639,14 @@
     <message>
         <source>Without asking which piece.</source>
         <translation>Ohne zu fragen, welche Figur.</translation>
+    </message>
+    <message>
+        <source>One-click moves</source>
+        <translation>Züge mit einem Klick</translation>
+    </message>
+    <message>
+        <source>A click on a square moves the only piece that can go there.</source>
+        <translation>Ein Klick auf ein Feld zieht die einzige Figur, die dorthin kann.</translation>
     </message>
     <message>
         <source>Scroll through moves</source>

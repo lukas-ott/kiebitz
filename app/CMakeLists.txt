@@ -27,6 +27,7 @@ qt_add_library(kiebitz_ui STATIC
     databases/AddDatabaseDialog.cpp
     databases/AddDatabaseDialog.hpp
     databases/DatabaseManager.cpp
+    databases/DatabaseManagerBroadcasts.cpp
     databases/DatabaseManager.hpp
     databases/DatabasesView.cpp
     databases/DatabasesView.hpp
@@ -83,6 +84,8 @@ qt_add_library(kiebitz_ui STATIC
     puzzles/PuzzleStats.hpp
     puzzles/PuzzlesView.cpp
     puzzles/PuzzlesView.hpp
+    profiles/AccountFinder.cpp
+    profiles/AccountFinder.hpp
     profiles/AddAccountDialog.cpp
     profiles/AddAccountDialog.hpp
     profiles/Fide.cpp
@@ -91,8 +94,12 @@ qt_add_library(kiebitz_ui STATIC
     profiles/FideCard.hpp
     profiles/LichessLogin.cpp
     profiles/LichessLogin.hpp
+    profiles/PreparePage.cpp
+    profiles/PreparePage.hpp
     profiles/ProfileStore.cpp
     profiles/ProfileStore.hpp
+    profiles/Wikidata.cpp
+    profiles/Wikidata.hpp
     profiles/ProfilesView.cpp
     profiles/ProfilesView.hpp
     repertoire/PracticeStats.cpp
@@ -135,6 +142,10 @@ qt_add_library(kiebitz_ui STATIC
     widgets/DateRange.cpp
     widgets/DateRange.hpp
     widgets/ElidedLabel.hpp
+    widgets/FlowLayout.cpp
+    widgets/FlowLayout.hpp
+    widgets/MultiChoice.cpp
+    widgets/MultiChoice.hpp
     widgets/VerticalScrollArea.hpp
     widgets/EmptyState.cpp
     widgets/EmptyState.hpp

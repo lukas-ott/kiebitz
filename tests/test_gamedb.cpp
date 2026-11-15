@@ -9,6 +9,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <zstd.h>
 
 namespace {
 
@@ -489,4 +490,181 @@ TEST(GameDatabase, GamesCanBeFoundByTextAndDatesInAnyOrder) {
     EXPECT_TRUE((*db)->find(query, 10, &stop).empty());
     const std::atomic<bool> go{false};
     EXPECT_EQ((*db)->find(query, 10, &go).size(), 4U);
+}
+
+TEST(GameDatabase, GamesAreFoundByAPlayersFideId) {
+    // As Lichess's broadcasts have them: both players' ids, or one, or none.
+    const char* const games = R"([White "Wang, Justin Zhide"]
+[Black "Mohammadi, Arvin"]
+[WhiteFideId "4312830"]
+[BlackFideId "12528617"]
+[Result "1/2-1/2"]
+
+1. e4 c5 1/2-1/2
+
+[White "Someone"]
+[Black "Wang, Justin Zhide"]
+[BlackFideId "4312830"]
+[Result "0-1"]
+
+1. d4 Nf6 0-1
+
+[White "No Ids"]
+[Black "At All"]
+[Result "*"]
+
+1. c4 *
+)";
+    const TempFolder folder;
+    {
+        auto writer = gamedb::DatabaseWriter::create(folder.path(), {"Broadcasts", "", 0, 0});
+        ASSERT_TRUE(writer.ok());
+        gamedb::GameSplitter splitter;
+        const auto add = [&](std::string_view game) {
+            (*writer)->add(gamedb::scanGame(game));
+        };
+        splitter.feed(games, add);
+        splitter.finish(add);
+        EXPECT_EQ((*writer)->finish(), "");
+    }
+    auto db = gamedb::Database::open(folder.path());
+    ASSERT_TRUE(db.ok());
+    EXPECT_TRUE((*db)->hasFideIds());
+    EXPECT_EQ((*db)->gamesOfFideId(4312830), (std::vector<gamedb::GameId>{1, 2}));
+    EXPECT_EQ((*db)->gamesOfFideId(12528617), (std::vector<gamedb::GameId>{1}));
+    EXPECT_TRUE((*db)->gamesOfFideId(1).empty());
+    // By name, exactly (any case): any of the ways it is written.
+    const std::vector<std::string> wang{"WANG, JUSTIN ZHIDE", "Justin Wang"};
+    EXPECT_EQ((*db)->gamesOfPlayer(wang), (std::vector<gamedb::GameId>{1, 2}));
+    const std::vector<std::string> part{"Wang"};
+    EXPECT_TRUE((*db)->gamesOfPlayer(part).empty()); // a part of a name is someone else
+
+    // A database without FIDE ids has none to look up.
+    const TempFolder plain;
+    {
+        auto writer = gamedb::DatabaseWriter::create(plain.path(), {"Plain", "", 0, 0});
+        ASSERT_TRUE(writer.ok());
+        (*writer)->add(gamedb::scanGame("[White \"A\"]\n[Black \"B\"]\n\n1. e4 *\n"));
+        EXPECT_EQ((*writer)->finish(), "");
+    }
+    auto none = gamedb::Database::open(plain.path());
+    ASSERT_TRUE(none.ok());
+    EXPECT_FALSE((*none)->hasFideIds());
+    EXPECT_TRUE((*none)->gamesOfFideId(4312830).empty());
+}
+
+TEST(PgnFilesReader, ReadsPlainAndZstdFilesOneAfterAnother) {
+    const TempFolder folder;
+    const auto write = [&](const std::string& name, const std::string& bytes) {
+        const std::string path = folder.path() + "/" + name;
+        std::FILE* file = std::fopen(path.c_str(), "wb");
+        if (file == nullptr) {
+            return path;
+        }
+        std::fwrite(bytes.data(), 1, bytes.size(), file);
+        std::fclose(file);
+        return path;
+    };
+    // Many games, so the compressed file is read in several pieces, without a newline at the
+    // end (the reader puts one between files).
+    std::string many;
+    for (int i = 0; i < 3000; ++i) {
+        many += "[White \"W" + std::to_string(i) +
+                "\"]\n[Black \"B\"]\n[Result \"1-0\"]\n\n1. e4 e5 "
+                "2. Nf3 Nc6 3. Bb5 a6 1-0\n\n";
+    }
+    many += "[White \"Last\"]\n[Black \"B\"]\n\n1. d4 *";
+    std::string packed(ZSTD_compressBound(many.size()), '\0');
+    packed.resize(ZSTD_compress(packed.data(), packed.size(), many.data(), many.size(), 3));
+    const std::string first = write("2026-01.pgn.zst", packed);
+    const std::string plain = "[White \"Plain\"]\n[Black \"B\"]\n\n1. c4 *\n";
+    const std::string second = write("plain.pgn", plain);
+
+    std::atomic<std::uint64_t> bytes{0};
+    gamedb::PgnFilesReader reader({first, second}, &bytes);
+    std::string text;
+    std::vector<char> buffer(1000); // small: output held back by zstd must still come out
+    for (std::size_t n = 0; (n = reader.read(buffer.data(), buffer.size())) > 0;) {
+        text.append(buffer.data(), n);
+    }
+    EXPECT_EQ(reader.error(), "");
+    EXPECT_EQ(text.substr(0, many.size()), many);
+    EXPECT_EQ(text.substr(many.size()), "\n[White \"Plain\"]\n[Black \"B\"]\n\n1. c4 *\n");
+    EXPECT_EQ(bytes.load(), packed.size() + plain.size());
+
+    // A cut-off download says so.
+    const std::string cut = write("cut.pgn.zst", packed.substr(0, packed.size() / 2));
+    gamedb::PgnFilesReader broken({cut});
+    while (broken.read(buffer.data(), buffer.size()) > 0) {
+    }
+    EXPECT_NE(broken.error().find("incomplete"), std::string::npos) << broken.error();
+}
+
+TEST(GameScan, AnAmbiguousMoveEndsTheGameThereInsteadOfStoppingTheImport) {
+    // Both knights (b1, f3) can go to d2: "Nd2" doesn't say which. Lichess's broadcasts have
+    // such moves now and then (typed in by hand).
+    const auto game = gamedb::scanGame(
+        "[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. Nf3 d5 2. d4 e6 3. Nd2 Nf6 *\n");
+    EXPECT_TRUE(game.damaged);
+    EXPECT_FALSE(game.skipped);
+    EXPECT_EQ(game.moves.size(), 4U); // up to the ambiguous move
+}
+
+TEST(GameDatabase, ANameIsFoundByItsWordsInAnyOrder) {
+    const char* const games = R"([White "Nordmann, Ola"]
+[Black "Hansen, Kari"]
+[Event "Norway Chess 2024"]
+[Site "https://lichess.org/broadcast/norway-chess/round-1/abc"]
+[Result "1-0"]
+
+1. e4 1-0
+
+[White "Olafsen, Nils"]
+[Black "Nordberg, Ola"]
+[Event "Oslo Open"]
+[Site "Oslo NOR"]
+[Result "0-1"]
+
+1. d4 0-1
+)";
+    const TempFolder folder;
+    {
+        auto writer = gamedb::DatabaseWriter::create(folder.path(), {"Names", "", 0, 0});
+        ASSERT_TRUE(writer.ok());
+        gamedb::GameSplitter splitter;
+        const auto add = [&](std::string_view game) {
+            (*writer)->add(gamedb::scanGame(game));
+        };
+        splitter.feed(games, add);
+        splitter.finish(add);
+        EXPECT_EQ((*writer)->finish(), "");
+    }
+    auto db = gamedb::Database::open(folder.path());
+    ASSERT_TRUE(db.ok());
+    const auto whites = [&](std::string_view text) {
+        gamedb::GameQuery query;
+        query.text = text;
+        std::vector<std::string> found;
+        for (const auto& game : (*db)->find(query, 10)) {
+            found.push_back(game.white);
+        }
+        std::sort(found.begin(), found.end());
+        return found;
+    };
+    using Names = std::vector<std::string>;
+    // Any order, any case, with or without the comma; part of a word is enough.
+    EXPECT_EQ(whites("Ola Nordmann"), Names{"Nordmann, Ola"});
+    EXPECT_EQ(whites("nordmann ola"), Names{"Nordmann, Ola"});
+    EXPECT_EQ(whites("Nordmann, Ola"), Names{"Nordmann, Ola"});
+    EXPECT_EQ(whites("nord ola"), (Names{"Nordmann, Ola", "Olafsen, Nils"})); // Nordberg, Ola
+    // Every word must be in one name: "Ola Hansen" is two players, not one.
+    EXPECT_TRUE(whites("Ola Hansen").empty());
+    // Events and sites too; a web address isn't searched (Lichess's broadcasts have one per
+    // game), but the event it belongs to is.
+    EXPECT_EQ(whites("norway chess"), Names{"Nordmann, Ola"});
+    EXPECT_EQ(whites("oslo"), Names{"Olafsen, Nils"});
+    EXPECT_TRUE(whites("lichess.org").empty());
+    // One or two letters (which most names have) don't search yet: every game.
+    EXPECT_EQ(whites("ol").size(), 2U);
+    EXPECT_EQ(whites("o").size(), 2U);
 }

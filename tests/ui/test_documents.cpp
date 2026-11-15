@@ -9,6 +9,7 @@
 #include "library/NewFileDialog.hpp"
 #include "notation/NotationView.hpp"
 #include "panels/GameInfoPanel.hpp"
+#include "profiles/ProfilesView.hpp"
 #include "repertoire/GapSource.hpp"
 #include "repertoire/RepertoirePanel.hpp"
 #include "repertoire/RepertoireStore.hpp"
@@ -1621,4 +1622,24 @@ TEST_F(DocumentsTest, LibraryGamesSortByAnyColumnAndFilterByDate) {
     ASSERT_NE(dates, nullptr);
     dates->setRange(QDate(2023, 7, 1), std::nullopt);
     ASSERT_TRUE(QTest::qWaitFor([&] { return whites() == QStringList{"alice"}; }, 5000));
+}
+
+TEST_F(DocumentsTest, APrepFileIsSavedInTheLibrarysPreparationFolderAndOpened) {
+    scanLibrary();
+    auto* profiles = window.findChild<kiebitz::app::ProfilesView*>();
+    ASSERT_NE(profiles, nullptr);
+    kiebitz::core::Game game;
+    game.setHeader("FileType", "Repertoire");
+    game.setHeader("Orientation", "white");
+    game.addMove(kiebitz::core::Game::root(), kiebitz::core::Position().parseSan("e4").value());
+    QSignalSpy opened(&window, &MainWindow::fileOpened);
+    emit profiles->prepFileRequested(QStringLiteral("Petra Pawn – White"), game);
+    const QString file = path("Preparation/Petra Pawn – White.pgn");
+    EXPECT_TRUE(QFile::exists(file));
+    ASSERT_TRUE(opened.count() > 0 || opened.wait(5000));
+    EXPECT_EQ(window.section(), MainWindow::Section::Board);
+    EXPECT_EQ(tabs->tabText(tabs->currentIndex()), QStringLiteral("Petra Pawn – White"));
+    // A second one doesn't overwrite the first.
+    emit profiles->prepFileRequested(QStringLiteral("Petra Pawn – White"), game);
+    EXPECT_TRUE(QFile::exists(path("Preparation/Petra Pawn – White 2.pgn")));
 }

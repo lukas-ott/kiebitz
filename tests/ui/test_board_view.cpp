@@ -79,6 +79,40 @@ TEST_F(BoardViewTest, IllegalMovesDoNothing) {
     EXPECT_EQ(moves.count(), 0);
 }
 
+TEST_F(BoardViewTest, OneClickOnASquareMovesTheOnlyPieceThatCanGoThere) {
+    click("e4"); // only the e-pawn can go there
+    ASSERT_EQ(moves.count(), 1);
+    EXPECT_EQ(lastMove().uci(), "e2e4");
+    click("f3"); // the g1 knight, or the f-pawn: a choice, so nothing yet
+    EXPECT_EQ(moves.count(), 0);
+    click("g1"); // this one goes there
+    ASSERT_EQ(moves.count(), 1);
+    EXPECT_EQ(lastMove().uci(), "g1f3");
+}
+
+TEST_F(BoardViewTest, OneClickWithAChoiceIsForgottenByAnotherClickOrEscape) {
+    // Both knights can go to d2; a click elsewhere, or Escape, forgets the choice.
+    board.setPosition(
+        kiebitz::core::Position::fromFen("4k3/8/8/8/8/8/8/1N2K1N1 w - - 0 1").value());
+    click("e2"); // the king, the g1 knight: a choice
+    click("a8"); // nowhere useful: forgotten
+    click("g1"); // the knight is picked up, not moved to e2
+    EXPECT_EQ(moves.count(), 0);
+    click("g1"); // put down again
+    click("e2");
+    QTest::keyClick(&board, Qt::Key_Escape);
+    click("e1"); // picked up, not moved
+    EXPECT_EQ(moves.count(), 0);
+}
+
+TEST_F(BoardViewTest, OneClickMovesCanBeTurnedOff) {
+    BoardView::Options options = board.options();
+    options.oneClick = false;
+    board.setOptions(options);
+    click("e4");
+    EXPECT_EQ(moves.count(), 0);
+}
+
 TEST_F(BoardViewTest, ClickingAnotherOwnPieceSwitchesSelection) {
     click("e2");
     click("d2");
@@ -158,6 +192,9 @@ TEST_F(BoardViewTest, LeftClickClearsTheDrawings) {
 }
 
 TEST_F(BoardViewTest, NewPositionClearsTheSelection) {
+    BoardView::Options options = board.options();
+    options.oneClick = false; // a click on e4 alone would play e4
+    board.setOptions(options);
     click("e2");
     board.setPosition(Position());
     click("e4"); // e2 is no longer selected, so this does nothing

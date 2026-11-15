@@ -675,6 +675,24 @@ QPushButton[role="chip"] {
 }
 QPushButton[role="chip"]:hover { color: @text; }
 QPushButton[role="chip"]:checked { background: @accentTint; color: @accent; border-color: @accent; }
+/* A line in your prep (the Prepare tab): the line, and an x to take it out */
+QWidget[role="prepChip"] { background: @accentTint; border-radius: 12px; }
+QPushButton[role="chipText"] {
+    background: transparent;
+    border: none;
+    color: @accent;
+    padding: 2px 2px;
+    font-size: 12px;
+}
+QPushButton[role="chipText"]:hover { color: @accentHover; }
+/* The Prepare tab's path: where you are, after the steps back */
+QPushButton[role="pathHere"] {
+    background: transparent;
+    border: none;
+    color: @text;
+    padding: 0;
+    font-weight: 600;
+}
 
 /* Explorer: the moves and the top games, like the Library's lists; the profile's theory check
    looks the same */

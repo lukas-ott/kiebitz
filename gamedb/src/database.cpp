@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <sqlite3.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -184,6 +185,19 @@ std::uint64_t sortKey(std::string_view moves) {
 
 // ---- Writer ------------------------------------------------------------------------------------
 
+namespace {
+
+/// fide.bin: a player's FIDE id and one of their games (its id - 1), sorted by both.
+struct FideEntry {
+    std::uint32_t fideId = 0;
+    std::uint32_t game = 0;
+    friend bool operator<(const FideEntry& a, const FideEntry& b) {
+        return a.fideId != b.fideId ? a.fideId < b.fideId : a.game < b.game;
+    }
+};
+
+} // namespace
+
 struct DatabaseWriter::Impl {
     std::string folder;
     DatabaseInfo info;
@@ -201,6 +215,7 @@ struct DatabaseWriter::Impl {
     std::vector<std::uint16_t> blackElo;
     std::vector<std::uint8_t> results;
     std::vector<std::uint8_t> standard; ///< 1: from the usual start position
+    std::vector<FideEntry> fide;        ///< players' FIDE ids and their games
 
     Impl() = default;
     Impl(const Impl&) = delete;
@@ -323,6 +338,12 @@ void DatabaseWriter::add(const ScannedGame& game) {
     d.blackElo.push_back(static_cast<std::uint16_t>(std::clamp(game.blackElo, 0, 65535)));
     d.results.push_back(static_cast<std::uint8_t>(game.result));
     d.standard.push_back(game.fen.empty() ? 1 : 0);
+    const auto index = static_cast<std::uint32_t>(d.results.size() - 1);
+    for (const std::uint32_t fideId : {game.whiteFideId, game.blackFideId}) {
+        if (fideId != 0) {
+            d.fide.push_back({fideId, index});
+        }
+    }
     // Commit now and then, so the transaction never grows too big.
     if (d.results.size() % 200000 == 0) {
         exec(d.db, "COMMIT; BEGIN");
@@ -348,6 +369,12 @@ std::string DatabaseWriter::finish(const std::function<void(double)>& progress) 
     if (!writeFile(pathIn(d.folder, "offsets.bin"), d.offsets) ||
         !writeFile(pathIn(d.folder, "elo.bin"), d.elo)) {
         return "Couldn't write the database (is the disk full?).";
+    }
+    if (!d.fide.empty()) {
+        std::sort(d.fide.begin(), d.fide.end());
+        if (!writeFile(pathIn(d.folder, "fide.bin"), d.fide)) {
+            return "Couldn't write the database (is the disk full?).";
+        }
     }
     report(0.05);
 
@@ -459,6 +486,50 @@ std::string DatabaseWriter::finish(const std::function<void(double)>& progress) 
 
 // ---- Reader ------------------------------------------------------------------------------------
 
+namespace {
+
+/// Text as a search compares it: lower case, with punctuation (the comma in "Nordmann, Ola")
+/// as spaces.
+std::string folded(std::string_view text) {
+    std::string result;
+    result.reserve(text.size());
+    for (const char c : text) {
+        const auto byte = static_cast<unsigned char>(c);
+        if (byte >= 0x80 || std::isalnum(byte) != 0) {
+            result += static_cast<char>(std::tolower(byte));
+        } else {
+            result += ' ';
+        }
+    }
+    return result;
+}
+
+/// The words of a search, folded: "Ola Nordmann" and "Nordmann, Ola" give the same two.
+std::vector<std::string> searchWords(std::string_view text) {
+    std::vector<std::string> words;
+    const std::string plain = folded(text);
+    std::size_t at = 0;
+    while (at < plain.size()) {
+        const std::size_t start = plain.find_first_not_of(' ', at);
+        if (start == std::string::npos) {
+            break;
+        }
+        const std::size_t end = plain.find(' ', start);
+        words.push_back(plain.substr(start, end == std::string::npos ? end : end - start));
+        at = end == std::string::npos ? plain.size() : end;
+    }
+    return words;
+}
+
+/// The names a search looks in (players, events, sites: not web addresses, which Lichess's
+/// broadcasts have one of per game), folded, one after another; read once.
+struct NameIndex {
+    std::string text;                                       ///< the folded names, back to back
+    std::vector<std::pair<std::uint32_t, std::int64_t>> at; ///< where each starts, and its id
+};
+
+} // namespace
+
 struct Database::Impl {
     DatabaseInfo info;
     sqlite3* db = nullptr;
@@ -471,6 +542,66 @@ struct Database::Impl {
     MappedFile elo;
     MappedFile ratings;    ///< optional: databases made before it don't have it
     MappedFile attributes; ///< optional too
+    MappedFile fide;       ///< optional: only databases with FIDE ids have it
+    mutable std::once_flag namesRead;
+    mutable NameIndex names; ///< read on the first search
+
+    /// The names to search, read the first time (on a connection of its own: any thread).
+    const NameIndex& nameIndex() const {
+        std::call_once(namesRead, [this] {
+            sqlite3* connection = nullptr;
+            if (sqlite3_open_v2(path.c_str(), &connection,
+                                SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nullptr) != SQLITE_OK) {
+                sqlite3_close(connection);
+                return;
+            }
+            {
+                const Statement all(connection, "SELECT id, name FROM names");
+                while (sqlite3_step(all.handle) == SQLITE_ROW) {
+                    // The name's bytes (UTF-8), as they are stored.
+                    const auto* raw = static_cast<const char*>(sqlite3_column_blob(all.handle, 1));
+                    const std::string_view name(
+                        raw, static_cast<std::size_t>(sqlite3_column_bytes(all.handle, 1)));
+                    if (raw == nullptr || name.starts_with("http")) {
+                        continue;
+                    }
+                    names.at.emplace_back(static_cast<std::uint32_t>(names.text.size()),
+                                          sqlite3_column_int64(all.handle, 0));
+                    names.text += folded(name);
+                    names.text += '\n';
+                }
+            }
+            sqlite3_close(connection);
+        });
+        return names;
+    }
+
+    /// The ids of the names that have every word (in any order).
+    /// `cancelled` (optional) stops it (the ids found so far are returned, to be thrown away).
+    [[nodiscard]] std::vector<std::int64_t>
+    namesWith(const std::vector<std::string>& words,
+              const std::atomic<bool>* cancelled = nullptr) const {
+        const NameIndex& index = nameIndex();
+        std::vector<std::int64_t> ids;
+        if (words.empty()) {
+            return ids;
+        }
+        for (std::size_t k = 0; k < index.at.size(); ++k) {
+            if (cancelled != nullptr && k % 65536 == 0 && cancelled->load()) {
+                return ids;
+            }
+            const std::size_t start = index.at[k].first;
+            const std::size_t end =
+                k + 1 < index.at.size() ? index.at[k + 1].first - 1 : index.text.size() - 1;
+            const std::string_view name(index.text.data() + start, end - start);
+            if (std::all_of(words.begin(), words.end(), [&](const std::string& word) {
+                    return name.find(word) != std::string_view::npos;
+                })) {
+                ids.push_back(index.at[k].second);
+            }
+        }
+        return ids;
+    }
 
     Impl() = default;
     Impl(const Impl&) = delete;
@@ -767,6 +898,7 @@ core::Result<std::unique_ptr<Database>> Database::open(const std::string& folder
     }
     impl->ratings.open(pathIn(folder, "ratings.bin"));  // optional
     impl->attributes.open(pathIn(folder, "attrs.bin")); // optional
+    impl->fide.open(pathIn(folder, "fide.bin"));        // optional
     return std::unique_ptr<Database>(new Database(std::move(impl)));
 }
 
@@ -777,6 +909,53 @@ const DatabaseInfo& Database::info() const {
 bool Database::hasRatings() const {
     return m_impl->ratings.count<std::uint16_t>() == 2 * m_impl->order.count<std::uint32_t>() &&
            m_impl->order.count<std::uint32_t>() > 0;
+}
+
+bool Database::hasFideIds() const {
+    return m_impl->fide.count<FideEntry>() > 0;
+}
+
+std::vector<GameId> Database::gamesOfFideId(std::uint32_t fideId) const {
+    const auto* first = m_impl->fide.as<FideEntry>();
+    const auto* last = first + m_impl->fide.count<FideEntry>();
+    const auto* lo = std::partition_point(
+        first, last, [fideId](const FideEntry& entry) { return entry.fideId < fideId; });
+    std::vector<GameId> games;
+    for (const auto* at = lo; at != last && at->fideId == fideId; ++at) {
+        games.push_back(static_cast<GameId>(at->game) + 1);
+    }
+    return games;
+}
+
+std::vector<GameId> Database::gamesOfPlayer(std::span<const std::string> names) const {
+    std::vector<GameId> games;
+    if (names.empty()) {
+        return games;
+    }
+    // A connection of its own (any thread); the names by their index, their games by theirs.
+    sqlite3* db = nullptr;
+    if (sqlite3_open_v2(m_impl->path.c_str(), &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX,
+                        nullptr) != SQLITE_OK) {
+        sqlite3_close(db);
+        return games;
+    }
+    const std::unique_ptr<sqlite3, int (*)(sqlite3*)> closer(db, &sqlite3_close);
+    exec(db, "CREATE TEMP TABLE player (id INTEGER PRIMARY KEY)");
+    {
+        const Statement name(db, "INSERT OR IGNORE INTO player (id) SELECT id FROM names "
+                                 "WHERE name = ? COLLATE NOCASE");
+        for (const std::string& each : names) {
+            sql::bindTextOrNull(name.handle, 1, each);
+            sqlite3_step(name.handle);
+            sqlite3_reset(name.handle);
+        }
+    }
+    const Statement query(db, "SELECT id FROM games WHERE white IN player UNION "
+                              "SELECT id FROM games WHERE black IN player ORDER BY 1");
+    while (sqlite3_step(query.handle) == SQLITE_ROW) {
+        games.push_back(sqlite3_column_int64(query.handle, 0));
+    }
+    return games;
 }
 
 bool Database::hasSortIndexes() const {
@@ -882,6 +1061,10 @@ std::vector<GameInfo> Database::games(GameId first, std::size_t count) const {
     return readGames(query.handle);
 }
 
+void Database::prepareSearch() const {
+    (void)m_impl->nameIndex();
+}
+
 std::vector<GameInfo> Database::search(std::string_view text, std::size_t limit) const {
     if (text.empty()) {
         return games(1, limit);
@@ -891,8 +1074,19 @@ std::vector<GameInfo> Database::search(std::string_view text, std::size_t limit)
     return find(query, limit);
 }
 
-std::vector<GameInfo> Database::find(const GameQuery& query, std::size_t limit,
+std::vector<GameInfo> Database::find(const GameQuery& asked, std::size_t limit,
                                      const std::atomic<bool>* cancelled) const {
+    // One or two letters would find most games (half of all names have "an"): not a search
+    // yet. Three, in one word or more, is.
+    GameQuery query = asked;
+    const std::vector<std::string> words = searchWords(query.text);
+    std::size_t letters = 0;
+    for (const std::string& word : words) {
+        letters += word.size();
+    }
+    if (letters < 3) {
+        query.text.clear();
+    }
     // A connection of its own: a long query (sorting millions of games) doesn't hold up the
     // pages of the list, which read on the shared one.
     sqlite3* db = nullptr;
@@ -908,15 +1102,48 @@ std::vector<GameInfo> Database::find(const GameQuery& query, std::size_t limit,
             [](void* flag) { return static_cast<const std::atomic<bool>*>(flag)->load() ? 1 : 0; },
             const_cast<std::atomic<bool>*>(cancelled)); // NOLINT(*-const-cast): read only
     }
-    // LIKE with % and _ taken literally.
-    std::string pattern = "%";
-    for (const char c : query.text) {
-        if (c == '%' || c == '_' || c == '\\') {
-            pattern += '\\';
+    // What is searched for: the names with every word of it (in any order: "Ola Nordmann"
+    // finds "Nordmann, Ola"), in a table of this connection's own. Few names (a player, an
+    // event): their games are gathered through the indexes into a table, then sorted. Very
+    // many (two letters in thousands of names): the games are walked in order instead, which
+    // stops as soon as there are enough.
+    bool gathered = false;
+    if (!query.text.empty()) {
+        const std::vector<std::int64_t> names = m_impl->namesWith(words, cancelled);
+        if (cancelled != nullptr && cancelled->load()) {
+            return {};
         }
-        pattern += c;
+        exec(db, "CREATE TEMP TABLE hit (id INTEGER PRIMARY KEY); BEGIN");
+        {
+            const Statement insert(db, "INSERT INTO hit (id) VALUES (?)");
+            for (std::size_t k = 0; k < names.size(); ++k) {
+                if (cancelled != nullptr && k % 4096 == 0 && cancelled->load()) {
+                    return {};
+                }
+                sqlite3_bind_int64(insert.handle, 1, names[k]);
+                sqlite3_step(insert.handle);
+                sqlite3_reset(insert.handle);
+            }
+        }
+        exec(db, "COMMIT");
+        constexpr std::size_t kGatherNames = 20000;
+        if (names.size() <= kGatherNames) {
+            gathered = true;
+            exec(db, "CREATE TEMP TABLE found (id INTEGER PRIMARY KEY)");
+            for (const char* column : {"white", "black", "event", "site"}) {
+                exec(db, (std::string("INSERT OR IGNORE INTO found SELECT id FROM games WHERE ") +
+                          column + " IN hit")
+                             .c_str());
+            }
+            const Statement eco(db,
+                                "INSERT OR IGNORE INTO found SELECT id FROM games WHERE eco = ?");
+            sql::bindTextOrNull(eco.handle, 1, query.text);
+            sqlite3_step(eco.handle);
+            if (cancelled != nullptr && cancelled->load()) {
+                return {};
+            }
+        }
     }
-    pattern += '%';
     using Order = GameQuery::Order;
     // Sorted by a name and nothing searched: the names walked in order (their index), each
     // one's games after it, so the first rows come at once whatever the size.
@@ -931,12 +1158,11 @@ std::vector<GameInfo> Database::find(const GameQuery& query, std::size_t limit,
         }
     }
     // What is searched for, and the dates: the same whichever way the games are walked.
-    std::string with;
-    if (!query.text.empty()) {
-        with = "WITH hit AS (SELECT id FROM names WHERE name LIKE ?1 ESCAPE '\\') ";
-    }
+    const std::string with;
     std::string filters;
-    if (!query.text.empty()) {
+    if (gathered) {
+        filters += " AND g.id IN found";
+    } else if (!query.text.empty()) {
         filters += " AND (g.white IN hit OR g.black IN hit OR g.event IN hit OR g.site IN hit OR "
                    "g.eco = ?2)";
     }
@@ -949,7 +1175,14 @@ std::vector<GameInfo> Database::find(const GameQuery& query, std::size_t limit,
     if (!query.toDate.empty()) {
         filters += " AND g.date <= ?4"; // the prefix and anything after it: "2024" … "2024~"
     }
-    const std::string games = std::string("SELECT ") + kGameColumns + kGameTables + " WHERE 1";
+    // Gathered games: those first (CROSS JOIN keeps that order of the loops), each looked up by
+    // its id, then sorted; never all games walked to find them.
+    const std::string games =
+        gathered ? std::string("SELECT ") + kGameColumns + " FROM found f CROSS JOIN games g ON " +
+                       "g.id = f.id LEFT JOIN names w ON w.id = g.white LEFT JOIN names b ON " +
+                       "b.id = g.black LEFT JOIN names e ON e.id = g.event LEFT JOIN names s ON " +
+                       "s.id = g.site WHERE 1"
+                 : std::string("SELECT ") + kGameColumns + kGameTables + " WHERE 1";
     std::string walked; // by a name: its index, each one's games after it
     const char* nameColumn = nullptr;
     if (byName != nullptr) {
@@ -1009,7 +1242,6 @@ std::vector<GameInfo> Database::find(const GameQuery& query, std::size_t limit,
         const std::string text = with + from + filters + extra + " ORDER BY " + order + " LIMIT ?5";
         const Statement statement(db, text.c_str());
         if (!query.text.empty()) {
-            sql::bindTextOrNull(statement.handle, 1, pattern);
             sql::bindTextOrNull(statement.handle, 2, query.text);
         }
         if (!query.fromDate.empty()) {

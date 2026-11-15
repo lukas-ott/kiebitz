@@ -89,6 +89,9 @@ struct Answer {
     std::vector<gamedb::GameInfo> games;
 };
 
+/// A profile's games: how often each move is played in theory (the reference Prepare uses).
+constexpr int kTheoryColumn = 5;
+
 } // namespace
 
 ExplorerPanel::ExplorerPanel(DatabaseManager& databases, ProfileStore& profiles,
@@ -196,9 +199,10 @@ ExplorerPanel::ExplorerPanel(DatabaseManager& databases, ProfileStore& profiles,
 
     m_moves = new QTreeWidget;
     m_moves->setObjectName(QStringLiteral("explorerMoves"));
-    m_moves->setColumnCount(5);
+    m_moves->setColumnCount(6);
     m_moves->setHeaderLabels(
-        {tr("MOVE"), tr("GAMES"), QStringLiteral("%"), tr("RESULTS"), tr("RATING")});
+        {tr("MOVE"), tr("GAMES"), QStringLiteral("%"), tr("RESULTS"), tr("RATING"), tr("THEORY")});
+    m_moves->setColumnHidden(kTheoryColumn, true); // a profile's games only
     m_moves->setRootIsDecorated(false);
     m_moves->setUniformRowHeights(true);
     m_moves->setFrameShape(QFrame::NoFrame);
@@ -209,6 +213,8 @@ ExplorerPanel::ExplorerPanel(DatabaseManager& databases, ProfileStore& profiles,
     m_moves->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     m_moves->header()->setSectionResizeMode(3, QHeaderView::Stretch);
     m_moves->header()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+    m_moves->header()->setSectionResizeMode(kTheoryColumn, QHeaderView::ResizeToContents);
+    m_moves->headerItem()->setTextAlignment(kTheoryColumn, Qt::AlignRight | Qt::AlignVCenter);
     m_moves->header()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_moves->headerItem()->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
     m_moves->headerItem()->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -395,6 +401,11 @@ void ExplorerPanel::refreshParts() {
     if (profile->parts.contains(QStringLiteral("otb"))) {
         choices.emplace_back(QStringLiteral("otb"), tr("Over the board"));
     }
+    for (const auto& [part, database] : profile->sources) { // their games in each database
+        if (profile->parts.contains(part)) {
+            choices.emplace_back(part, database);
+        }
+    }
     if (std::none_of(choices.begin(), choices.end(),
                      [this](const auto& choice) { return choice.first == m_part; })) {
         m_part.clear(); // gone (another profile, an account removed)
@@ -524,6 +535,11 @@ void ExplorerPanel::refresh() {
     if (m_sideRow != nullptr) {
         m_sideRow->setVisible(profile);
         m_sideTitle->setVisible(profile);
+    }
+    if (profile) {
+        askTheory(line, request);
+    } else {
+        m_moves->setColumnHidden(kTheoryColumn, true);
     }
     if (profile && filter.side != gamedb::ExploreFilter::Side::Any) {
         if (const Profile* p = m_profiles.profile(key.section(u':', 1, 1))) {
@@ -688,6 +704,125 @@ GapSource ExplorerPanel::gapSource() {
     return source;
 }
 
+void ExplorerPanel::askTheory(const std::vector<core::Move>& line, int request) {
+    // The reference the Prepare tab compares with (chosen there), else the first usable one.
+    const QString wanted = QSettings().value(QStringLiteral("prepare/theorySource")).toString();
+    GapSource reference;
+    for (GapSource& source : theorySources()) {
+        if (!source.explore) {
+            continue;
+        }
+        if (!reference.explore || source.name == wanted) {
+            reference = std::move(source);
+        }
+    }
+    m_theory.clear();
+    m_theoryTotal = 0;
+    m_moves->setColumnHidden(kTheoryColumn, !reference.explore);
+    if (!reference.explore) {
+        return;
+    }
+    m_moves->headerItem()->setToolTip(
+        kTheoryColumn, tr("How often each move is played in %1").arg(reference.name));
+    using Counts = std::vector<repertoire::MoveCount>;
+    // Owned by the panel and deleted when done (deleteLater); the analyzer can't see that.
+    auto* watcher =
+        new QFutureWatcher<Counts>(this); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    connect(watcher, &QFutureWatcher<Counts>::finished, this, [this, watcher, request] {
+        watcher->deleteLater();
+        if (request != m_request) {
+            return;
+        }
+        for (const repertoire::MoveCount& count : watcher->result()) {
+            m_theory[QString::fromStdString(count.move.uci())] = count.games;
+            m_theoryTotal += count.games;
+        }
+        m_moves->setSortingEnabled(false);
+        fillTheoryColumn();
+        m_moves->setSortingEnabled(true);
+    });
+    // NOLINTNEXTLINE(bugprone-exception-escape): a worker, like any explorer function
+    const auto ask = [line, explore = std::move(reference.explore)] {
+        return explore(line);
+    };
+    watcher->setFuture(QtConcurrent::run(ask));
+} // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+void ExplorerPanel::fillTheoryColumn() {
+    if (m_moves->isColumnHidden(kTheoryColumn)) {
+        return;
+    }
+    const auto& c = m_style.colors();
+    for (int i = 0; i < m_moves->topLevelItemCount(); ++i) {
+        auto* item = dynamic_cast<SortableItem*>(m_moves->topLevelItem(i));
+        if (item == nullptr) {
+            continue;
+        }
+        if (m_theoryTotal == 0) {
+            item->setText(kTheoryColumn, QString());
+            continue;
+        }
+        const auto found = m_theory.find(item->data(0, kMoveRole).toString());
+        const quint64 games = found != m_theory.end() ? found->second : 0;
+        const double share =
+            100.0 * static_cast<double>(games) / static_cast<double>(m_theoryTotal);
+        item->setSortValue(kTheoryColumn, share);
+        QString text = QStringLiteral("<1%");
+        if (games == 0) {
+            text = QStringLiteral("–");
+        } else if (share >= 1.0) {
+            text = QStringLiteral("%1%").arg(qRound(share));
+        }
+        item->setText(kTheoryColumn, text);
+        item->setTextAlignment(kTheoryColumn, Qt::AlignRight | Qt::AlignVCenter);
+        item->setForeground(kTheoryColumn, c.muted);
+    }
+}
+
+QString ExplorerPanel::theoryShare(const QString& san) const {
+    for (int i = 0; i < m_moves->topLevelItemCount(); ++i) {
+        if (m_moves->topLevelItem(i)->text(0) == san) {
+            return m_moves->isColumnHidden(kTheoryColumn)
+                       ? QString()
+                       : m_moves->topLevelItem(i)->text(kTheoryColumn);
+        }
+    }
+    return {};
+}
+
+std::vector<GapSource> ExplorerPanel::theorySources() {
+    std::vector<GapSource> sources;
+    for (const auto& [kind, name] :
+         {std::pair{LichessExplorer::Kind::Masters, tr("Masters (Lichess)")},
+          std::pair{LichessExplorer::Kind::Lichess, tr("Lichess")}}) {
+        GapSource source;
+        source.name = name;
+        if (m_lichess.signedIn()) {
+            source.explore = m_online->blocking(kind, gamedb::ExploreFilter{});
+        } else {
+            source.unavailable = tr("Sign in to Lichess to compare with its games.");
+        }
+        sources.push_back(std::move(source));
+    }
+    for (const InstalledDatabase& database : m_databases.databases()) {
+        GapSource source;
+        source.name = QString::fromStdString(database.db->info().name);
+        source.explore = [db = database.db](std::span<const core::Move> line) {
+            std::vector<repertoire::MoveCount> result;
+            for (const auto& stats : db->explore(line).moves) {
+                result.push_back({stats.move, stats.games});
+            }
+            return result;
+        };
+        sources.push_back(std::move(source));
+    }
+    // Usable ones first: a signed-out Lichess comes after the databases.
+    std::stable_partition(sources.begin(), sources.end(), [](const GapSource& source) {
+        return static_cast<bool>(source.explore);
+    });
+    return sources;
+}
+
 bool ExplorerPanel::onlineSource() const {
     return m_source->currentData().toString().startsWith(u"lichess:");
 }
@@ -747,6 +882,7 @@ void ExplorerPanel::showAnswer(const gamedb::Explored& explored,
         cellBox->addWidget(bar, 0, Qt::AlignVCenter);
         m_moves->setItemWidget(item, 3, cell);
     }
+    fillTheoryColumn();
     m_moves->setSortingEnabled(true); // sorts by the column chosen
     m_games->clear();
     for (const gamedb::GameInfo& game : games) {

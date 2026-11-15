@@ -2,6 +2,7 @@
 #include "kiebitz/repertoire/drill.hpp"
 #include "kiebitz/repertoire/gaps.hpp"
 #include "kiebitz/repertoire/openings.hpp"
+#include "kiebitz/repertoire/prep.hpp"
 #include "kiebitz/repertoire/summary.hpp"
 #include "kiebitz/repertoire/theory.hpp"
 #include "kiebitz/repertoire/tree.hpp"
@@ -519,4 +520,117 @@ TEST(RepertoireMerge, GamesBecomeOneTree) {
     EXPECT_EQ(merged.node(answers[1]).san, "Nc3");
     EXPECT_EQ(merged.node(answers[1]).comment, "Closed");
     EXPECT_EQ(merged.nodeCount(), 10U); // the root and e4 e5 Nf3 c5 Nf3 Nc3 d4 d5 c4
+}
+
+namespace {
+
+std::vector<core::Move> movesOf(std::string_view text) {
+    return repertoire::parseLine(text).value();
+}
+
+} // namespace
+
+TEST(RepertoirePrep, YourOptionsAndTheirRepliesWithYourRepertoireAlongside) {
+    using repertoire::PlayedGame;
+    // The player as Black: against 1. e4 the Caro-Kann (3 games), the Sicilian once; against
+    // 1. d4 once. Their White game doesn't count when you are White.
+    const std::vector<PlayedGame> games{
+        {movesOf("1. e4 c6 2. d4 d5 3. Nc3 dxe4"), core::Color::Black, 0, 20260901},
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 Bf5"), core::Color::Black, 2, 20250101},
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 Bf5"), core::Color::Black, 1, 20240101},
+        {movesOf("1. e4 c5 2. Nf3 d6"), core::Color::Black, 1, 20230101},
+        {movesOf("1. d4 Nf6 2. c4 g6"), core::Color::Black, 2, 20220101},
+        {movesOf("1. e4 e5 2. Nf3"), core::Color::White, 2, 20260101},
+    };
+    // Your White repertoire: 1. e4, against the Caro-Kann 3. e5; nothing against 1... c5.
+    repertoire::Tree white(core::Color::White);
+    white.add(pgn::parseGame("1. e4 c6 2. d4 d5 3. e5 (3. Nd2) *").value(), 0, 0);
+    white.add(pgn::parseGame("1. e4 e5 2. Nf3 *").value(), 0, 1);
+    const repertoire::PrepTree tree(games, core::Color::White, &white);
+    EXPECT_EQ(tree.games(), 5U);
+
+    // Your first moves: 1. e4 (4 of their games, in your repertoire), 1. d4 (1, not in it).
+    const auto first = tree.moves({});
+    ASSERT_EQ(first.size(), 2U);
+    EXPECT_EQ(first[0].san, "e4");
+    EXPECT_TRUE(first[0].yours);
+    EXPECT_EQ(first[0].games, 4U);
+    EXPECT_EQ(first[0].points2, 4U); // lost, won, drew, drew
+    EXPECT_EQ(first[0].won, 1U);
+    EXPECT_EQ(first[0].drawn, 2U);
+    EXPECT_EQ(first[0].lost, 1U);
+    EXPECT_EQ(first[0].lastDate, 20260901);
+    EXPECT_TRUE(first[0].inRepertoire);
+    EXPECT_TRUE(first[1].outsideRepertoire);
+
+    // Their replies to 1. e4: the Caro-Kann (answered), the Sicilian (not answered).
+    const auto replies = tree.moves(movesOf("1. e4"));
+    ASSERT_EQ(replies.size(), 2U);
+    EXPECT_EQ(replies[0].san, "c6");
+    EXPECT_FALSE(replies[0].yours);
+    EXPECT_TRUE(replies[0].inRepertoire);
+    EXPECT_EQ(replies[1].san, "c5");
+    EXPECT_TRUE(replies[1].outsideRepertoire);
+
+    // After 2... d5: 3. e5 twice (yours), 3. Nc3 once (not yours).
+    const auto third = tree.moves(movesOf("1. e4 c6 2. d4 d5"));
+    ASSERT_EQ(third.size(), 2U);
+    EXPECT_EQ(third[0].san, "e5");
+    EXPECT_EQ(third[0].games, 2U);
+    EXPECT_DOUBLE_EQ(third[0].score(), 0.75);
+    EXPECT_TRUE(third[1].outsideRepertoire);
+}
+
+TEST(RepertoirePrep, AYourMoveTheyNeverMetIsAnOptionToo) {
+    const std::vector<repertoire::PlayedGame> games{
+        {movesOf("1. e4 c6 2. d4 d5 3. e5"), core::Color::Black, 1, 0}};
+    repertoire::Tree white(core::Color::White);
+    white.add(pgn::parseGame("1. e4 c6 2. d4 d5 3. Nd2 *").value(), 0, 0);
+    const repertoire::PrepTree tree(games, core::Color::White, &white);
+    const auto moves = tree.moves(movesOf("1. e4 c6 2. d4 d5"));
+    ASSERT_EQ(moves.size(), 2U);
+    EXPECT_EQ(moves[1].san, "Nd2");
+    EXPECT_EQ(moves[1].games, 0U);
+    EXPECT_TRUE(moves[1].inRepertoire);
+}
+
+TEST(RepertoirePrep, APrepFileHasTheChosenLinesAndTheirRepliesAsVariations) {
+    using repertoire::PlayedGame;
+    const std::vector<PlayedGame> games{
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6"), core::Color::Black, 1, 20260101},
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6"), core::Color::Black, 0, 20250101},
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 c5 4. dxc5"), core::Color::Black, 2, 20240101},
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 c5 4. c3"), core::Color::Black, 2, 20230101},
+        {movesOf("1. e4 c6 2. d4 d5 3. e5 h5"), core::Color::Black, 2, 20220101}, // once: left out
+    };
+    const repertoire::PrepTree tree(games, core::Color::White);
+    repertoire::PrepTree::FileOptions options;
+    options.event = "Preparation: Petra Pawn";
+    options.plies = 3;
+    options.keep = 0;
+    options.comment = [](const repertoire::PrepMove& move) {
+        return std::to_string(move.games) + " games";
+    };
+    const std::vector<std::vector<core::Move>> lines{movesOf("1. e4 c6 2. d4 d5 3. e5")};
+    const core::Game game = tree.prepFile(lines, options);
+    EXPECT_EQ(game.header("FileType"), "Repertoire");
+    EXPECT_EQ(game.header("Orientation"), "white");
+    EXPECT_EQ(game.header("Event"), "Preparation: Petra Pawn");
+    std::string pgn = pgn::writeGame(game);
+    std::replace(pgn.begin(), pgn.end(), '\n', ' '); // wrapped at 80 columns
+    // The line, then their two replies played twice each; 3... h5 (once) is left out. Your
+    // answers: the move most played against them (4. Nf3; 4. dxc5 and 4. c3 tie: the first).
+    EXPECT_NE(pgn.find("3. e5 Bf5 {2 games} (3... c5"), std::string::npos) << pgn;
+    EXPECT_NE(pgn.find(") 4. Nf3 e6 {2 games}"), std::string::npos) << pgn;
+    EXPECT_NE(pgn.find("(3... c5 {2 games} 4. dxc5"), std::string::npos) << pgn;
+    EXPECT_EQ(pgn.find("h5"), std::string::npos) << pgn;
+    EXPECT_NE(pgn.find("c6 {5 games}"), std::string::npos) << pgn; // on the way, theirs too
+}
+
+TEST(RepertoirePrep, PgnDatesBecomeNumbers) {
+    EXPECT_EQ(repertoire::dateNumber("2024.05.12"), 20240512);
+    EXPECT_EQ(repertoire::dateNumber("2024.??.??"), 20240000);
+    EXPECT_EQ(repertoire::dateNumber("2024"), 20240000);
+    EXPECT_EQ(repertoire::dateNumber("????.??.??"), 0);
+    EXPECT_EQ(repertoire::dateNumber(""), 0);
 }

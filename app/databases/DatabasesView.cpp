@@ -11,6 +11,7 @@
 #include "widgets/Message.hpp"
 
 #include <QAbstractTableModel>
+#include <QDate>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QHBoxLayout>
@@ -147,7 +148,24 @@ DatabasesView::DatabasesView(DatabaseManager& manager, const AppStyle& style, QW
     auto* titles = new QVBoxLayout;
     titles->setSpacing(0);
     titles->addWidget(m_title);
-    titles->addWidget(m_subtitle);
+    // Lichess's broadcasts: new months to download, a link after the subtitle (it comes and
+    // goes at the end of the line: nothing moves).
+    m_update = new QPushButton;
+    m_update->setObjectName(QStringLiteral("databaseUpdate"));
+    m_update->setProperty("role", "link");
+    m_update->setFocusPolicy(Qt::NoFocus);
+    m_update->hide();
+    connect(m_update, &QPushButton::clicked, this, [this] {
+        m_update->hide();
+        m_newMonths = 0;
+        m_manager.updateBroadcasts();
+    });
+    auto* subtitleRow = new QHBoxLayout;
+    subtitleRow->setSpacing(10);
+    subtitleRow->addWidget(m_subtitle);
+    subtitleRow->addWidget(m_update);
+    subtitleRow->addStretch();
+    titles->addLayout(subtitleRow);
     top->addLayout(titles, 1);
     top->addWidget(m_gamesStatus);
     top->addSpacing(6);
@@ -208,7 +226,23 @@ DatabasesView::DatabasesView(DatabaseManager& manager, const AppStyle& style, QW
 
 void DatabasesView::addDatabase() {
     AddDatabaseDialog dialog(this);
-    if (dialog.exec() == QDialog::Accepted && !dialog.path().isEmpty()) {
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    if (dialog.broadcasts()) {
+        // About 770 MB of monthly files, and the database built from them (about as much).
+        const qint64 needed = 2'000'000'000;
+        const qint64 free = m_manager.spaceFree();
+        if (free >= 0 && needed > free) {
+            const QLocale locale;
+            notice(this, tr("Not enough space"),
+                   tr("Lichess's broadcasts need about %1 of disk space, and %2 is free.")
+                       .arg(locale.formattedDataSize(needed, 1, QLocale::DataSizeSIFormat),
+                            locale.formattedDataSize(free, 1, QLocale::DataSizeSIFormat)));
+            return;
+        }
+        m_manager.updateBroadcasts();
+    } else if (!dialog.path().isEmpty()) {
         importFile(dialog.path(), dialog.name(), dialog.source());
     }
 }
@@ -322,6 +356,7 @@ void DatabasesView::showSelected() {
     }
     m_shown = folder;
     m_db.reset();
+    m_update->hide();
     for (const InstalledDatabase& database : m_manager.databases()) {
         if (database.folder == folder) {
             m_db = database.db;
@@ -337,8 +372,38 @@ void DatabasesView::showSelected() {
     }
     const auto& info = m_db->info();
     m_title->setText(QString::fromStdString(info.name));
-    m_subtitle->setText(tr("%1 games  ·  from %2")
-                            .arg(number(m_db->gameCount()), QString::fromStdString(info.source)));
+    m_subtitle->setToolTip(QString());
+    if (info.source != DatabaseManager::kBroadcastsSource) {
+        m_subtitle->setText(
+            tr("%1 games  ·  from %2")
+                .arg(number(m_db->gameCount()), QString::fromStdString(info.source)));
+        return;
+    }
+    // Lichess's broadcasts: up to which month, and whether there are newer ones (asked at most
+    // once an hour).
+    const QString last = m_manager.broadcastMonths().value(m_manager.broadcastMonths().size() - 1);
+    const QDate month =
+        QDate::fromString(last + QStringLiteral("-01"), QStringLiteral("yyyy-MM-dd"));
+    m_subtitle->setText(tr("%1 games  ·  up to %2")
+                            .arg(number(m_db->gameCount()),
+                                 QLocale().toString(month, QStringLiteral("MMMM yyyy"))));
+    m_subtitle->setToolTip(tr("Lichess's broadcasts, CC BY-SA 4.0: credit lichess.org"));
+    const auto showUpdate = [this] {
+        m_update->setText(m_newMonths == 1 ? tr("Update: 1 new month")
+                                           : tr("Update: %1 new months").arg(m_newMonths));
+        m_update->setVisible(m_newMonths > 0);
+    };
+    if (m_checked.isValid() && m_checked.elapsed() < 3'600'000) {
+        showUpdate();
+        return;
+    }
+    m_checked.start();
+    m_manager.checkBroadcasts([this, showUpdate](int fresh, const QString& /*error*/) {
+        m_newMonths = std::max(fresh, 0);
+        if (m_db && m_db->info().source == DatabaseManager::kBroadcastsSource) {
+            showUpdate();
+        }
+    });
 }
 
 void DatabasesView::openRow(int row) {

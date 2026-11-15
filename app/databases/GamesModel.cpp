@@ -59,6 +59,10 @@ void GamesModel::setUpTable(QTableView& table) {
 
 void GamesModel::setDatabase(std::shared_ptr<const gamedb::Database> db) {
     m_db = std::move(db);
+    if (m_db) {
+        // What a search looks in, read now in the background: typing finds games at once.
+        (void)QtConcurrent::run([db = m_db] { db->prepareSearch(); });
+    }
     refresh();
 }
 

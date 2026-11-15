@@ -6,6 +6,7 @@
 #include <array>
 #include <charconv>
 #include <cstring>
+#include <exception>
 
 namespace kiebitz::gamedb {
 namespace {
@@ -169,6 +170,10 @@ ScannedGame scanGame(std::string_view text) {
             game.whiteElo = toInt(value);
         } else if (name == "BlackElo") {
             game.blackElo = toInt(value);
+        } else if (name == "WhiteFideId") {
+            game.whiteFideId = static_cast<std::uint32_t>(std::max(toInt(value), 0));
+        } else if (name == "BlackFideId") {
+            game.blackFideId = static_cast<std::uint32_t>(std::max(toInt(value), 0));
         } else if (name == "FEN") {
             game.fen = value;
         } else if (name == "TimeControl") {
@@ -281,7 +286,9 @@ ScannedGame scanGame(std::string_view text) {
             chess::Move move = chess::Move::NO_MOVE;
             try {
                 move = chess::uci::parseSan(board, token, moves);
-            } catch (const chess::uci::SanParseError&) {
+            } catch (const std::exception&) {
+                // Not a move here (SanParseError), or an ambiguous one (AmbiguousMoveError):
+                // the game is kept up to it. Never let it end the import.
                 move = chess::Move::NO_MOVE;
             }
             const auto byte =

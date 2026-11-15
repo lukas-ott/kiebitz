@@ -1,12 +1,14 @@
 #pragma once
 
 #include "Fide.hpp"
+#include "Wikidata.hpp"
 #include "kiebitz/core/game.hpp"
 #include "kiebitz/gamedb/database.hpp"
 
 #include <QDateTime>
 #include <QFuture>
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QUrl>
 
@@ -42,6 +44,13 @@ struct Account {
     int siteGames = 0;                    ///< games on the site (the downloads may be fewer)
 };
 
+/// An account that may be the profile's FIDE player's (see AccountFinder).
+struct SuggestedAccount {
+    AccountSite site = AccountSite::Lichess;
+    QString username;
+    QStringList reasons;
+};
+
 /// A person whose games Kiebitz keeps: you (the main profile), or a friend or opponent. All of a
 /// profile's games, from its accounts and the over-the-board games added to it, are one
 /// database; each account (and the over-the-board games) is also a database of its own, so it
@@ -59,9 +68,20 @@ struct Profile {
     bool fideLooked = false;  ///< a lookup has been done for this name
     bool fideLooking = false; ///< a lookup is under way
     QString fideError;        ///< why the last lookup failed (FIDE not answering), or empty
+    /// Online accounts that may be the FIDE player's, best first, looked for once per player.
+    std::vector<SuggestedAccount> suggestions;
+    int suggestionsFor = 0;  ///< the FIDE id they were looked for (0: not yet)
+    bool suggesting = false; ///< looking right now
+    QStringList dismissed;   ///< "Not them": "lichess:name", "chesscom:name"
+    /// What Wikidata knows about the FIDE player (looked up with the accounts): a photo,
+    /// Wikipedia articles; most players aren't there.
+    WikiPerson wiki;
     std::shared_ptr<const gamedb::Database> all; ///< null until built (or no games)
-    /// By part: an account's id, or "otb".
+    /// By part: an account's id, "otb" (your PGN files, games pasted), or a database's part
+    /// ("src-lichess-broadcasts": the player's games found in that database).
     std::map<QString, std::shared_ptr<const gamedb::Database>> parts;
+    /// The database parts there are: their part id and the database's name.
+    std::vector<std::pair<QString, QString>> sources;
     /// The profile's results by part ("" = all its games), counted from its games.
     std::map<QString, gamedb::Record> records;
 };
@@ -69,8 +89,10 @@ struct Profile {
 /// The profiles, kept in "Profiles" under the app's data folder:
 ///   profiles.json                 who they are and their accounts;
 ///   <profile>/<account>/*.pgn     the games as downloaded (or added: <profile>/otb/);
+///   <profile>/src-<db>/games.pgn  the player's games found in a game database (name.txt: its
+///                                 name);
 ///   <profile>/db/<part>/          the databases built from them (part: an account, "otb",
-///                                 or "all").
+///                                 a database's, or "all").
 /// Downloads and building run in the background; changed() and progress() tell the page.
 class ProfileStore : public QObject {
     Q_OBJECT
@@ -126,6 +148,20 @@ public:
     /// Who the profile is in a part's games ("" = all): usernames, and its names over the board.
     [[nodiscard]] static QStringList namesOf(const Profile& profile, const QString& part);
 
+    // A "part" may be several, chosen together: "otb+src-caissabase" (partsKey()). Everything
+    // above that takes a part takes such a key too.
+    /// The parts of a key, sorted ("" = none: all games).
+    [[nodiscard]] static QStringList splitParts(const QString& key);
+    /// The key of several parts (any order, once each).
+    [[nodiscard]] static QString partsKey(QStringList parts);
+    /// The games of a part, or of several together (each game once); null if there are none,
+    /// or several aren't combined yet (combine() does that).
+    [[nodiscard]] std::shared_ptr<const gamedb::Database> database(const QString& profileId,
+                                                                   const QString& part) const;
+    /// Combines several parts' games into one database, each game once (in the background;
+    /// changed() follows). Kept until the profile's games change.
+    void combine(const QString& profileId, const QString& part);
+
     /// Looks up the profile's FIDE player again (in the background; changed() follows).
     void lookUpFide(const QString& profileId);
     /// Picks one of the candidates as the profile's FIDE player (0: none of them).
@@ -135,13 +171,36 @@ public:
     [[nodiscard]] QString status(const QString& profileId) const;
     [[nodiscard]] bool busy(const QString& profileId) const;
 
-    /// The servers (tests point them at a fake one).
-    void setServers(const QUrl& lichess, const QUrl& chessCom, const QUrl& fide = {});
+    /// The servers (tests point them at a fake one). `wiki` is Wikidata's query service and
+    /// Wikimedia Commons; without it, a `fide` server given is used for those too.
+    void setServers(const QUrl& lichess, const QUrl& chessCom, const QUrl& fide = {},
+                    const QUrl& wiki = {});
+    /// The player's photo (from Wikimedia Commons), saved with the profile; empty if none.
+    [[nodiscard]] QString photoFile(const QString& profileId) const;
     /// The Lichess token to download an account's games with (its own, else any; empty: not
     /// signed in). Downloads with one go faster, an account's own games faster still.
     void setLichessToken(std::function<QByteArray(const QString& username)> token) {
         m_lichessToken = std::move(token);
     }
+    /// The game databases a player's games are looked for in, with their names (Lichess's
+    /// broadcasts, Caissabase, ...). Called on this thread whenever they are looked for.
+    using GameSources =
+        std::function<std::vector<std::pair<QString, std::shared_ptr<const gamedb::Database>>>()>;
+    void setGameSources(GameSources sources) { m_gameSources = std::move(sources); }
+    /// Whether there is a database to look in.
+    [[nodiscard]] bool hasGameSources() const;
+    /// Looks for the games of the profile's FIDE player in each of those databases (in the
+    /// background): by FIDE id where it has them, else by name. Each database's games are a
+    /// part of their own ("Games from"); games deleted from them stay deleted. Builds again
+    /// only if they changed. Busy: done once it isn't. Without a FIDE player: nothing.
+    void refreshSourceGames(const QString& profileId);
+
+    /// Looks for online accounts that may be the profile's FIDE player's (in the background;
+    /// changed() follows). Once per player, unless `again`.
+    void findAccounts(const QString& profileId, bool again = false);
+    /// "Not them": the suggestion goes, and isn't suggested again.
+    void dismissSuggestion(const QString& profileId, AccountSite site, const QString& username);
+
     /// Waits for running builds (tests, quitting).
     void wait();
 
@@ -168,7 +227,12 @@ private:
     void build(const QString& profileId);
     void fetchRatings(const std::shared_ptr<Job>& job, const QString& accountId);
     void computeRecords(const QString& profileId);
+    /// Takes what Wikidata says about the profile's player; fetches the photo if it is new.
+    void setWiki(const QString& profileId, const WikiPerson& wiki);
     void openDatabases(const QString& profileId);
+    /// The player's games from each database, as refreshSourceGames() writes them; `done` (on
+    /// this thread) gets whether anything changed.
+    void collectSourceGames(const QString& profileId, std::function<void(bool changed)> done);
 
     QString m_root;
     std::vector<Profile> m_profiles;
@@ -177,8 +241,15 @@ private:
     QUrl m_chessCom{QStringLiteral("https://api.chess.com")};
     std::function<QByteArray(const QString& username)> m_lichessToken;
     QUrl m_fide{QStringLiteral("https://lichess.org")}; ///< Lichess keeps FIDE's rating list
+    QUrl m_commons{QStringLiteral("https://commons.wikimedia.org")};
     QNetworkAccessManager* m_network = nullptr;
+    class AccountFinder* m_finder = nullptr;
     std::vector<QFuture<void>> m_builds;
+    GameSources m_gameSources;
+    QSet<QString> m_sourcesPending; ///< refreshSourceGames() asked for while busy
+    /// Several parts' games together, by "profile|key".
+    std::map<QString, std::shared_ptr<const gamedb::Database>> m_combined;
+    QSet<QString> m_combining; ///< being combined
 };
 
 } // namespace kiebitz::app

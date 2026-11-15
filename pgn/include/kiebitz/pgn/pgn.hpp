@@ -54,6 +54,11 @@ struct GameEntry {
 /// other headers don't count).
 [[nodiscard]] std::string gameKey(const core::Game& game);
 
+/// The same game from different sources (ChessBase writes "Wang,J", Lichess "Wang, Justin
+/// Zhide"): the players' surnames (letters only, any case), the date's digits, the result and
+/// the main line's moves.
+[[nodiscard]] std::string sameGameKey(const core::Game& game);
+
 /// Writes a game as standard PGN: headers, a blank line, then the moves wrapped at 80 columns,
 /// with variations, comments (arrows and marks as [%cal]/[%csl]) and NAGs as $n.
 [[nodiscard]] std::string writeGame(const core::Game& game);

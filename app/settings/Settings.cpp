@@ -23,6 +23,7 @@ const std::map<std::string_view, QVariant>& defaults() {
         {Settings::kLastMove, true},
         {Settings::kMoveMethod, QStringLiteral("both")},
         {Settings::kAutoQueen, false},
+        {Settings::kOneClick, true},
         {Settings::kWheel, true},
         {Settings::kNotationRows, false},
         {Settings::kFigurines, false},

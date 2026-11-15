@@ -32,6 +32,7 @@ PLUGINS=(
     platforms/libqcocoa.dylib
     styles/libqmacstyle.dylib
     tls/libqsecuretransportbackend.dylib # HTTPS (Stockfish download, Lichess cloud) via macOS
+    imageformats/libqjpeg.dylib          # players' photos (Wikimedia Commons)
 )
 
 QTPATHS="${QTPATHS:-$(command -v qtpaths6 || command -v qtpaths)}"

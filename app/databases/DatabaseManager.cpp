@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
 #include <QStandardPaths>
@@ -329,6 +330,12 @@ void DatabaseManager::finished(int id, const QString& error) {
 }
 
 void DatabaseManager::cancel(int job) {
+    if (job != 0 && job == m_broadcastUpdate.job) {
+        m_broadcastUpdate.cancelled = true; // its download stops; its build stops below
+        if (m_broadcastUpdate.reply != nullptr) {
+            m_broadcastUpdate.reply->abort();
+        }
+    }
     for (const Running& running : m_running) {
         if (running.id == job) {
             running.cancel->store(true);

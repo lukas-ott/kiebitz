@@ -45,6 +45,9 @@ if(KIEBITZ_BUILD_APP)
         ui/test_translations.cpp)
     find_package(Qt6 REQUIRED COMPONENTS Test)
     target_link_libraries(kiebitz_ui_tests PRIVATE kiebitz_ui Qt6::Test GTest::gtest)
+    # zstd's header, to make Lichess-like downloads (the library comes with kiebitz_ui).
+    target_include_directories(kiebitz_ui_tests SYSTEM PRIVATE
+        $<TARGET_PROPERTY:zstd,INTERFACE_INCLUDE_DIRECTORIES>)
     kiebitz_set_warnings(kiebitz_ui_tests)
     # A predictable stand-in for a UCI engine (see fake_engine.cpp).
     add_executable(kiebitz_fake_engine fake_engine.cpp)

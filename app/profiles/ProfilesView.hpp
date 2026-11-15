@@ -1,5 +1,6 @@
 #pragma once
 
+#include "board/BoardTheme.hpp"
 #include "kiebitz/core/game.hpp"
 #include "kiebitz/gamedb/database.hpp"
 #include "kiebitz/repertoire/theory.hpp"
@@ -54,6 +55,10 @@ public:
     /// The profile shown (its id).
     [[nodiscard]] QString current() const { return m_current; }
     void select(const QString& profileId);
+    /// Games copied as PGN (from ChessBase's online database), into the over-the-board games.
+    void pasteGames();
+    /// The Prepare tab's board: colours and pieces as on the Board page.
+    void setBoardLook(const BoardTheme& theme, const QString& pieces);
 
 signals:
     void openGameRequested(const kiebitz::core::Game& game);
@@ -63,6 +68,8 @@ signals:
     /// The repertoire file for `side` with the position after `line`, opened there.
     void repertoireRequested(kiebitz::core::Color side,
                              const std::vector<kiebitz::core::Move>& line);
+    /// The Prepare tab's "Create Prep File": a repertoire file to save in the Library.
+    void prepFileRequested(const QString& name, const kiebitz::core::Game& game);
     /// The theory check is done (tests).
     void theoryChecked();
 
@@ -84,6 +91,7 @@ private:
     void addAccount();
     void addOtbGames();
     void showFideCard();
+    void showPhoto();
     /// The game selected in the Games tab, deleted from the profile (after asking).
     void deleteSelectedGame();
 
@@ -97,18 +105,23 @@ private:
     QListWidget* m_list = nullptr;
     QLabel* m_name = nullptr;
     QPushButton* m_info = nullptr; ///< "i": the profile's FIDE player
+    QLabel* m_photo = nullptr;     ///< the player's photo (Wikimedia Commons), if there is one
+    QString m_photoShown;          ///< the photo file shown, and when it was written
     QLabel* m_summary = nullptr;
     QLabel* m_status = nullptr;
     QStackedWidget* m_summaryLine = nullptr; ///< m_summary, or m_status while there is one
     QPushButton* m_sync = nullptr;
     QPushButton* m_rename = nullptr;
     QPushButton* m_remove = nullptr;
-    QVBoxLayout* m_accounts = nullptr; ///< the account cards, one above the other
-    QComboBox* m_parts = nullptr;      ///< all games, one account, over the board
-    QString m_part;                    ///< the part looked at ("" = all)
-    std::uint8_t m_speeds = 0;         ///< the time control looked at (bits: 1 << Speed; 0: all)
-    QStackedWidget* m_pages = nullptr; ///< Overview | Games
-    QLabel* m_totalText = nullptr;     ///< "1,234 games · 54%"
+    QVBoxLayout* m_accounts = nullptr;    ///< the account cards, one above the other
+    class MultiChoice* m_parts = nullptr; ///< games from: accounts, over the board, databases
+    QString m_part;                       ///< the part looked at ("" = all)
+    std::uint8_t m_speeds = 0;            ///< the time control looked at (bits: 1 << Speed; 0: all)
+    QStackedWidget* m_pages = nullptr;    ///< Overview | Games | Repertoire | Prepare
+    class PreparePage* m_prepare = nullptr;
+    QPushButton* m_showRepertoire = nullptr; ///< your own profile only
+    QPushButton* m_showPrepare = nullptr;    ///< someone else's only
+    QLabel* m_totalText = nullptr;           ///< "1,234 games · 54%"
     ResultBar* m_totalBar = nullptr;
     QLabel* m_legend = nullptr; ///< wins, draws, losses with their numbers
     QLabel* m_whiteText = nullptr;

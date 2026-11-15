@@ -24,6 +24,8 @@ public:
     [[nodiscard]] QString path() const { return m_path; }
     [[nodiscard]] QString name() const;
     [[nodiscard]] QString source() const { return m_source; }
+    /// Lichess's broadcasts were chosen: Kiebitz downloads them itself.
+    [[nodiscard]] bool broadcasts() const { return m_broadcasts; }
 
     /// For tests: choose a file as if picked in the Local part.
     void chooseFile(const QString& path);
@@ -38,6 +40,7 @@ private:
     QPushButton* m_import = nullptr;
     QString m_path;
     QString m_source;
+    bool m_broadcasts = false;
 };
 
 } // namespace kiebitz::app

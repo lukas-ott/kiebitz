@@ -2,6 +2,7 @@
 
 #include "kiebitz/core/game.hpp"
 
+#include <QElapsedTimer>
 #include <QWidget>
 
 #include <memory>
@@ -63,7 +64,10 @@ private:
     ElidedLabel* m_gamesStatus = nullptr; ///< "Searching…", "The first 10,000 are shown"
     QTableView* m_games = nullptr;
     GamesModel* m_model = nullptr;
-    QString m_shown; ///< the folder of the database shown
+    QString m_shown;                 ///< the folder of the database shown
+    QPushButton* m_update = nullptr; ///< Lichess's broadcasts: "Update: 2 new months"
+    int m_newMonths = 0;
+    QElapsedTimer m_checked; ///< since Lichess was last asked for new months
     std::shared_ptr<const gamedb::Database> m_db;
 };
 

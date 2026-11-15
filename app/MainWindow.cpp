@@ -14,6 +14,7 @@
 #include "notation/NotationView.hpp"
 #include "notify/Notifications.hpp"
 #include "panels/GameInfoPanel.hpp"
+#include "profiles/ProfilesView.hpp"
 #include "puzzles/PuzzlesView.hpp"
 #include "repertoire/Practice.hpp"
 #include "repertoire/PracticeStats.hpp"
@@ -341,6 +342,10 @@ void MainWindow::paste() {
     }
     if (auto* text = qobject_cast<QPlainTextEdit*>(focus)) {
         text->paste();
+        return;
+    }
+    if (m_section == Section::Profiles) {
+        m_profilesView->pasteGames(); // games copied from ChessBase: the profile's
         return;
     }
     m_documents->openText(QApplication::clipboard()->text());

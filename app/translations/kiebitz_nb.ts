@@ -171,6 +171,33 @@
     </message>
 </context>
 <context>
+    <name>kiebitz::app::AccountFinder</name>
+    <message>
+        <source>Listed on Wikidata</source>
+        <translation>Oppført på Wikidata</translation>
+    </message>
+    <message>
+        <source>Real name matches</source>
+        <translation>Ekte navn stemmer</translation>
+    </message>
+    <message>
+        <source>Surname in the real name</source>
+        <translation>Etternavn i det ekte navnet</translation>
+    </message>
+    <message>
+        <source>FIDE %1 in the profile</source>
+        <translation>FIDE %1 i profilen</translation>
+    </message>
+    <message>
+        <source>Verified %1</source>
+        <translation>Bekreftet %1</translation>
+    </message>
+    <message>
+        <source>Name in the username</source>
+        <translation>Navnet i brukernavnet</translation>
+    </message>
+</context>
+<context>
     <name>kiebitz::app::ActivityChart</name>
     <message>
         <source>No dated games yet</source>
@@ -250,6 +277,22 @@
     <message>
         <source>Cancel</source>
         <translation>Avbryt</translation>
+    </message>
+    <message>
+        <source>Every tournament Lichess has broadcast since 2020, about a million games.</source>
+        <translation>Hver turnering Lichess har sendt siden 2020, omtrent en million partier.</translation>
+    </message>
+    <message>
+        <source>About 770 MB to download, then a little each month</source>
+        <translation>Omtrent 770 MB å laste ned, så litt hver måned</translation>
+    </message>
+    <message>
+        <source>CC BY-SA 4.0: free to use, credit lichess.org.</source>
+        <translation>CC BY-SA 4.0: fritt å bruke, kreditt til lichess.org.</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Last ned</translation>
     </message>
     <message>
         <source>Open Download Page</source>
@@ -388,6 +431,30 @@
         <source>The database couldn't be removed.</source>
         <translation>Databasen kunne ikke fjernes.</translation>
     </message>
+    <message>
+        <source>Lichess's database isn't answering. Try again later.</source>
+        <translation>Lichess sin database svarer ikke. Prøv igjen senere.</translation>
+    </message>
+    <message>
+        <source>Looking for new months</source>
+        <translation>Ser etter nye måneder</translation>
+    </message>
+    <message>
+        <source>Couldn't save the download.</source>
+        <translation>Kunne ikke lagre nedlastingen.</translation>
+    </message>
+    <message>
+        <source>Downloading month %1 of %2</source>
+        <translation>Laster ned måned %1 av %2</translation>
+    </message>
+    <message>
+        <source>The download didn't finish. Check the connection and try again.</source>
+        <translation>Nedlastingen ble ikke ferdig. Sjekk forbindelsen og prøv igjen.</translation>
+    </message>
+    <message>
+        <source>No games were found in Lichess's broadcasts.</source>
+        <translation>Ingen partier ble funnet i Lichess sine overføringer.</translation>
+    </message>
 </context>
 <context>
     <name>kiebitz::app::DatabasesView</name>
@@ -428,6 +495,10 @@
         <translation>Ikke nok plass</translation>
     </message>
     <message>
+        <source>Lichess's broadcasts need about %1 of disk space, and %2 is free.</source>
+        <translation>Lichess sine overføringer trenger omtrent %1 diskplass, og %2 er ledig.</translation>
+    </message>
+    <message>
         <source>Importing this needs about %1 of disk space, and %2 is free.</source>
         <translation>Importen trenger omtrent %1 diskplass, og %2 er ledig.</translation>
     </message>
@@ -458,6 +529,22 @@
     <message>
         <source>%1 games  ·  from %2</source>
         <translation>%1 partier  ·  fra %2</translation>
+    </message>
+    <message>
+        <source>%1 games  ·  up to %2</source>
+        <translation>%1 partier  ·  til og med %2</translation>
+    </message>
+    <message>
+        <source>Lichess's broadcasts, CC BY-SA 4.0: credit lichess.org</source>
+        <translation>Lichess sine overføringer, CC BY-SA 4.0: kreditt til lichess.org</translation>
+    </message>
+    <message>
+        <source>Update: 1 new month</source>
+        <translation>Oppdater: 1 ny måned</translation>
+    </message>
+    <message>
+        <source>Update: %1 new months</source>
+        <translation>Oppdater: %1 nye måneder</translation>
     </message>
 </context>
 <context>
@@ -805,6 +892,10 @@
         <translation>RATING</translation>
     </message>
     <message>
+        <source>THEORY</source>
+        <translation>TEORI</translation>
+    </message>
+    <message>
         <source>RESULT</source>
         <translation>RESULTAT</translation>
     </message>
@@ -903,6 +994,14 @@
     <message>
         <source>Add a database or sign in to Lichess, then choose it in the Explorer tab.</source>
         <translation>Legg til en database eller logg inn på Lichess, og velg den så i Utforsker-fanen.</translation>
+    </message>
+    <message>
+        <source>How often each move is played in %1</source>
+        <translation>Hvor ofte hvert trekk spilles i %1</translation>
+    </message>
+    <message>
+        <source>Sign in to Lichess to compare with its games.</source>
+        <translation>Logg inn på Lichess for å sammenligne med partiene der.</translation>
     </message>
     <message>
         <source>1 game</source>
@@ -1014,6 +1113,10 @@
     <message>
         <source>Open FIDE Profile</source>
         <translation>Åpne FIDE-profil</translation>
+    </message>
+    <message>
+        <source>Wikipedia</source>
+        <translation>Wikipedia</translation>
     </message>
     <message>
         <source>Try Again</source>
@@ -2021,6 +2124,22 @@
         <translation>Info</translation>
     </message>
     <message>
+        <source>Create Prep File</source>
+        <translation>Lag forberedelsesfil</translation>
+    </message>
+    <message>
+        <source>Choose a Library folder first: the file goes into it.</source>
+        <translation>Velg en biblioteksmappe først: filen legges der.</translation>
+    </message>
+    <message>
+        <source>Preparation</source>
+        <translation>Forberedelse</translation>
+    </message>
+    <message>
+        <source>The file couldn't be saved.</source>
+        <translation>Filen kunne ikke lagres.</translation>
+    </message>
+    <message>
         <source>Restart Kiebitz?</source>
         <translation>Starte Kiebitz på nytt?</translation>
     </message>
@@ -2101,6 +2220,13 @@
     <message>
         <source>↑ ↓ to choose a continuation, → to play it</source>
         <translation>↑ ↓ velger en fortsettelse, → spiller den</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::MultiChoice</name>
+    <message>
+        <source>%1 sources</source>
+        <translation>%1 kilder</translation>
     </message>
 </context>
 <context>
@@ -2311,6 +2437,145 @@
     </message>
 </context>
 <context>
+    <name>kiebitz::app::PreparePage</name>
+    <message>
+        <source>I play</source>
+        <translation>Jeg spiller</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Hvit</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>Svart</translation>
+    </message>
+    <message>
+        <source>Open on the board</source>
+        <translation>Åpne på brettet</translation>
+    </message>
+    <message>
+        <source>RESULTS</source>
+        <translation>RESULTATER</translation>
+    </message>
+    <message>
+        <source>YOUR PREP</source>
+        <translation>DIN FORBEREDELSE</translation>
+    </message>
+    <message>
+        <source>Create Prep File</source>
+        <translation>Lag forberedelsesfil</translation>
+    </message>
+    <message>
+        <source>MOVE</source>
+        <translation>TREKK</translation>
+    </message>
+    <message>
+        <source>Start (Home)</source>
+        <translation>Start (Home)</translation>
+    </message>
+    <message>
+        <source>Back (←)</source>
+        <translation>Tilbake (←)</translation>
+    </message>
+    <message>
+        <source>Forward (→)</source>
+        <translation>Fremover (→)</translation>
+    </message>
+    <message>
+        <source>End (End)</source>
+        <translation>Slutt (End)</translation>
+    </message>
+    <message>
+        <source>Reading their games…</source>
+        <translation>Leser partiene …</translation>
+    </message>
+    <message>
+        <source>No games of theirs with Black.</source>
+        <translation>Ingen partier med svart.</translation>
+    </message>
+    <message>
+        <source>No games of theirs with White.</source>
+        <translation>Ingen partier med hvit.</translation>
+    </message>
+    <message>
+        <source>Their %1 games with Black</source>
+        <translation>Deres %1 partier med svart</translation>
+    </message>
+    <message>
+        <source>Their %1 games with White</source>
+        <translation>Deres %1 partier med hvit</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>Start</translation>
+    </message>
+    <message>
+        <source>YOUR MOVES</source>
+        <translation>DINE TREKK</translation>
+    </message>
+    <message>
+        <source>THEIR REPLIES</source>
+        <translation>DERES SVAR</translation>
+    </message>
+    <message>
+        <source>Your repertoire's move</source>
+        <translation>Repertoarets trekk</translation>
+    </message>
+    <message>
+        <source>never met</source>
+        <translation>aldri møtt</translation>
+    </message>
+    <message>
+        <source>In your prep: click to take it out</source>
+        <translation>I forberedelsen din: klikk for å ta det ut</translation>
+    </message>
+    <message>
+        <source>Add this line to your prep</source>
+        <translation>Legg denne varianten til forberedelsen</translation>
+    </message>
+    <message>
+        <source>None of their games go further.</source>
+        <translation>Ingen av partiene deres går videre.</translation>
+    </message>
+    <message>
+        <source>Take it out</source>
+        <translation>Ta ut</translation>
+    </message>
+    <message>
+        <source>Preparation: %1</source>
+        <translation>Forberedelse: %1</translation>
+    </message>
+    <message>
+        <source>%1: 1 game</source>
+        <translation>%1: 1 parti</translation>
+    </message>
+    <message>
+        <source>%1: %2 games</source>
+        <translation>%1: %2 partier</translation>
+    </message>
+    <message>
+        <source>scores %1%</source>
+        <translation>scorer %1%</translation>
+    </message>
+    <message>
+        <source>last %1</source>
+        <translation>sist %1</translation>
+    </message>
+    <message>
+        <source>GAMES</source>
+        <translation>PARTIER</translation>
+    </message>
+    <message>
+        <source>LAST</source>
+        <translation>SIST</translation>
+    </message>
+    <message>
+        <source>No games here yet.</source>
+        <translation>Ingen partier her ennå.</translation>
+    </message>
+</context>
+<context>
     <name>kiebitz::app::ProfileStore</name>
     <message>
         <source>There is no %1 account called %2.</source>
@@ -2335,6 +2600,10 @@
     <message>
         <source>Adding games…</source>
         <translation>Legger til partier …</translation>
+    </message>
+    <message>
+        <source>Looking for tournament games…</source>
+        <translation>Ser etter turneringspartier …</translation>
     </message>
     <message>
         <source>Couldn't reach %1 to look up %2. Try again in a moment.</source>
@@ -2456,6 +2725,10 @@
         <translation>FIDEs ratingliste</translation>
     </message>
     <message>
+        <source>Photo: Wikimedia Commons</source>
+        <translation>Foto: Wikimedia Commons</translation>
+    </message>
+    <message>
         <source>Overview</source>
         <translation>Oversikt</translation>
     </message>
@@ -2466,6 +2739,10 @@
     <message>
         <source>Repertoire</source>
         <translation>Repertoar</translation>
+    </message>
+    <message>
+        <source>Prepare</source>
+        <translation>Forbered</translation>
     </message>
     <message>
         <source>Games from</source>
@@ -2668,8 +2945,20 @@
         <translation>Over brettet</translation>
     </message>
     <message>
-        <source>Your tournament games, from PGN files</source>
-        <translation>Brettpartiene dine, fra PGN-filer</translation>
+        <source>Add a database in Databases (Lichess's broadcasts, Caissabase) to find their tournament games by themselves</source>
+        <translation>Legg til en database under Databaser (Lichess sine overføringer, Caissabase) for å finne turneringspartiene av seg selv</translation>
+    </message>
+    <message>
+        <source>None of their games in your databases</source>
+        <translation>Ingen av partiene deres i databasene dine</translation>
+    </message>
+    <message>
+        <source>The player on ChessBase: copy their games there and paste them here</source>
+        <translation>Spilleren hos ChessBase: kopier partiene der og lim dem inn her</translation>
+    </message>
+    <message>
+        <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase's online database.</source>
+        <translation>Det er ingen partier på utklippstavlen. Kopier partier som PGN først, for eksempel i ChessBase sin nettdatabase.</translation>
     </message>
     <message>
         <source>LICHESS</source>
@@ -2818,6 +3107,38 @@
     <message>
         <source>Add Account</source>
         <translation>Legg til konto</translation>
+    </message>
+    <message>
+        <source>Tournament games, from PGN files or ChessBase</source>
+        <translation>Turneringspartier, fra PGN-filer eller ChessBase</translation>
+    </message>
+    <message>
+        <source>Paste Games</source>
+        <translation>Lim inn partier</translation>
+    </message>
+    <message>
+        <source>Games copied from ChessBase or anywhere else, as PGN (⌘V)</source>
+        <translation>Partier kopiert fra ChessBase eller hvor som helst, som PGN (⌘V)</translation>
+    </message>
+    <message>
+        <source>Search on ChessBase</source>
+        <translation>Søk hos ChessBase</translation>
+    </message>
+    <message>
+        <source>MAYBE THEIRS</source>
+        <translation>KANSKJE DERES</translation>
+    </message>
+    <message>
+        <source>Looking on Lichess and chess.com…</source>
+        <translation>Ser på Lichess og chess.com …</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Legg til</translation>
+    </message>
+    <message>
+        <source>Not them</source>
+        <translation>Ikke dem</translation>
     </message>
     <message>
         <source>There's no %1 account called “%2”.</source>
@@ -3318,6 +3639,14 @@
     <message>
         <source>Without asking which piece.</source>
         <translation>Uten å spørre hvilken brikke.</translation>
+    </message>
+    <message>
+        <source>One-click moves</source>
+        <translation>Trekk med ett klikk</translation>
+    </message>
+    <message>
+        <source>A click on a square moves the only piece that can go there.</source>
+        <translation>Et klikk på et felt flytter den eneste brikken som kan gå dit.</translation>
     </message>
     <message>
         <source>Scroll through moves</source>

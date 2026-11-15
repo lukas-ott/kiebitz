@@ -1,11 +1,14 @@
 #include "kiebitz/gamedb/import.hpp"
 
+#include <algorithm>
 #include <condition_variable>
+#include <cstring>
 #include <deque>
 #include <map>
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <zstd.h>
 
 namespace kiebitz::gamedb {
 namespace {
@@ -174,6 +177,133 @@ ImportResult importPgn(DatabaseWriter& writer,
     }
     storer.join();
     return result;
+}
+
+} // namespace kiebitz::gamedb
+
+namespace kiebitz::gamedb {
+
+PgnFilesReader::PgnFilesReader(std::vector<std::string> paths,
+                               std::atomic<std::uint64_t>* bytesRead)
+    : m_paths(std::move(paths)), m_input(1U << 20U), m_bytesRead(bytesRead) {}
+
+PgnFilesReader::~PgnFilesReader() {
+    closeFile();
+}
+
+void PgnFilesReader::closeFile() {
+    if (m_file != nullptr) {
+        std::fclose(m_file);
+        m_file = nullptr;
+    }
+    if (m_zstd != nullptr) {
+        ZSTD_freeDCtx(static_cast<ZSTD_DCtx*>(m_zstd));
+        m_zstd = nullptr;
+    }
+    m_inputPos = 0;
+    m_inputSize = 0;
+}
+
+bool PgnFilesReader::openNext() {
+    closeFile();
+    while (m_next < m_paths.size()) {
+        const std::string& path = m_paths[m_next++];
+        m_file = std::fopen(path.c_str(), "rb");
+        if (m_file == nullptr) {
+            m_error = "Couldn't read " + path + ".";
+            return false;
+        }
+        m_inputSize = std::fread(m_input.data(), 1, m_input.size(), m_file);
+        m_inputPos = 0;
+        if (m_bytesRead != nullptr) {
+            m_bytesRead->fetch_add(m_inputSize);
+        }
+        // A zstd frame (28 B5 2F FD), or a skippable one (5? 2A 4D 18).
+        const auto byte = [&](std::size_t i) -> unsigned {
+            return static_cast<unsigned char>(m_input[i]);
+        };
+        const bool frame = m_inputSize >= 4 && byte(0) == 0x28 && byte(1) == 0xB5 &&
+                           byte(2) == 0x2F && byte(3) == 0xFD;
+        const bool skippable = m_inputSize >= 4 && (byte(0) & 0xF0U) == 0x50 && byte(1) == 0x2A &&
+                               byte(2) == 0x4D && byte(3) == 0x18;
+        if (frame || skippable) {
+            m_zstd = ZSTD_createDCtx();
+            m_frameEnded = false;
+        }
+        m_separator = m_next > 1; // a game never runs from one file into the next
+        return true;
+    }
+    return false;
+}
+
+std::size_t PgnFilesReader::read(char* buffer, std::size_t size) {
+    if (size == 0 || !m_error.empty()) {
+        return 0;
+    }
+    while (true) {
+        if (m_file == nullptr && !openNext()) {
+            return 0;
+        }
+        if (m_separator) {
+            m_separator = false;
+            buffer[0] = '\n';
+            return 1;
+        }
+        if (m_inputPos == m_inputSize && m_zstd != nullptr && !m_frameEnded) {
+            // All input taken, but some output may still be held back: let it out first.
+            ZSTD_inBuffer in{m_input.data(), 0, 0};
+            ZSTD_outBuffer out{buffer, size, 0};
+            const std::size_t status =
+                ZSTD_decompressStream(static_cast<ZSTD_DCtx*>(m_zstd), &out, &in);
+            if (ZSTD_isError(status) != 0) {
+                m_error = "A download is damaged: " + m_paths[m_next - 1] + ".";
+                closeFile();
+                return 0;
+            }
+            m_frameEnded = status == 0;
+            if (out.pos > 0) {
+                return out.pos;
+            }
+        }
+        if (m_inputPos == m_inputSize) {
+            m_inputSize = std::fread(m_input.data(), 1, m_input.size(), m_file);
+            m_inputPos = 0;
+            if (m_bytesRead != nullptr) {
+                m_bytesRead->fetch_add(m_inputSize);
+            }
+            if (m_inputSize == 0) {
+                if (m_zstd != nullptr && !m_frameEnded) {
+                    m_error = "A download is incomplete: " + m_paths[m_next - 1] + ".";
+                    closeFile();
+                    return 0;
+                }
+                closeFile();
+                continue; // the next file
+            }
+        }
+        if (m_zstd == nullptr) {
+            const std::size_t n = std::min(size, m_inputSize - m_inputPos);
+            std::memcpy(buffer, m_input.data() + m_inputPos, n);
+            m_inputPos += n;
+            return n;
+        }
+        ZSTD_inBuffer in{m_input.data(), m_inputSize, m_inputPos};
+        ZSTD_outBuffer out{buffer, size, 0};
+        while (out.pos == 0 && in.pos < in.size) {
+            const std::size_t status =
+                ZSTD_decompressStream(static_cast<ZSTD_DCtx*>(m_zstd), &out, &in);
+            if (ZSTD_isError(status) != 0) {
+                m_error = "A download is damaged: " + m_paths[m_next - 1] + ".";
+                closeFile();
+                return 0;
+            }
+            m_frameEnded = status == 0;
+        }
+        m_inputPos = in.pos;
+        if (out.pos > 0) {
+            return out.pos;
+        }
+    }
 }
 
 } // namespace kiebitz::gamedb

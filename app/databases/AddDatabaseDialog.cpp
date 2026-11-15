@@ -109,6 +109,35 @@ QWidget* AddDatabaseDialog::buildWeb() {
     auto* box = new QVBoxLayout(page);
     box->setContentsMargins(0, 0, 0, 0);
     box->setSpacing(10);
+    {
+        // Lichess's broadcasts: Kiebitz downloads them itself, and keeps them up to date.
+        auto* card = new QFrame;
+        card->setProperty("card", true);
+        auto* cardBox = new QVBoxLayout(card);
+        cardBox->setContentsMargins(16, 14, 16, 14);
+        cardBox->setSpacing(4);
+        cardBox->addWidget(label(QStringLiteral("Lichess broadcasts"), "sectionTitle"));
+        cardBox->addWidget(label(tr("Every tournament Lichess has broadcast since 2020, about a "
+                                    "million games."),
+                                 "pvLine"));
+        cardBox->addWidget(
+            label(tr("About 770 MB to download, then a little each month"), "emptyHint"));
+        cardBox->addWidget(
+            label(tr("CC BY-SA 4.0: free to use, credit lichess.org."), "emptyHint"));
+        auto* row = new QHBoxLayout;
+        auto* download = new QPushButton(tr("Download"));
+        download->setObjectName(QStringLiteral("addDatabaseBroadcasts"));
+        download->setProperty("role", "primary");
+        connect(download, &QPushButton::clicked, this, [this] {
+            m_broadcasts = true;
+            accept();
+        });
+        row->addWidget(download);
+        row->addStretch();
+        cardBox->addSpacing(6);
+        cardBox->addLayout(row);
+        box->addWidget(card);
+    }
     for (const WebSource& source : kSources) {
         auto* card = new QFrame;
         card->setProperty("card", true);

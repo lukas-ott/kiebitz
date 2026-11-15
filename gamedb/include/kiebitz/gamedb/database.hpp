@@ -19,6 +19,7 @@
 /// A game database: millions of games in a folder, searchable, with an opening explorer.
 ///
 /// The folder holds:
+///   fide.bin      (only if its games have FIDE ids) pairs of a FIDE id and a game, sorted;
 ///   games.sqlite  the headers, with indexes for searching players, events and openings;
 ///   moves.bin     every game's main line, one byte per move;
 ///   offsets.bin   where each game's moves start in moves.bin;
@@ -210,15 +211,27 @@ public:
     /// Whether it has the indexes for sorting (older databases get them from addSortIndexes()).
     [[nodiscard]] bool hasSortIndexes() const;
     [[nodiscard]] std::uint64_t gameCount() const;
+    /// Whether its games have their players' FIDE ids (fide.bin).
+    [[nodiscard]] bool hasFideIds() const;
+    /// The games of the player with this FIDE id, as White or Black, in the order imported.
+    [[nodiscard]] std::vector<GameId> gamesOfFideId(std::uint32_t fideId) const;
+    /// The games of the player called any of `names` exactly (any case: "Carlsen, Magnus"), as
+    /// White or Black, in the order imported. Any thread.
+    [[nodiscard]] std::vector<GameId> gamesOfPlayer(std::span<const std::string> names) const;
 
     /// Games by id, `count` of them from `first` (for scrolling through all of them).
     [[nodiscard]] std::vector<GameInfo> games(GameId first, std::size_t count) const;
     /// Games whose players, event, site or ECO contain `text` (any case), newest first.
     [[nodiscard]] std::vector<GameInfo> search(std::string_view text, std::size_t limit) const;
+    /// Reads what a search looks in (the names), if it hasn't yet: the first search is then as
+    /// quick as the rest. Any thread; call it before searching (the Databases page does when a
+    /// database is shown).
+    void prepareSearch() const;
     /// The games a query asks for, at most `limit` of them. On a connection of its own, so a
     /// slow one (sorting millions of games) holds up nothing else; `cancelled`, when set, stops
-    /// it (and it returns what it has, which is to be thrown away).
-    [[nodiscard]] std::vector<GameInfo> find(const GameQuery& query, std::size_t limit,
+    /// it (and it returns what it has, which is to be thrown away). The text's words are looked
+    /// for in names in any order; under three letters in all, the text isn't searched yet.
+    [[nodiscard]] std::vector<GameInfo> find(const GameQuery& asked, std::size_t limit,
                                              const std::atomic<bool>* cancelled = nullptr) const;
     /// A whole game: headers and moves.
     [[nodiscard]] std::optional<core::Game> game(GameId id) const;

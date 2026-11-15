@@ -5,6 +5,7 @@ add_library(kiebitz_repertoire
     src/drill.cpp
     src/gaps.cpp
     src/openings.cpp
+    src/prep.cpp
     src/summary.cpp
     src/theory.cpp
     src/tree.cpp)

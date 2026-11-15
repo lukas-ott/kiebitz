@@ -5,6 +5,7 @@
 #include "databases/DatabaseManager.hpp"
 #include "databases/DatabasesView.hpp"
 #include "explorer/ExplorerPanel.hpp"
+#include "fake_server.hpp"
 #include "library/Library.hpp"
 #include "profiles/LichessLogin.hpp"
 #include "profiles/ProfileStore.hpp"
@@ -31,6 +32,8 @@
 #include <QTest>
 #include <QTreeWidget>
 #include <gtest/gtest.h>
+
+#include <zstd.h>
 
 namespace {
 
@@ -395,4 +398,96 @@ TEST_F(DatabasesTest, ADoubleClickOnATopGameOpensIt) {
     EXPECT_EQ(opened.size(), 0); // one click only selects
     QTest::mouseDClick(games->viewport(), Qt::LeftButton, {}, first);
     EXPECT_EQ(opened.size(), 1);
+}
+
+namespace {
+
+/// A month of broadcasts as Lichess has them: zstd-compressed PGN with FIDE ids.
+QByteArray broadcastMonth(const QString& white, const QString& black, int whiteId, int blackId) {
+    const QByteArray pgn = QStringLiteral("[Event \"Open\"]\n[White \"%1\"]\n[Black \"%2\"]\n"
+                                          "[WhiteFideId \"%3\"]\n[BlackFideId \"%4\"]\n"
+                                          "[Result \"1-0\"]\n\n1. e4 { [%eval 0.2] } e5 1-0\n\n")
+                               .arg(white, black)
+                               .arg(whiteId)
+                               .arg(blackId)
+                               .toUtf8();
+    QByteArray packed(static_cast<qsizetype>(ZSTD_compressBound(pgn.size())), '\0');
+    packed.resize(static_cast<qsizetype>(
+        ZSTD_compress(packed.data(), packed.size(), pgn.data(), pgn.size(), 3)));
+    return packed;
+}
+
+} // namespace
+
+TEST_F(DatabasesTest, LichessBroadcastsAreDownloadedAndOnlyNewMonthsAfterwards) {
+    kiebitz::test::FakeServer server;
+    const QByteArray base = server.url().toString().toUtf8();
+    server.pages["/broadcast/list.txt"] =
+        base + "/broadcast/lichess_db_broadcast_2026-09.pgn.zst\n" + base +
+        "/broadcast/lichess_db_broadcast_2026-08.pgn.zst\n";
+    server.pages["/broadcast/lichess_db_broadcast_2026-08.pgn.zst"] =
+        broadcastMonth(QStringLiteral("Wang, Justin"), QStringLiteral("Smith, Ann"), 4312830, 111);
+    server.pages["/broadcast/lichess_db_broadcast_2026-09.pgn.zst"] =
+        broadcastMonth(QStringLiteral("Smith, Ann"), QStringLiteral("Wang, Justin"), 111, 4312830);
+    DatabaseManager manager(path("Databases"));
+    manager.setBroadcastServer(server.url());
+
+    int fresh = -2;
+    manager.checkBroadcasts([&](int months, const QString&) { fresh = months; });
+    ASSERT_TRUE(QTest::qWaitFor([&] { return fresh != -2; }, 10000));
+    EXPECT_EQ(fresh, 2);
+
+    QSignalSpy finished(&manager, &DatabaseManager::jobFinished);
+    EXPECT_NE(manager.updateBroadcasts(), 0);
+    EXPECT_EQ(manager.updateBroadcasts(), 0); // one at a time
+    ASSERT_TRUE(finished.wait(20000));
+    EXPECT_EQ(finished.front().at(1).toString(), QString());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return manager.broadcasts() != nullptr; }, 10000));
+    EXPECT_EQ(manager.broadcastMonths(),
+              (QStringList{QStringLiteral("2026-08"), QStringLiteral("2026-09")}));
+    EXPECT_EQ(manager.broadcasts()->gameCount(), 2U);
+    EXPECT_EQ(manager.broadcasts()->gamesOfFideId(4312830).size(), 2U);
+
+    // A new month: only it is downloaded, and the database has all three.
+    server.pages["/broadcast/list.txt"] +=
+        base + "/broadcast/lichess_db_broadcast_2026-10.pgn.zst\n";
+    server.pages["/broadcast/lichess_db_broadcast_2026-10.pgn.zst"] =
+        broadcastMonth(QStringLiteral("Wang, Justin"), QStringLiteral("Lee, Bo"), 4312830, 222);
+    server.asked.clear();
+    fresh = -2;
+    manager.checkBroadcasts([&](int months, const QString&) { fresh = months; });
+    ASSERT_TRUE(QTest::qWaitFor([&] { return fresh != -2; }, 10000));
+    EXPECT_EQ(fresh, 1);
+    finished.clear();
+    manager.updateBroadcasts();
+    ASSERT_TRUE(finished.wait(20000));
+    EXPECT_EQ(finished.front().at(1).toString(), QString());
+    EXPECT_FALSE(
+        server.asked.contains(QStringLiteral("/broadcast/lichess_db_broadcast_2026-08.pgn.zst")));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return manager.broadcasts() != nullptr && manager.broadcasts()->gameCount() == 3; },
+        10000));
+    EXPECT_EQ(manager.broadcasts()->gamesOfFideId(4312830).size(), 3U);
+    EXPECT_EQ(manager.databases().size(), 1U); // replaced, not added
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        const kiebitz::app::AppStyle style(*qApp);
+        DatabasesView view(manager, style);
+        view.resize(1180, 600);
+        view.show();
+        QTest::qWait(300);
+        view.grab().save(QDir(dir).filePath(QStringLiteral("databases-broadcasts.png")));
+        kiebitz::app::AddDatabaseDialog dialog;
+        dialog.show();
+        QTest::qWait(100);
+        dialog.grab().save(QDir(dir).filePath(QStringLiteral("add-database.png")));
+        dialog.close();
+    }
+
+    // Nothing new: nothing downloaded, nothing built.
+    finished.clear();
+    server.asked.clear();
+    manager.updateBroadcasts();
+    ASSERT_TRUE(finished.wait(20000));
+    EXPECT_EQ(finished.front().at(1).toString(), QString());
+    EXPECT_EQ(server.asked, (QStringList{QStringLiteral("/broadcast/list.txt")}));
 }

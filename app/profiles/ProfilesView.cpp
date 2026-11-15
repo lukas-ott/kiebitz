@@ -3,8 +3,10 @@
 #include "AddAccountDialog.hpp"
 #include "FideCard.hpp"
 #include "LichessLogin.hpp"
+#include "PreparePage.hpp"
 #include "ProfileStore.hpp"
 #include "databases/GamesModel.hpp"
+#include "kiebitz/pgn/pgn.hpp"
 #include "repertoire/RepertoireStore.hpp"
 #include "style/AppStyle.hpp"
 #include "style/Icons.hpp"
@@ -14,19 +16,25 @@
 #include "widgets/DateRange.hpp"
 #include "widgets/ElidedLabel.hpp"
 #include "widgets/Message.hpp"
+#include "widgets/MultiChoice.hpp"
 #include "widgets/NameDialog.hpp"
 #include "widgets/ResultBar.hpp"
 #include "widgets/SortCycle.hpp"
 #include "widgets/SortableItem.hpp"
 #include "widgets/VerticalScrollArea.hpp"
 
+#include <QClipboard>
 #include <QComboBox>
 #include <QCryptographicHash>
+#include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFutureWatcher>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -35,6 +43,9 @@
 #include <QListWidget>
 #include <QLocale>
 #include <QMenu>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPixmap>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSaveFile>
@@ -47,6 +58,7 @@
 #include <QTableView>
 #include <QTimer>
 #include <QTreeWidget>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -62,6 +74,7 @@ namespace {
 constexpr int kIdRole = Qt::UserRole;
 constexpr auto kOtb = "otb";
 constexpr int kAccountsWidth = 300;
+constexpr int kPhotoSize = 48;               ///< the player's photo by the name
 constexpr int kGroupRole = Qt::UserRole + 1; ///< a theory row: its group in the report
 constexpr int kGameRole = Qt::UserRole + 2;  ///< a theory game row: its game
 
@@ -317,8 +330,15 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     m_summaryLine->addWidget(m_summary);
     m_summaryLine->addWidget(m_status);
     titles->addWidget(m_summaryLine);
+    m_photo = new QLabel;
+    m_photo->setObjectName(QStringLiteral("profilePhoto"));
+    m_photo->setFixedSize(kPhotoSize, kPhotoSize);
+    m_photo->setToolTip(tr("Photo: Wikimedia Commons"));
+    m_photo->hide();
     auto* top = new QHBoxLayout;
     top->setSpacing(6);
+    top->addWidget(m_photo, 0, Qt::AlignVCenter);
+    top->addSpacing(6);
     top->addLayout(titles, 1);
     top->addWidget(m_rename, 0, Qt::AlignTop);
     top->addWidget(m_remove, 0, Qt::AlignTop);
@@ -342,10 +362,14 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     viewsRow->setContentsMargins(2, 2, 2, 2);
     viewsRow->setSpacing(2);
     m_pages = new QStackedWidget;
+    // Preparing needs the room: the accounts column steps aside on the Prepare tab.
+    connect(m_pages, &QStackedWidget::currentChanged, accountsScroll,
+            [accountsScroll](int page) { accountsScroll->setVisible(page != 3); });
     for (const auto& [index, text, name] :
          {std::tuple{0, tr("Overview"), "profileShowOverview"},
           std::tuple{1, tr("Games"), "profileShowGames"},
-          std::tuple{2, tr("Repertoire"), "profileShowRepertoire"}}) {
+          std::tuple{2, tr("Repertoire"), "profileShowRepertoire"},
+          std::tuple{3, tr("Prepare"), "profileShowPrepare"}}) {
         auto* button = new QPushButton(text);
         button->setObjectName(QString::fromLatin1(name));
         button->setProperty("role", "segment");
@@ -357,16 +381,23 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
             m_pages->setCurrentIndex(index);
             if (index == 2) {
                 showTheory();
+            } else if (index == 3) {
+                m_prepare->show(m_current, m_part);
             }
         });
         viewsRow->addWidget(button);
+        if (index == 2) {
+            m_showRepertoire = button;
+        } else if (index == 3) {
+            m_showPrepare = button;
+        }
     }
-    m_parts = new QComboBox;
+    // Games from: any of the accounts, your PGN games and the databases, together (each game
+    // once), or all of them.
+    m_parts = new MultiChoice(tr("All games"));
     m_parts->setObjectName(QStringLiteral("profilePart"));
-    m_parts->setFocusPolicy(Qt::NoFocus);
-    m_parts->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    connect(m_parts, &QComboBox::activated, this, [this] {
-        m_part = m_parts->currentData().toString();
+    connect(m_parts, &MultiChoice::changed, this, [this] {
+        m_part = ProfileStore::partsKey(m_parts->selected());
         showGames();
     });
     auto* panelTop = new QHBoxLayout;
@@ -598,6 +629,13 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     theoryBox->addWidget(m_theory, 1);
     m_pages->addWidget(theoryPage);
 
+    // Prepare: against someone else, what to play: their games against your options.
+    m_prepare = new PreparePage(m_store, m_repertoires, m_style);
+    m_prepare->setObjectName(QStringLiteral("preparePage"));
+    connect(m_prepare, &PreparePage::openLineRequested, this, &ProfilesView::openGameRequested);
+    connect(m_prepare, &PreparePage::prepFileRequested, this, &ProfilesView::prepFileRequested);
+    m_pages->addWidget(m_prepare);
+
     auto* panel = new QVBoxLayout;
     panel->setSpacing(12);
     panel->addLayout(panelTop);
@@ -628,6 +666,8 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     connect(&m_repertoires, &RepertoireStore::changed, this, [this] {
         if (m_pages->currentIndex() == 2) {
             showTheory(); // a file marked as a repertoire, or changed: check again
+        } else if (m_pages->currentIndex() == 3) {
+            m_prepare->show(m_current, m_part, true);
         }
     });
     connect(&m_lichess, &LichessLogin::changed, this, &ProfilesView::showProfile);
@@ -779,13 +819,29 @@ void ProfilesView::showProfile() {
         }
     }
     m_summary->setText(summary.join(QStringLiteral("  ·  ")));
+    showPhoto();
     m_remove->setVisible(!profile->main);
+    // Your games against your repertoire; someone else's: preparing against them.
+    m_showRepertoire->setVisible(profile->main);
+    m_showPrepare->setVisible(!profile->main);
+    if ((profile->main && m_pages->currentIndex() == 3) ||
+        (!profile->main && m_pages->currentIndex() == 2)) {
+        m_pages->setCurrentIndex(0);
+        findChild<QPushButton*>(QStringLiteral("profileShowOverview"))->setChecked(true);
+    }
     const QString status = m_store.status(m_current);
     showStatus(status);
     m_sync->setEnabled(status.isEmpty() && !profile->accounts.empty());
     showAccounts(*profile);
     showParts(*profile);
     showGames();
+    // Someone else's profile with a FIDE player: their online accounts, as suggestions (once).
+    if (!profile->main && profile->fide && profile->suggestionsFor != profile->fide->id &&
+        !profile->suggesting) {
+        const QString id = m_current;
+        QMetaObject::invokeMethod(
+            this, [this, id] { m_store.findAccounts(id); }, Qt::QueuedConnection);
+    }
 }
 
 void ProfilesView::showAccounts(const Profile& profile) {
@@ -940,7 +996,103 @@ void ProfilesView::showAccounts(const Profile& profile) {
     connect(addOtb, &QPushButton::clicked, this, &ProfilesView::addOtbGames);
     QVBoxLayout* otb = newCard(tr("OTB"), tr("Over the board"), addOtb);
     gamesRow(otb, partGames(QString::fromLatin1(kOtb)), 0);
-    otb->addWidget(label(tr("Your tournament games, from PGN files"), "cardFoot"));
+    // The player's games found in each game database (a "Games from" choice of its own).
+    for (const auto& [part, database] : profile.sources) {
+        row(otb, database, label(number(partGames(part)), "ratingValue"));
+    }
+    // Where they come from: PGN files and games copied from ChessBase's online database; with
+    // a FIDE player, the game databases' too, found by themselves.
+    if (!profile.fide) {
+        otb->addWidget(label(tr("Tournament games, from PGN files or ChessBase"), "cardFoot"));
+    } else if (!m_store.hasGameSources()) {
+        auto* hint = label(tr("Add a database in Databases (Lichess's broadcasts, Caissabase) to "
+                              "find their tournament games by themselves"),
+                           "cardFoot");
+        hint->setWordWrap(true);
+        otb->addWidget(hint);
+    } else if (profile.sources.empty()) {
+        otb->addWidget(label(tr("None of their games in your databases"), "cardFoot"));
+    }
+    auto* otbLinks = new QHBoxLayout;
+    otbLinks->setSpacing(12);
+    auto* paste = new QPushButton(tr("Paste Games"));
+    paste->setObjectName(QStringLiteral("profilePasteGames"));
+    paste->setProperty("role", "link");
+    paste->setFocusPolicy(Qt::NoFocus);
+    paste->setToolTip(tr("Games copied from ChessBase or anywhere else, as PGN (⌘V)"));
+    connect(paste, &QPushButton::clicked, this, &ProfilesView::pasteGames);
+    auto* chessBase = new QPushButton(tr("Search on ChessBase"));
+    chessBase->setObjectName(QStringLiteral("profileChessBase"));
+    chessBase->setProperty("role", "link");
+    chessBase->setFocusPolicy(Qt::NoFocus);
+    chessBase->setToolTip(tr("The player on ChessBase: copy their games there and paste "
+                             "them here"));
+    // ChessBase's player search for the name ("Dahl, Max" → …/search/max_dahl).
+    QString searched = profile.name;
+    if (profile.fide && profile.fide->name.contains(u',')) {
+        searched = profile.fide->name.section(u',', 1).trimmed() + u' ' +
+                   profile.fide->name.section(u',', 0, 0).trimmed();
+    }
+    const QString words = searched.toLower().split(u' ', Qt::SkipEmptyParts).join(u'_');
+    connect(chessBase, &QPushButton::clicked, this, [words] {
+        QDesktopServices::openUrl(
+            QUrl(QStringLiteral("https://players.chessbase.com/en/search/") + words));
+    });
+    otbLinks->addWidget(paste);
+    otbLinks->addWidget(chessBase);
+    otbLinks->addStretch();
+    otb->addLayout(otbLinks);
+
+    // Online accounts that may be theirs: why each might be, Add, or "Not them".
+    if (profile.suggesting || !profile.suggestions.empty()) {
+        auto* frame = new QFrame;
+        frame->setProperty("statTile", true);
+        frame->setObjectName(QStringLiteral("suggestedAccounts"));
+        auto* box = new QVBoxLayout(frame);
+        box->setContentsMargins(14, 12, 12, 12);
+        box->setSpacing(8);
+        box->addWidget(label(tr("MAYBE THEIRS"), "cardTitle"));
+        if (profile.suggesting) {
+            box->addWidget(label(tr("Looking on Lichess and chess.com…"), "cardFoot"));
+        }
+        for (const SuggestedAccount& suggestion : profile.suggestions) {
+            auto* head = new QHBoxLayout;
+            head->setSpacing(8);
+            auto* siteBadge = label(siteText(suggestion.site).toUpper(), "siteBadge");
+            siteBadge->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+            head->addWidget(siteBadge, 0, Qt::AlignVCenter);
+            auto* name = new ElidedLabel;
+            name->setProperty("role", "databaseName");
+            name->setFullText(suggestion.username);
+            head->addWidget(name, 1);
+            auto* add = new QPushButton(tr("Add"));
+            add->setObjectName(QStringLiteral("suggestionAdd:") + suggestion.username);
+            add->setProperty("role", "link");
+            add->setFocusPolicy(Qt::NoFocus);
+            connect(add, &QPushButton::clicked, this,
+                    [this, site = suggestion.site, username = suggestion.username] {
+                        m_store.addAccount(m_current, site, username);
+                    });
+            head->addWidget(add);
+            auto* notThem = new QPushButton;
+            notThem->setObjectName(QStringLiteral("suggestionDismiss:") + suggestion.username);
+            notThem->setProperty("role", "nav");
+            notThem->setToolTip(tr("Not them"));
+            notThem->setIcon(makeIcon(IconKind::Close, c.muted, c.dimmed, 12));
+            notThem->setFixedSize(22, 22);
+            connect(notThem, &QPushButton::clicked, this,
+                    [this, site = suggestion.site, username = suggestion.username] {
+                        m_store.dismissSuggestion(m_current, site, username);
+                    });
+            head->addWidget(notThem);
+            box->addLayout(head);
+            auto* why = new ElidedLabel;
+            why->setProperty("role", "cardFoot");
+            why->setFullText(suggestion.reasons.join(QStringLiteral(" · ")));
+            box->addWidget(why);
+        }
+        m_accounts->addWidget(frame);
+    }
 
     auto* addAccountButton = new QPushButton(tr("Add Account"));
     addAccountButton->setIcon(makeIcon(IconKind::Plus, c.text, c.dimmed, 14));
@@ -998,33 +1150,33 @@ void ProfilesView::showLichessLogin() {
 }
 
 void ProfilesView::showParts(const Profile& profile) {
-    const QSignalBlocker block(m_parts);
-    m_parts->clear();
-    m_parts->addItem(tr("All games"), QString());
+    std::vector<std::pair<QString, QString>> choices;
+    choices.reserve(profile.accounts.size() + 1 + profile.sources.size());
     for (const Account& account : profile.accounts) {
-        m_parts->addItem(QStringLiteral("%1 · %2").arg(siteText(account.site), account.username),
-                         account.id);
+        choices.emplace_back(
+            account.id, QStringLiteral("%1 · %2").arg(siteText(account.site), account.username));
     }
-    m_parts->addItem(tr("Over the board"), QString::fromLatin1(kOtb));
-    const int index = m_parts->findData(m_part);
-    m_parts->setCurrentIndex(index >= 0 ? index : 0);
-    m_part = m_parts->currentData().toString(); // gone (another profile, an account removed)
+    choices.emplace_back(QString::fromLatin1(kOtb), tr("Over the board"));
+    for (const auto& [part, database] : profile.sources) {
+        choices.emplace_back(part, database); // "Lichess broadcasts", "Caissabase"
+    }
+    m_parts->setChoices(std::move(choices));
+    m_parts->setSelected(ProfileStore::splitParts(m_part));
+    // What is still there (another profile, an account removed).
+    m_part = ProfileStore::partsKey(m_parts->selected());
 }
 
 void ProfilesView::showGames() {
-    const Profile* profile = m_store.profile(m_current);
-    m_db.reset();
-    if (profile != nullptr) {
-        if (m_part.isEmpty()) {
-            m_db = profile->all;
-        } else if (const auto found = profile->parts.find(m_part); found != profile->parts.end()) {
-            m_db = found->second;
-        }
+    m_db = m_store.database(m_current, m_part);
+    if (!m_db && ProfileStore::splitParts(m_part).size() > 1) {
+        m_store.combine(m_current, m_part); // their games together: shown once they are
     }
     m_model->setDatabase(m_db);
     showStats();
     if (m_pages->currentIndex() == 2) {
         showTheory();
+    } else if (m_pages->currentIndex() == 3) {
+        m_prepare->show(m_current, m_part);
     }
 }
 
@@ -1242,6 +1394,13 @@ QString ProfilesView::theoryFingerprint(const Profile& profile) const {
 
 void ProfilesView::fillTheory() {
     const repertoire::TheoryReport& report = m_theoryReport;
+    // The openings you had open stay open (another filter, a new check); the rest start closed.
+    QStringList opened;
+    for (int i = 0; i < m_theory->topLevelItemCount(); ++i) {
+        if (m_theory->topLevelItem(i)->isExpanded()) {
+            opened << m_theory->topLevelItem(i)->text(0);
+        }
+    }
     m_theory->setSortingEnabled(false);
     m_theory->clear();
     const auto& c = m_style.colors();
@@ -1358,7 +1517,10 @@ void ProfilesView::fillTheory() {
         }
     }
     m_theory->setSortingEnabled(true);
-    m_theory->expandToDepth(0); // the openings open, their games not
+    for (int i = 0; i < m_theory->topLevelItemCount(); ++i) {
+        QTreeWidgetItem* opening = m_theory->topLevelItem(i);
+        opening->setExpanded(opened.contains(opening->text(0)));
+    }
     if (report.checked == 0) {
         m_theorySummary->setText(tr("None of these games has a colour you have a repertoire for."));
         return;
@@ -1412,6 +1574,43 @@ void ProfilesView::deleteSelectedGame() {
     }
 }
 
+void ProfilesView::showPhoto() {
+    // Read again only when another file (or a newer one) is to be shown.
+    const QString file = m_store.photoFile(m_current);
+    const QString shown =
+        file.isEmpty()
+            ? QString()
+            : file + u'|' + QString::number(QFileInfo(file).lastModified().toMSecsSinceEpoch());
+    if (shown == m_photoShown) {
+        return;
+    }
+    m_photoShown = shown;
+    const QImage image(file);
+    if (image.isNull()) {
+        m_photo->hide();
+        return;
+    }
+    // Round, filled from the top (the face): the middle of a portrait's upper part.
+    const qreal ratio = devicePixelRatioF();
+    QPixmap round(QSize(kPhotoSize, kPhotoSize) * ratio);
+    round.setDevicePixelRatio(ratio);
+    round.fill(Qt::transparent);
+    QPainter painter(&round);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    QPainterPath circle;
+    circle.addEllipse(QRectF(0, 0, kPhotoSize, kPhotoSize));
+    painter.setClipPath(circle);
+    const QImage scaled = image.scaled(QSize(kPhotoSize, kPhotoSize) * ratio,
+                                       Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    const QRectF source((scaled.width() - (kPhotoSize * ratio)) / 2, 0, kPhotoSize * ratio,
+                        kPhotoSize * ratio);
+    painter.drawImage(QRectF(0, 0, kPhotoSize, kPhotoSize), scaled, source);
+    painter.end();
+    m_photo->setPixmap(round);
+    m_photo->show();
+}
+
 void ProfilesView::showFideCard() {
     const Profile* profile = m_store.profile(m_current);
     if (profile == nullptr) {
@@ -1436,8 +1635,9 @@ void ProfilesView::showFideCard() {
         status = tr("No player called %1 in FIDE's rating list.").arg(profile->name);
         retry = true;
     }
-    auto* card = new FideCard(profile->fide, profile->fideCandidates, status, retry,
-                              profile->fideChosen, profile->main, m_style, this);
+    auto* card =
+        new FideCard(profile->fide, profile->fideCandidates, status, retry, profile->fideChosen,
+                     profile->main, profile->wiki.article(QLocale().name()), m_style, this);
     connect(card, &FideCard::retryRequested, this,
             [this, id = m_current] { m_store.lookUpFide(id); });
     connect(card, &FideCard::chosen, this,
@@ -1500,6 +1700,32 @@ void ProfilesView::addOtbGames() {
     if (!files.isEmpty()) {
         m_store.addOtbGames(m_current, files);
     }
+}
+
+void ProfilesView::setBoardLook(const BoardTheme& theme, const QString& pieces) {
+    m_prepare->setBoardLook(theme, pieces);
+}
+
+void ProfilesView::pasteGames() {
+    // PGN from the clipboard (ChessBase's online database copies games as PGN), kept in the
+    // profile's folder and added as a file would be: games it has already are left out.
+    const QString text = QGuiApplication::clipboard()->text();
+    const std::string pgnText = text.toStdString();
+    if (m_current.isEmpty() || pgn::indexGames(pgnText).empty() ||
+        !text.contains(QLatin1Char('['))) {
+        notice(this, tr("Paste Games"),
+               tr("There are no games on the clipboard. Copy games as PGN first, for example "
+                  "in ChessBase's online database."));
+        return;
+    }
+    const QString file = m_store.cacheFile(m_current, QStringLiteral("ChessBase.pgn"));
+    QFile out(file);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return;
+    }
+    out.write(text.toUtf8());
+    out.close();
+    m_store.addOtbGames(m_current, {file});
 }
 
 void ProfilesView::showStatus(const QString& status) {

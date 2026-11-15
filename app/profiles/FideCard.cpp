@@ -45,7 +45,8 @@ QString describe(const FidePlayer& player) {
 
 FideCard::FideCard(const std::optional<FidePlayer>& player,
                    const std::vector<FidePlayer>& candidates, const QString& status, bool retry,
-                   bool confirmed, bool you, const AppStyle& /*style*/, QWidget* parent)
+                   bool confirmed, bool you, const QString& wikipedia, const AppStyle& /*style*/,
+                   QWidget* parent)
     : QFrame(parent, Qt::Popup) {
     setObjectName(QStringLiteral("fideCard"));
     setAttribute(Qt::WA_TranslucentBackground); // its own rounded card shows
@@ -95,6 +96,14 @@ FideCard::FideCard(const std::optional<FidePlayer>& player,
         connect(open, &QPushButton::clicked, this,
                 [url = player->profileUrl()] { QDesktopServices::openUrl(QUrl(url)); });
         buttons->addWidget(open);
+        if (!wikipedia.isEmpty()) {
+            auto* article = new QPushButton(tr("Wikipedia"));
+            article->setObjectName(QStringLiteral("fideWikipedia"));
+            article->setProperty("role", "secondary");
+            connect(article, &QPushButton::clicked, this,
+                    [wikipedia] { QDesktopServices::openUrl(QUrl(wikipedia)); });
+            buttons->addWidget(article);
+        }
         buttons->addStretch();
         foundBox->addLayout(buttons);
     } else {

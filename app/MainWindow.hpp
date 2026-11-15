@@ -127,6 +127,9 @@ private:
     void applySetting(const QString& key);
     /// The language changed: asks to restart now (then restartRequested()).
     void askToRestart();
+    /// A preparation file (from a profile's Prepare tab), saved under "Preparation" in the
+    /// Library, then opened.
+    void savePrepFile(const QString& name, const core::Game& game);
     /// The Settings page's Folders section: where the library, databases, ... are.
     void showFolders();
     void showAbout();
@@ -238,6 +241,8 @@ private:
     PuzzlesView* m_puzzlesView = nullptr;
     LichessLogin* m_lichess = nullptr; ///< signed in: Lichess explorer, faster downloads
     ProfileStore* m_profiles = nullptr;
+    QStringList m_fideSourcesStamp; ///< the game databases, and their sizes
+    bool m_fideSourcesSeen = false;
     ProfilesView* m_profilesView = nullptr;
     SettingsView* m_settingsView = nullptr;
     EngineRegistry* m_engineRegistry = nullptr;

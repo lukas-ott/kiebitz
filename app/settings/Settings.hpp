@@ -28,6 +28,7 @@ public:
     static constexpr auto kLastMove = "board/lastMove";       ///< the last move highlighted
     static constexpr auto kMoveMethod = "board/moveMethod";   ///< "both", "drag", "click"
     static constexpr auto kAutoQueen = "board/autoQueen";     ///< promote without asking
+    static constexpr auto kOneClick = "board/oneClickMoves";  ///< a square clicked: its move
     static constexpr auto kWheel = "board/wheel";             ///< the wheel steps through moves
     // Moves
     static constexpr auto kNotationRows = "notation/rows";   ///< the move list in rows

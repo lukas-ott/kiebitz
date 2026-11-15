@@ -384,3 +384,30 @@ TEST(PgnKey, TheSameGameWithOtherCommentsOrHeadersIsTheSame) {
                   "[Result \"1-0\"]\n\n1. e4 c6 2. d4 d5 1-0\n"),
               base);
 }
+
+TEST(PgnKey, TheSameGameFromChessBaseAndLichessMatches) {
+    const auto key = [](std::string_view text) {
+        auto game = pgn::parseGame(text);
+        return game.ok() ? pgn::sameGameKey(*game) : std::string();
+    };
+    // ChessBase shortens first names; Lichess writes them out, with evaluations and clocks.
+    const std::string chessBase = key("[White \"Wang,J\"]\n[Black \"Mohammadi,A\"]\n"
+                                      "[Date \"2026.09.29\"]\n[Result \"1/2-1/2\"]\n\n"
+                                      "1.e4 c5 2.Nc3 1/2-1/2");
+    const std::string lichess = key("[White \"Wang, Justin Zhide\"]\n[Black \"Mohammadi, Arvin\"]\n"
+                                    "[Date \"2026.09.29\"]\n[Result \"1/2-1/2\"]\n\n"
+                                    "1. e4 { [%eval 0.18] [%clk 1:30:58] } 1... c5 2. Nc3 1/2-1/2");
+    EXPECT_FALSE(chessBase.empty());
+    EXPECT_EQ(chessBase, lichess);
+    // "First Last" too.
+    EXPECT_EQ(key("[White \"Justin Wang\"]\n[Black \"Arvin Mohammadi\"]\n"
+                  "[Date \"2026.09.29\"]\n[Result \"1/2-1/2\"]\n\n1. e4 c5 2. Nc3 1/2-1/2"),
+              lichess);
+    // Another day, result or move: another game.
+    EXPECT_NE(key("[White \"Wang,J\"]\n[Black \"Mohammadi,A\"]\n[Date \"2026.09.30\"]\n"
+                  "[Result \"1/2-1/2\"]\n\n1.e4 c5 2.Nc3 1/2-1/2"),
+              lichess);
+    EXPECT_NE(key("[White \"Wang,J\"]\n[Black \"Mohammadi,A\"]\n[Date \"2026.09.29\"]\n"
+                  "[Result \"1/2-1/2\"]\n\n1.e4 c5 2.Nf3 1/2-1/2"),
+              lichess);
+}

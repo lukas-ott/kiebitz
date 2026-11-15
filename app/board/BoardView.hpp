@@ -74,6 +74,9 @@ public:
         bool lastMove = true;  ///< the last move's squares highlighted
         MoveMethod moveMethod = MoveMethod::Both;
         bool autoQueen = false; ///< promote to a queen without asking
+        /// A click on a square moves the only piece that can go there (ChessBase's way);
+        /// several can: they light up, and a click on one moves it.
+        bool oneClick = true;
     };
     void setOptions(const Options& options);
     [[nodiscard]] const Options& options() const noexcept { return m_options; }
@@ -122,6 +125,8 @@ private:
 
     void recomputeGeometry();
     void select(std::optional<core::Square> square);
+    /// Forgets a one-click square waiting for its piece.
+    void clearTarget();
     /// Plays from→to if legal, asking for the promotion piece first when needed.
     /// Returns false if the move isn't legal.
     bool tryMove(core::Square from, core::Square to);
@@ -161,6 +166,8 @@ private:
 
     // Interaction state
     std::optional<core::Square> m_selected;
+    std::optional<core::Square> m_target;      ///< one-click: the square clicked, with a choice
+    std::vector<core::Square> m_targetFrom;    ///< ... of these pieces
     std::optional<core::Square> m_pressSquare; ///< left button went down on a pickable piece
     bool m_dragging = false;
     bool m_wasSelected = false; ///< the pressed piece was already selected

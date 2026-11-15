@@ -25,6 +25,9 @@ struct ScannedGame {
     std::string fen; ///< the start position, if not the usual one
     int whiteElo = 0;
     int blackElo = 0;
+    /// The players' FIDE ids ([WhiteFideId], [BlackFideId]; Lichess's broadcasts have them), or 0.
+    std::uint32_t whiteFideId = 0;
+    std::uint32_t blackFideId = 0;
     GameResult result = GameResult::Unknown;
     Speed speed = Speed::Unknown;
     std::string moves; ///< one byte per move (see codec)

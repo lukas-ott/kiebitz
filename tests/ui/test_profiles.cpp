@@ -1,28 +1,42 @@
 // Profiles: accounts whose games are downloaded (from a fake Lichess and chess.com, never the
 // real ones), over-the-board games added by hand, and the databases built from them.
 
+#include "board/BoardView.hpp"
 #include "databases/DatabaseManager.hpp"
 #include "explorer/ExplorerPanel.hpp"
 #include "explorer/LichessExplorer.hpp"
 #include "fake_server.hpp"
+#include "kiebitz/pgn/pgn.hpp"
+#include "kiebitz/repertoire/gaps.hpp"
 #include "library/Library.hpp"
 #include "net/Lichess.hpp"
+#include "profiles/AccountFinder.hpp"
 #include "profiles/Fide.hpp"
 #include "profiles/LichessLogin.hpp"
+#include "profiles/PreparePage.hpp"
 #include "profiles/ProfileStore.hpp"
 #include "profiles/ProfilesView.hpp"
+#include "profiles/Wikidata.hpp"
 #include "repertoire/RepertoireStore.hpp"
 #include "sound/Sounds.hpp"
 #include "style/AppStyle.hpp"
 #include "style/Icons.hpp"
 #include "widgets/Message.hpp"
+#include "widgets/MultiChoice.hpp"
 
+#include <QAction>
 #include <QApplication>
+#include <QBuffer>
+#include <QClipboard>
 #include <QComboBox>
+#include <QDate>
 #include <QDir>
 #include <QFile>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLocale>
+#include <QMenu>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPainter>
@@ -306,16 +320,23 @@ TEST_F(ProfilesTest, ThePageShowsAProfileAndItsPartsAndTheExplorerUsesThem) {
     ASSERT_NE(games, nullptr);
     EXPECT_EQ(games->model()->rowCount(), 3);
     // A dropdown with all games, Lichess · alice and over the board.
-    auto* part = view.findChild<QComboBox*>(QStringLiteral("profilePart"));
+    auto* part = view.findChild<kiebitz::app::MultiChoice*>(QStringLiteral("profilePart"));
     ASSERT_NE(part, nullptr);
-    EXPECT_EQ(part->count(), 3);
-    EXPECT_EQ(part->itemText(1), QStringLiteral("Lichess · alice"));
-    part->setCurrentIndex(part->findData(QStringLiteral("otb")));
-    emit part->activated(part->currentIndex());
+    const auto choice = [&](const QString& value) {
+        return part->menu()->findChild<QAction*>(QStringLiteral("choice:") + value);
+    };
+    ASSERT_NE(choice(QStringLiteral("lichess-alice")), nullptr);
+    EXPECT_EQ(choice(QStringLiteral("lichess-alice"))->text(), QStringLiteral("Lichess · alice"));
+    choice(QStringLiteral("otb"))->trigger();
     EXPECT_EQ(games->model()->rowCount(), 1);
+    // Both ticked: that is all of them.
+    choice(QStringLiteral("lichess-alice"))->trigger();
+    EXPECT_TRUE(part->selected().isEmpty());
+    EXPECT_EQ(part->text(), QStringLiteral("All games"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return games->model()->rowCount() == 3; }, 10000));
     // The overview counts alice's games: two downloaded, one over the board.
-    part->setCurrentIndex(0);
-    emit part->activated(0);
+    choice(QStringLiteral("all"))->trigger();
+    EXPECT_TRUE(part->selected().isEmpty());
     auto* total = view.findChild<QLabel*>(QStringLiteral("profileTotal"));
     ASSERT_NE(total, nullptr);
     EXPECT_TRUE(QTest::qWaitFor([&] { return total->text().startsWith(u"3 games"); }, 5000))
@@ -843,7 +864,9 @@ TEST_F(ProfilesTest, TheRepertoireTabShowsWhereGamesLeftTheBook) {
     // and one with Black (no Black repertoire: not checked).
     ProfileStore store(folder.filePath(QStringLiteral("profiles")));
     store.setServers(server.url(), server.url(), server.url());
-    const QString id = store.addProfile(QStringLiteral("Alice Smith"));
+    // Your own profile (the tab is only there): you are Alice.
+    const QString id = store.profiles()[0].id;
+    store.renameProfile(id, QStringLiteral("Alice Smith"));
     QFile pgn(folder.filePath(QStringLiteral("club.pgn")));
     ASSERT_TRUE(pgn.open(QIODevice::WriteOnly));
     pgn.write(game("Smith, Alice", "Bob", "1. e4 e5 2. Bc4 Nf6"));
@@ -877,6 +900,12 @@ TEST_F(ProfilesTest, TheRepertoireTabShowsWhereGamesLeftTheBook) {
     ASSERT_TRUE(QTest::qWaitFor(
         [&] { return !view.theoryRows().join(u'|').contains(u"Other openings"); }, 20000));
     QStringList rows = view.theoryRows();
+    // Every opening starts closed: you open the one you want.
+    if (const auto* theory = view.findChild<QTreeWidget*>(QStringLiteral("profileTheory"))) {
+        for (int i = 0; i < theory->topLevelItemCount(); ++i) {
+            EXPECT_FALSE(theory->topLevelItem(i)->isExpanded()) << i;
+        }
+    }
     rows.sort(); // openings with as many games come in any order
     EXPECT_EQ(rows, (QStringList{QStringLiteral("Bishop's Opening: 2. Bc4  You  2  2. Nf3"),
                                  QStringLiteral("English Opening: 1. c4  You  1  1. e4"),
@@ -978,9 +1007,14 @@ TEST_F(ProfilesTest, OverTheBoardGamesAreAddedOnceAndCanBeDeleted) {
     third.close();
     store.addOtbGames(id, {third.fileName()}); // rebuilds with the old copy in it
     waitFor(store, id);
-    ASSERT_EQ(store.profile(id)->all->gameCount(), 4U);
+    // Over the board both copies are there; all games count it once.
+    const auto otbGames = [&] {
+        return store.profile(id)->parts.at(QStringLiteral("otb"));
+    };
+    ASSERT_EQ(otbGames()->gameCount(), 4U);
+    EXPECT_EQ(store.profile(id)->all->gameCount(), 3U);
     // Carol's game, from the database: deleted once, there once more.
-    const auto db = store.profile(id)->all;
+    const auto db = otbGames();
     std::optional<kiebitz::core::Game> carol;
     for (const auto& info : db->games(1, 10)) {
         if (info.white == "Carol") {
@@ -990,10 +1024,10 @@ TEST_F(ProfilesTest, OverTheBoardGamesAreAddedOnceAndCanBeDeleted) {
     ASSERT_TRUE(carol.has_value());
     store.deleteGame(id, QString(), *carol);
     waitFor(store, id);
-    EXPECT_EQ(store.profile(id)->all->gameCount(), 3U);
+    EXPECT_EQ(otbGames()->gameCount(), 3U);
     store.deleteGame(id, QStringLiteral("otb"), *carol);
     waitFor(store, id);
-    EXPECT_EQ(store.profile(id)->all->gameCount(), 2U);
+    EXPECT_EQ(otbGames()->gameCount(), 2U);
     // Opened, a game is as its PGN has it: with its clocks and comments.
     QFile timed(folder.filePath(QStringLiteral("timed.pgn")));
     ASSERT_TRUE(timed.open(QIODevice::WriteOnly));
@@ -1105,4 +1139,615 @@ TEST(Icons, SidebarIconsSnapshot) {
         sheet.save(QDir(dir).filePath(QStringLiteral("icons.png")));
     }
     SUCCEED();
+}
+
+namespace {
+
+/// A database like Lichess's broadcasts: games with the players' FIDE ids.
+std::shared_ptr<const kiebitz::gamedb::Database> broadcastsDb(const QString& folder,
+                                                              const std::string& pgn) {
+    QDir().mkpath(folder);
+    {
+        auto writer = kiebitz::gamedb::DatabaseWriter::create(folder.toStdString(),
+                                                              {"Lichess broadcasts", "", 0, 0});
+        if (!writer.ok()) {
+            return nullptr;
+        }
+        kiebitz::gamedb::GameSplitter splitter;
+        const auto add = [&](std::string_view game) {
+            (*writer)->add(kiebitz::gamedb::scanGame(game));
+        };
+        splitter.feed(pgn, add);
+        splitter.finish(add);
+        if (!(*writer)->finish().empty()) {
+            return nullptr;
+        }
+    }
+    auto db = kiebitz::gamedb::Database::open(folder.toStdString());
+    return db.ok() ? std::shared_ptr<const kiebitz::gamedb::Database>(std::move(*db)) : nullptr;
+}
+
+} // namespace
+
+TEST_F(ProfilesTest, EachDatabaseGivesThePlayersGamesAPartOfItsOwnAndAllCountsThemOnce) {
+    server.pages["/api/fide/player"] = kFideAnswer;
+    // Lichess's broadcasts: found by FIDE id.
+    const auto broadcasts = broadcastsDb(
+        folder.filePath(QStringLiteral("broadcasts")),
+        "[White \"Carlsen, Magnus\"]\n[Black \"Caruana, Fabiano\"]\n[WhiteFideId \"1503014\"]\n"
+        "[BlackFideId \"2020009\"]\n[Date \"2026.09.29\"]\n[Result \"1-0\"]\n\n"
+        "1. e4 e5 2. Nf3 1-0\n\n"
+        "[White \"Nakamura, Hikaru\"]\n[Black \"Carlsen, Magnus\"]\n[WhiteFideId \"2016192\"]\n"
+        "[BlackFideId \"1503014\"]\n[Date \"2026.09.30\"]\n[Result \"0-1\"]\n\n"
+        "1. d4 Nf6 0-1\n\n"
+        "[White \"Someone, Else\"]\n[Black \"Another, One\"]\n[WhiteFideId \"5\"]\n"
+        "[BlackFideId \"6\"]\n[Result \"*\"]\n\n1. c4 *\n");
+    // A database without FIDE ids (Caissabase): found by name; the same game as in the
+    // broadcasts once more, and a namesake who isn't him.
+    const auto caissabase = broadcastsDb(
+        folder.filePath(QStringLiteral("caissabase")),
+        "[White \"Carlsen, Magnus\"]\n[Black \"Kasparov, Garry\"]\n[Date \"2004.03.18\"]\n"
+        "[Result \"1/2-1/2\"]\n\n1. d4 d5 1/2-1/2\n\n"
+        "[White \"Carlsen, Magnus\"]\n[Black \"Caruana, Fabiano\"]\n[Date \"2026.09.29\"]\n"
+        "[Result \"1-0\"]\n\n1. e4 e5 2. Nf3 1-0\n\n"
+        "[White \"Carlsen, Henrik\"]\n[Black \"X\"]\n[Result \"1-0\"]\n\n1. e4 1-0\n");
+    ASSERT_NE(broadcasts, nullptr);
+    ASSERT_NE(caissabase, nullptr);
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    store.setGameSources([&] {
+        return std::vector<std::pair<QString, std::shared_ptr<const kiebitz::gamedb::Database>>>{
+            {QStringLiteral("Lichess broadcasts"), broadcasts},
+            {QStringLiteral("Caissabase"), caissabase}};
+    });
+    const QString id = store.addProfile(QStringLiteral("Magnus Carlsen"));
+    // The FIDE player found: two games from each database, the shared one once in all.
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* profile = store.profile(id);
+            return !store.busy(id) && profile->all && profile->all->gameCount() == 3;
+        },
+        10000));
+    const auto* profile = store.profile(id);
+    ASSERT_EQ(profile->sources.size(), 2U);
+    EXPECT_EQ(profile->sources[0].second, QStringLiteral("Caissabase"));
+    EXPECT_EQ(profile->sources[1].second, QStringLiteral("Lichess broadcasts"));
+    EXPECT_EQ(profile->parts.at(profile->sources[0].first)->gameCount(), 2U);
+    EXPECT_EQ(profile->parts.at(profile->sources[1].first)->gameCount(), 2U);
+
+    // The same game from ChessBase (names written its way): your files keep it, and all of
+    // them still count it once.
+    const QString pasted = folder.filePath(QStringLiteral("chessbase.pgn"));
+    {
+        QFile file(pasted);
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        file.write("[White \"Carlsen,M\"]\n[Black \"Caruana,F\"]\n[Date \"2026.09.29\"]\n"
+                   "[Result \"1-0\"]\n\n1.e4 e5 2.Nf3 1-0\n\n"
+                   "[White \"Carlsen,M\"]\n[Black \"Anand,V\"]\n[Date \"2010.01.01\"]\n"
+                   "[Result \"1/2-1/2\"]\n\n1.c4 c5 1/2-1/2\n");
+    }
+    QSignalSpy added(&store, &ProfileStore::otbAdded);
+    store.addOtbGames(id, {pasted});
+    ASSERT_TRUE(added.wait(5000));
+    EXPECT_EQ(added.front().at(1).toInt(), 2);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(id) && store.profile(id)->all->gameCount() == 4; }, 10000));
+    // All four are his, also the ones ChessBase writes "Carlsen,M".
+    ASSERT_TRUE(QTest::qWaitFor([&] {
+        const auto& records = store.profile(id)->records;
+        const auto all = records.find(QString());
+        return all != records.end() && all->second.games() == 4;
+    }));
+
+    // Your PGN games and Caissabase's together: the shared game once (three, not four).
+    const QString both =
+        ProfileStore::partsKey({QStringLiteral("otb"), store.profile(id)->sources[0].first});
+    EXPECT_EQ(store.database(id, both), nullptr); // not combined yet
+    store.combine(id, both);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return store.database(id, both) != nullptr; }, 10000));
+    EXPECT_EQ(store.database(id, both)->gameCount(), 3U);
+
+    // A database's game deleted stays deleted when the games are looked for again.
+    const auto nakamura = broadcasts->game(2);
+    ASSERT_TRUE(nakamura.has_value());
+    const QString broadcastPart = store.profile(id)->sources[1].first;
+    store.deleteGame(id, broadcastPart, *nakamura);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(id) && store.profile(id)->all->gameCount() == 3; }, 10000));
+    store.refreshSourceGames(id);
+    QTest::qWait(300);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !store.busy(id); }, 10000));
+    EXPECT_EQ(store.profile(id)->all->gameCount(), 3U);
+
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        const kiebitz::app::AppStyle style(*qApp);
+        kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+        kiebitz::app::Library library;
+        kiebitz::app::RepertoireStore repertoires(library);
+        kiebitz::app::ProfilesView view(store, lichess, repertoires, style);
+        view.resize(1180, 720);
+        view.show();
+        view.select(id);
+        QTest::qWait(100);
+        view.grab().save(QDir(dir).filePath(QStringLiteral("profile-sources.png")));
+        const auto* parts =
+            view.findChild<kiebitz::app::MultiChoice*>(QStringLiteral("profilePart"));
+        QStringList texts;
+        for (const QAction* action : parts->menu()->actions()) {
+            texts << action->text();
+        }
+        EXPECT_TRUE(texts.contains(QStringLiteral("Lichess broadcasts")));
+        EXPECT_TRUE(texts.contains(QStringLiteral("Caissabase")));
+    }
+    // Not this player after all: the databases' games go; your files stay.
+    store.chooseFide(id, 0);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(id) && store.profile(id)->all->gameCount() == 2; }, 10000));
+    EXPECT_TRUE(store.profile(id)->sources.empty());
+}
+
+TEST_F(ProfilesTest, GamesCopiedFromChessBaseArePastedIntoTheOverTheBoardGames) {
+    const kiebitz::app::AppStyle style(*qApp);
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+    kiebitz::app::Library library;
+    kiebitz::app::RepertoireStore repertoires(library);
+    kiebitz::app::ProfilesView view(store, lichess, repertoires, style);
+    view.resize(1180, 720);
+    view.show();
+    const QString me = store.profiles()[0].id;
+    view.select(me);
+    QApplication::processEvents();
+    QApplication::clipboard()->setText(
+        QStringLiteral("[White \"Ott,L\"]\n[Black \"Smith,A\"]\n[Date \"2025.03.01\"]\n"
+                       "[Result \"1-0\"]\n\n1.e4 e5 2.Nf3 1-0\n\n"
+                       "[White \"Lee,B\"]\n[Black \"Ott,L\"]\n[Date \"2025.03.02\"]\n"
+                       "[Result \"0-1\"]\n\n1.d4 d5 0-1\n"));
+    QSignalSpy added(&store, &ProfileStore::otbAdded);
+    auto* paste = view.findChild<QPushButton*>(QStringLiteral("profilePasteGames"));
+    ASSERT_NE(paste, nullptr);
+    QTest::mouseClick(paste, Qt::LeftButton);
+    ASSERT_TRUE(added.wait(5000));
+    EXPECT_EQ(added.front().at(1).toInt(), 2);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return !store.busy(me) && store.profile(me)->all &&
+                   store.profile(me)->all->gameCount() == 2;
+        },
+        10000));
+}
+
+TEST(AccountFinder, UsernamesAreGuessedFromTheFideName) {
+    const QStringList guesses = kiebitz::app::usernameGuesses(QStringLiteral("Wang, Justin Zhide"));
+    EXPECT_EQ(guesses.front(), QStringLiteral("justinwang"));
+    EXPECT_TRUE(guesses.contains(QStringLiteral("wangjustin")));
+    EXPECT_TRUE(guesses.contains(QStringLiteral("jwang")));
+    EXPECT_TRUE(guesses.contains(QStringLiteral("wang")));
+    // Accents go: usernames are plain letters.
+    EXPECT_TRUE(kiebitz::app::usernameGuesses(QStringLiteral("Müller, Jörg"))
+                    .contains(QStringLiteral("jorgmuller")));
+}
+
+TEST(AccountFinder, AnAccountIsJudgedByWhatItsProfileSays) {
+    kiebitz::app::FidePlayer player;
+    player.name = QStringLiteral("Wang, Justin Zhide");
+    player.title = QStringLiteral("CM");
+    player.standard = 2103;
+    using kiebitz::app::AccountFacts;
+    using kiebitz::app::judgeAccount;
+    // Real name and FIDE rating: surely them.
+    const auto sure = judgeAccount(AccountFacts{AccountSite::Lichess,
+                                                QStringLiteral("jw_chess"),
+                                                QStringLiteral("Justin Wang"),
+                                                {},
+                                                2110},
+                                   player);
+    EXPECT_GE(sure.score, 90);
+    EXPECT_EQ(sure.reasons.size(), 2);
+    // Only the name in the username: not enough to suggest.
+    EXPECT_LT(
+        judgeAccount(AccountFacts{AccountSite::ChessCom, QStringLiteral("wang1999"), {}, {}, 0},
+                     player)
+            .score,
+        50);
+    // Someone else's FIDE rating counts against.
+    EXPECT_LT(judgeAccount(AccountFacts{AccountSite::Lichess,
+                                        QStringLiteral("justinwang"),
+                                        QStringLiteral("Justin Wang"),
+                                        {},
+                                        1500},
+                           player)
+                  .score,
+              50);
+}
+
+TEST(Wikidata, TheAnswerGivesTheItemItsLichessAccountsPhotoAndArticles) {
+    // One row per article; the photo's file name comes percent-encoded in its address.
+    const QByteArray answer =
+        R"({"results":{"bindings":[)"
+        R"({"item":{"value":"http://www.wikidata.org/entity/Q106807"},)"
+        R"("lichess":{"value":"DrNykterstein"},)"
+        R"("photo":{"value":"http://commons.wikimedia.org/wiki/Special:FilePath/Magnus%20C.jpg"},)"
+        R"("article":{"value":"https://en.wikipedia.org/wiki/Magnus_Carlsen"}},)"
+        R"({"item":{"value":"http://www.wikidata.org/entity/Q106807"},)"
+        R"("lichess":{"value":"DrNykterstein"},)"
+        R"("article":{"value":"https://no.wikipedia.org/wiki/Magnus_Carlsen"}}]}})";
+    const kiebitz::app::WikiPerson person = kiebitz::app::parseWikidata(answer);
+    EXPECT_EQ(person.item, QStringLiteral("Q106807"));
+    EXPECT_EQ(person.lichess, QStringList{QStringLiteral("DrNykterstein")});
+    EXPECT_EQ(person.photo, QStringLiteral("Magnus C.jpg"));
+    // Bokmål reads the Norwegian Wikipedia; German has none here: English.
+    EXPECT_EQ(person.article(QStringLiteral("nb_NO")),
+              QStringLiteral("https://no.wikipedia.org/wiki/Magnus_Carlsen"));
+    EXPECT_EQ(person.article(QStringLiteral("de_DE")),
+              QStringLiteral("https://en.wikipedia.org/wiki/Magnus_Carlsen"));
+    EXPECT_EQ(kiebitz::app::commonsPhotoPath(person.photo, 160),
+              QStringLiteral("/wiki/Special:FilePath/Magnus%20C.jpg?width=160"));
+    EXPECT_TRUE(kiebitz::app::wikidataQuery(1503014).contains(QStringLiteral("\"1503014\"")));
+
+    // Two items with one FIDE id: which is meant is unclear, so neither.
+    const QByteArray two = R"({"results":{"bindings":[)"
+                           R"({"item":{"value":"http://www.wikidata.org/entity/Q1"}},)"
+                           R"({"item":{"value":"http://www.wikidata.org/entity/Q2"}}]}})";
+    EXPECT_TRUE(kiebitz::app::parseWikidata(two).item.isEmpty());
+    EXPECT_TRUE(kiebitz::app::parseWikidata("not json").item.isEmpty());
+}
+
+TEST_F(ProfilesTest, WikidataGivesAPlayersLichessAccountPhotoAndWikipediaArticle) {
+    server.pages["/api/fide/player"] =
+        R"([{"id":4312830,"name":"Wang, Justin Zhide","federation":"NZL","title":"CM",)"
+        R"("standard":2103}])";
+    // Wikidata knows them: a Lichess account no username guess finds, a photo, an article.
+    server.pages["/sparql"] =
+        R"({"results":{"bindings":[)"
+        R"({"item":{"value":"http://www.wikidata.org/entity/Q42"},)"
+        R"("lichess":{"value":"KiwiKnight"},)"
+        R"("photo":{"value":"http://commons.wikimedia.org/wiki/Special:FilePath/Justin%20Wang.jpg"},)"
+        R"("article":{"value":"https://en.wikipedia.org/wiki/Justin_Wang"}}]}})";
+    // Its profile says nothing about who it is: Wikidata alone makes it a suggestion.
+    server.pages["/api/users"] = R"([{"id":"kiwiknight","username":"KiwiKnight","profile":{}}])";
+    {
+        QImage image(40, 60, QImage::Format_RGB32);
+        image.fill(Qt::darkGreen);
+        QBuffer buffer;
+        buffer.open(QIODevice::WriteOnly);
+        image.save(&buffer, "PNG");
+        server.pages["/wiki/Special:FilePath/Justin%20Wang.jpg"] = buffer.data();
+    }
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    const QString id = store.addProfile(QStringLiteral("Justin Wang"));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* profile = store.profile(id);
+            return profile->suggestionsFor == 4312830 && !profile->suggesting &&
+                   !store.photoFile(id).isEmpty();
+        },
+        10000));
+    const auto* profile = store.profile(id);
+    ASSERT_FALSE(profile->suggestions.empty());
+    EXPECT_EQ(profile->suggestions.front().username, QStringLiteral("KiwiKnight"));
+    EXPECT_TRUE(
+        profile->suggestions.front().reasons.contains(QStringLiteral("Listed on Wikidata")));
+    EXPECT_EQ(profile->wiki.item, QStringLiteral("Q42"));
+    EXPECT_FALSE(QImage(store.photoFile(id)).isNull());
+
+    // The page: the photo by the name, the article in the FIDE card.
+    const kiebitz::app::AppStyle style(*qApp);
+    kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+    kiebitz::app::Library library;
+    kiebitz::app::RepertoireStore repertoires(library);
+    kiebitz::app::ProfilesView view(store, lichess, repertoires, style);
+    view.resize(1180, 720);
+    view.show();
+    view.select(id);
+    auto* photo = view.findChild<QLabel*>(QStringLiteral("profilePhoto"));
+    ASSERT_NE(photo, nullptr);
+    EXPECT_TRUE(photo->isVisible());
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileFide")), Qt::LeftButton);
+    QPushButton* article = nullptr;
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return (article = view.findChild<QPushButton*>(QStringLiteral("fideWikipedia"))); },
+        5000));
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        view.grab().save(QDir(dir).filePath(QStringLiteral("profile-photo.png")));
+    }
+    if (auto* card = view.findChild<QFrame*>(QStringLiteral("fideCard"))) {
+        card->close();
+    }
+
+    // Kept across starts.
+    ProfileStore again(folder.filePath(QStringLiteral("profiles")));
+    EXPECT_EQ(again.profile(id)->wiki, profile->wiki);
+    EXPECT_FALSE(again.photoFile(id).isEmpty());
+
+    // Another FIDE player chosen: what Wikidata said about the old one goes.
+    store.chooseFide(id, 0);
+    EXPECT_TRUE(store.profile(id)->wiki.item.isEmpty());
+    EXPECT_TRUE(store.photoFile(id).isEmpty());
+}
+
+TEST_F(ProfilesTest, AFidePlayersAccountsAreSuggestedAndNotThemIsRemembered) {
+    server.pages["/api/fide/player"] =
+        R"([{"id":4312830,"name":"Wang, Justin Zhide","federation":"NZL","title":"CM",)"
+        R"("standard":2103}])";
+    // Lichess: the username search finds two; one's profile says who they are.
+    server.pages["/api/player/autocomplete"] = R"(["JustinWang","justinwangfan"])";
+    server.pages["/api/users"] =
+        R"([{"id":"justinwang","username":"JustinWang","profile":{"realName":"Justin Wang",)"
+        R"("fideRating":2105}},{"id":"justinwangfan","username":"justinwangfan","profile":{}}])";
+    // chess.com: "jwang" exists, a verified CM with the name; everything else doesn't.
+    server.pages["/pub/player/jwang"] = R"({"username":"JWang","name":"Justin Wang","title":"CM"})";
+    server.pages["/pub/player/jwang/stats"] = R"({"fide":2103})";
+    server.pages["/pub/titled/CM"] = R"({"players":["jwang","someoneelse"]})";
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    const QString id = store.addProfile(QStringLiteral("Justin Wang"));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* profile = store.profile(id);
+            return profile->suggestionsFor == 4312830 && !profile->suggesting;
+        },
+        10000));
+    const auto& suggestions = store.profile(id)->suggestions;
+    ASSERT_EQ(suggestions.size(), 2U);
+    QStringList names;
+    for (const auto& suggestion : suggestions) {
+        names << suggestion.username;
+    }
+    EXPECT_TRUE(names.contains(QStringLiteral("JustinWang")));
+    EXPECT_TRUE(names.contains(QStringLiteral("JWang")));
+    EXPECT_FALSE(names.contains(QStringLiteral("justinwangfan")));
+    EXPECT_EQ(server.asked.count(QStringLiteral("/pub/player/jwang")), 1); // asked once
+
+    // Not them: gone, and not suggested again when looked for once more.
+    store.dismissSuggestion(id, AccountSite::ChessCom, QStringLiteral("JWang"));
+    ASSERT_EQ(store.profile(id)->suggestions.size(), 1U);
+    store.findAccounts(id, true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !store.profile(id)->suggesting; }, 10000));
+    QTest::qWait(50);
+    ASSERT_EQ(store.profile(id)->suggestions.size(), 1U);
+    EXPECT_EQ(store.profile(id)->suggestions.front().username, QStringLiteral("JustinWang"));
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        const kiebitz::app::AppStyle style(*qApp);
+        kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+        kiebitz::app::Library library;
+        kiebitz::app::RepertoireStore repertoires(library);
+        kiebitz::app::ProfilesView view(store, lichess, repertoires, style);
+        view.resize(1180, 720);
+        view.show();
+        view.select(id);
+        QTest::qWait(100);
+        view.grab().save(QDir(dir).filePath(QStringLiteral("profile-suggestions.png")));
+    }
+    // Kept across starts.
+    ProfileStore again(folder.filePath(QStringLiteral("profiles")));
+    EXPECT_EQ(again.profile(id)->suggestions.size(), 1U);
+    EXPECT_TRUE(again.profile(id)->dismissed.contains(QStringLiteral("chesscom:jwang")));
+}
+
+TEST_F(ProfilesTest, PreparingShowsTheirLinesWhatYourRepertoireLacksAndWhereTheyLeaveTheory) {
+    // Your White repertoire: the Open Sicilian with 2... d6.
+    const QTemporaryDir libraryFolder;
+    {
+        QFile file(libraryFolder.filePath(QStringLiteral("white.pgn")));
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        file.write("[FileType \"Repertoire\"]\n[Orientation \"white\"]\n\n"
+                   "1. e4 c5 2. Nf3 d6 3. d4 *\n");
+    }
+    kiebitz::app::Library library;
+    kiebitz::app::RepertoireStore repertoires(library);
+    library.setFolder(libraryFolder.path());
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return repertoires.get(kiebitz::core::Color::White) != nullptr; }, 10000));
+
+    // The opponent: 2... Nc6 twice and 2... a6 once as Black; 1. c4 twice as White.
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    const QString id = store.addProfile(QStringLiteral("Petra Pawn"));
+    const QString pgn = folder.filePath(QStringLiteral("petra.pgn"));
+    {
+        QFile file(pgn);
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        const auto one = [&](const char* white, const char* black, const char* date,
+                             const char* result, const char* moves) {
+            file.write(QByteArray("[White \"") + white + "\"]\n[Black \"" + black +
+                       "\"]\n[Date \"" + date + "\"]\n[Result \"" + result + "\"]\n\n" + moves +
+                       " " + result + "\n\n");
+        };
+        one("A", "Pawn, Petra", "2026.09.01", "0-1", "1. e4 c5 2. Nf3 Nc6 3. d4 cxd4");
+        one("B", "Pawn, Petra", "2025.01.01", "1/2-1/2", "1. e4 c5 2. Nf3 Nc6 3. Bb5 g6");
+        one("C", "Pawn, Petra", "2024.01.01", "1-0", "1. e4 c5 2. Nf3 a6");
+        one("Pawn, Petra", "D", "2026.05.01", "1-0", "1. c4 e5 2. Nc3");
+        one("Pawn, Petra", "E", "2026.06.01", "1-0", "1. c4 e5 2. g3");
+    }
+    QSignalSpy added(&store, &ProfileStore::otbAdded);
+    store.addOtbGames(id, {pgn});
+    ASSERT_TRUE(added.wait(5000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(id) && store.profile(id)->all != nullptr; }, 10000));
+
+    const kiebitz::app::AppStyle style(*qApp);
+    kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+    kiebitz::app::ProfilesView view(store, lichess, repertoires, style);
+    view.resize(1180, 720);
+    view.show();
+    view.select(id);
+    auto* prepareButton = view.findChild<QPushButton*>(QStringLiteral("profileShowPrepare"));
+    ASSERT_NE(prepareButton, nullptr);
+    EXPECT_TRUE(prepareButton->isVisible());
+    auto* page = view.findChild<kiebitz::app::PreparePage*>();
+    QSignalSpy ready(page, &kiebitz::app::PreparePage::ready);
+    QTest::mouseClick(prepareButton, Qt::LeftButton);
+    ASSERT_TRUE(ready.wait(10000));
+
+    auto* moves = view.findChild<QTreeWidget*>(QStringLiteral("prepareMoves"));
+    ASSERT_NE(moves, nullptr);
+    const auto row = [&](const QString& move) -> QTreeWidgetItem* {
+        for (int i = 0; i < moves->topLevelItemCount(); ++i) {
+            if (moves->topLevelItem(i)->text(0) == move) {
+                return moves->topLevelItem(i);
+            }
+        }
+        return nullptr;
+    };
+    const auto step = [&](const QString& move) {
+        QTreeWidgetItem* item = row(move);
+        ASSERT_NE(item, nullptr) << move.toStdString();
+        emit moves->itemClicked(item, 0);
+    };
+    // I play White: from the start, my 1. e4 (her 3 games with Black), my repertoire's.
+    ASSERT_NE(row(QStringLiteral("1. e4")), nullptr);
+    EXPECT_EQ(row(QStringLiteral("1. e4"))->text(2), QStringLiteral("3 · 100%"));
+    // A click steps in: her replies, then mine, then hers again.
+    step(QStringLiteral("1. e4"));
+    EXPECT_EQ(row(QStringLiteral("1… c5"))->text(2), QStringLiteral("3 · 100%"));
+    step(QStringLiteral("1… c5"));
+    step(QStringLiteral("2. Nf3"));
+    EXPECT_EQ(page->line().size(), 3U);
+    ASSERT_NE(row(QStringLiteral("2… Nc6")), nullptr);
+    EXPECT_EQ(row(QStringLiteral("2… Nc6"))->text(2), QStringLiteral("2 · 67%"));
+    EXPECT_EQ(row(QStringLiteral("2… a6"))->text(2), QStringLiteral("1 · 33%"));
+    // The board shows where I am.
+    const auto* board = view.findChild<kiebitz::app::BoardView*>(QStringLiteral("prepareBoard"));
+    ASSERT_NE(board, nullptr);
+    EXPECT_EQ(board->position().fullmoveNumber(), 2);
+
+    // The path leads back.
+    auto* back = view.findChild<QPushButton*>(QStringLiteral("preparePath:1"));
+    ASSERT_NE(back, nullptr);
+    QTest::mouseClick(back, Qt::LeftButton);
+    EXPECT_EQ(page->line().size(), 1U);
+    // The moves ahead stay: the path still has them, and the arrows step along them.
+    ASSERT_NE(view.findChild<QPushButton*>(QStringLiteral("preparePath:3")), nullptr);
+    auto* forward = view.findChild<QPushButton*>(QStringLiteral("prepareForward"));
+    auto* stepBack = view.findChild<QPushButton*>(QStringLiteral("prepareBack"));
+    ASSERT_NE(forward, nullptr);
+    ASSERT_NE(stepBack, nullptr);
+    QTest::mouseClick(forward, Qt::LeftButton);
+    EXPECT_EQ(page->line().size(), 2U);
+    QTest::keyClick(page, Qt::Key_Right);
+    EXPECT_EQ(page->line().size(), 3U);
+    EXPECT_FALSE(forward->isEnabled()); // the end of the line
+    QTest::mouseClick(stepBack, Qt::LeftButton);
+    QTest::keyClick(page, Qt::Key_Left);
+    EXPECT_EQ(page->line().size(), 1U);
+    QTest::keyClick(page, Qt::Key_Home);
+    EXPECT_TRUE(page->line().empty());
+    EXPECT_FALSE(stepBack->isEnabled());
+    QTest::keyClick(page, Qt::Key_End);
+    EXPECT_EQ(page->line().size(), 3U);
+    // Another move from the middle: the old moves ahead are gone.
+    QTest::keyClick(page, Qt::Key_Left);
+    step(QStringLiteral("2. Nf3")); // the same move: still on the way
+    EXPECT_EQ(page->line().size(), 3U);
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("preparePath:1")),
+                      Qt::LeftButton);
+    step(QStringLiteral("1… c5"));
+    EXPECT_EQ(page->line().size(), 2U);
+    step(QStringLiteral("2. Nf3"));
+
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        view.findChild<QPushButton*>(QStringLiteral("prepareAdd:2… Nc6"))->click();
+        QTest::qWait(100); // new rows and chips show on the next turn of the event loop
+        view.grab().save(QDir(dir).filePath(QStringLiteral("profile-prepare.png")));
+        view.findChild<QPushButton*>(QStringLiteral("prepareAdd:2… Nc6"))->click();
+    }
+    // + puts the line into my prep; the file has it, with her numbers as comments.
+    auto* add = view.findChild<QPushButton*>(QStringLiteral("prepareAdd:2… Nc6"));
+    ASSERT_NE(add, nullptr);
+    add->click();
+    ASSERT_EQ(page->prepLines().size(), 1U);
+    auto* create = view.findChild<QPushButton*>(QStringLiteral("prepareCreate"));
+    ASSERT_NE(create, nullptr);
+    EXPECT_TRUE(create->isVisible());
+    QSignalSpy file(&view, &kiebitz::app::ProfilesView::prepFileRequested);
+    QTest::mouseClick(create, Qt::LeftButton);
+    ASSERT_EQ(file.size(), 1);
+    EXPECT_EQ(file.front().at(0).toString(), QStringLiteral("Petra Pawn – White"));
+    std::string text = kiebitz::pgn::writeGame(file.front().at(1).value<kiebitz::core::Game>());
+    std::replace(text.begin(), text.end(), '\n', ' ');
+    EXPECT_NE(text.find("[FileType \"Repertoire\"]"), std::string::npos) << text;
+    EXPECT_NE(text.find("2. Nf3 Nc6 {Petra Pawn: 2 games, scores 75%"), std::string::npos) << text;
+    // Clicked again, it comes out.
+    view.findChild<QPushButton*>(QStringLiteral("prepareAdd:2… Nc6"))->click();
+    EXPECT_TRUE(page->prepLines().empty());
+
+    // Your repertoire changed: where I am stays.
+    page->show(id, QString(), true);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return row(QStringLiteral("2… Nc6")) != nullptr; }));
+    EXPECT_EQ(page->line().size(), 3U);
+
+    // I play Black: her White games, 1. c4 twice, both won; from the start again.
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("prepareBlack")), Qt::LeftButton);
+    EXPECT_TRUE(page->line().empty());
+    ASSERT_NE(row(QStringLiteral("1. c4")), nullptr);
+    EXPECT_EQ(row(QStringLiteral("1. c4"))->text(2), QStringLiteral("2 · 100%"));
+    EXPECT_TRUE(board->isFlipped());
+
+    // "Open on the board": the moves so far, in a new game.
+    step(QStringLiteral("1. c4"));
+    QSignalSpy opened(&view, &kiebitz::app::ProfilesView::openGameRequested);
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("prepareOpen")), Qt::LeftButton);
+    ASSERT_EQ(opened.size(), 1);
+    EXPECT_EQ(opened.front().at(0).value<kiebitz::core::Game>().mainLine().size(), 2U);
+}
+
+TEST_F(ProfilesTest, TheExplorerShowsHowOftenAProfilesMovesArePlayedInTheory) {
+    // A reference database: 1. e4 three times, 1. d4 once.
+    kiebitz::app::DatabaseManager databases(folder.filePath(QStringLiteral("dbs")));
+    const QString reference = folder.filePath(QStringLiteral("reference.pgn"));
+    {
+        QFile file(reference);
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        for (const char* moves : {"1. e4 e5", "1. e4 c5", "1. e4 e6", "1. d4 d5"}) {
+            file.write(QByteArray("[White \"X\"]\n[Black \"Y\"]\n[Result \"*\"]\n\n") + moves +
+                       " *\n\n");
+        }
+    }
+    QSignalSpy imported(&databases, &kiebitz::app::DatabaseManager::jobFinished);
+    databases.importFile(reference, QStringLiteral("Reference"));
+    ASSERT_TRUE(imported.wait(10000));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return databases.databases().size() == 1; }, 5000));
+
+    // A profile who plays 1. d4 and 1. b3.
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    const QString me = store.profiles()[0].id;
+    const QString pgn = folder.filePath(QStringLiteral("mine.pgn"));
+    {
+        QFile file(pgn);
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        file.write("[White \"Me\"]\n[Black \"A\"]\n[Result \"*\"]\n\n1. d4 d5 *\n\n"
+                   "[White \"Me\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. b3 e5 *\n");
+    }
+    QSignalSpy added(&store, &ProfileStore::otbAdded);
+    store.addOtbGames(me, {pgn});
+    ASSERT_TRUE(added.wait(5000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(me) && store.profile(me)->all != nullptr; }, 10000));
+
+    const kiebitz::app::AppStyle style(*qApp);
+    kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+    kiebitz::app::Library library;
+    kiebitz::app::RepertoireStore repertoires(library);
+    kiebitz::app::ExplorerPanel explorer(databases, store, repertoires, lichess, style);
+    auto* source = explorer.findChild<QComboBox*>(QStringLiteral("explorerSource"));
+    source->setCurrentIndex(source->findData(QStringLiteral("profile:") + me));
+    emit source->activated(source->currentIndex());
+    const kiebitz::core::Game start;
+    explorer.setPosition(&start, kiebitz::core::Game::root(), kiebitz::core::Color::White);
+    // Their moves, with how often the reference plays them: d4 in a quarter, b3 never.
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !explorer.theoryShare(QStringLiteral("d4")).isEmpty(); }, 5000));
+    EXPECT_EQ(explorer.theoryShare(QStringLiteral("d4")), QStringLiteral("25%"));
+    EXPECT_EQ(explorer.theoryShare(QStringLiteral("b3")), QStringLiteral("–"));
+
+    // The reference itself as the source: no theory column.
+    source->setCurrentIndex(
+        source->findData(QStringLiteral("db:") + databases.databases()[0].folder));
+    emit source->activated(source->currentIndex());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return explorer.moveTexts().size() == 2; }, 5000));
+    EXPECT_EQ(explorer.theoryShare(QStringLiteral("e4")), QString());
 }
