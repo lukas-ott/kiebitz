@@ -7,6 +7,7 @@ and training opening repertoires.
 
 Latest release: **[0.3.0](https://github.com/lukas-ott/kiebitz/releases/tag/v0.3.0)** (pre-release,
 Apple silicon). In English, German and Norwegian.
+Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**.
 
 ## What it does
 
@@ -129,6 +130,9 @@ tests/    GoogleTest unit tests; tests/ui/ drives the board and window offscreen
 bench/    Google Benchmark micro-benchmarks.
 scripts/  Dev scripts (startup timing).
 cmake/    Compiler options and pinned dependencies.
+website/  The website: one static page (HTML, CSS, a little JavaScript for the boards and the
+          newest release), published to GitHub Pages by .github/workflows/website.yml on
+          every push to main that changes it.
 ```
 
 ## Roadmap
