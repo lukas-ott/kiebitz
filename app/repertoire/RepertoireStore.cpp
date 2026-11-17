@@ -6,6 +6,7 @@
 #include "util/WhenReady.hpp"
 
 #include <QFile>
+#include <QSettings>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
@@ -52,6 +53,9 @@ RepertoireFile readFile(const QString& path) {
 repertoire::Tree treeOf(core::Color side, const std::vector<RepertoireFile>& files) {
     repertoire::Tree tree(side);
     for (std::size_t f = 0; f < files.size(); ++f) {
+        if (!files[f].active) {
+            continue; // read, but not part of the repertoire played
+        }
         for (std::size_t g = 0; g < files[f].games.size(); ++g) {
             tree.add(files[f].games[g], static_cast<int>(f), static_cast<int>(g));
         }
@@ -65,6 +69,69 @@ RepertoireStore::RepertoireStore(Library& library, QObject* parent)
     : QObject(parent), m_library(library) {
     connect(&m_library, &Library::scanned, this, &RepertoireStore::libraryChanged);
     connect(&m_library, &Library::progress, this, &RepertoireStore::libraryChanged);
+    const QSettings settings;
+    const QVariantMap saved = settings.value(QString::fromLatin1(kActiveKey)).toMap();
+    for (auto it = saved.begin(); it != saved.end(); ++it) {
+        m_active[it.key()] = it.value().toBool();
+    }
+}
+
+// ---- Active repertoires ------------------------------------------------------------------------
+
+bool RepertoireStore::isActive(const QString& name) const {
+    QString folder = name;
+    while (!folder.isEmpty()) {
+        if (const auto it = m_active.find(folder); it != m_active.end()) {
+            return it->second;
+        }
+        const qsizetype slash = folder.lastIndexOf(u'/');
+        folder = slash < 0 ? QString() : folder.left(slash);
+    }
+    return true;
+}
+
+std::optional<bool> RepertoireStore::activeSetting(const QString& folder) const {
+    if (const auto it = m_active.find(folder); it != m_active.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+void RepertoireStore::setActive(const QString& folder, bool active) {
+    m_active.erase(folder);
+    // The same as the folder around it says: no setting of its own needed.
+    const qsizetype slash = folder.lastIndexOf(u'/');
+    if (isActive(slash < 0 ? QString() : folder.left(slash)) != active) {
+        m_active[folder] = active;
+    }
+    saveActive();
+    emit activeChanged();
+    libraryChanged();
+}
+
+void RepertoireStore::folderMoved(const QString& from, const QString& to) {
+    std::map<QString, bool> moved;
+    for (const auto& [folder, active] : m_active) {
+        if (folder == from || folder.startsWith(from + u'/')) {
+            moved[to + folder.mid(from.size())] = active;
+        } else {
+            moved[folder] = active;
+        }
+    }
+    if (moved != m_active) {
+        m_active = std::move(moved);
+        saveActive();
+        emit activeChanged();
+    }
+}
+
+void RepertoireStore::saveActive() const {
+    QVariantMap saved;
+    for (const auto& [folder, active] : m_active) {
+        saved.insert(folder, active);
+    }
+    QSettings settings;
+    settings.setValue(QString::fromLatin1(kActiveKey), saved);
 }
 
 // ---- What a file is ----------------------------------------------------------------------------
@@ -151,22 +218,29 @@ QStringList RepertoireStore::filesWith(core::Color side, std::uint64_t position)
 
 void RepertoireStore::libraryChanged() {
     std::array<QStringList, 2> files;
+    std::array<QStringList, 2> all;
     std::array<QStringList, 2> stamps;
     for (const auto& file : m_library.files()) {
         if (!file.pgn || kindOf(*file.pgn) != library::FileKind::Repertoire) {
             continue; // not read yet, or not a repertoire
         }
         const std::size_t i = sideOf(*file.pgn) == core::Color::White ? 0 : 1;
-        files[i] << file.path;
-        stamps[i] << QStringLiteral("%1|%2|%3")
+        const bool active = isActive(file.name);
+        all[i] << file.path;
+        if (active) {
+            files[i] << file.path;
+        }
+        stamps[i] << QStringLiteral("%1|%2|%3|%4")
                          .arg(file.path, QString::number(file.size),
-                              QString::number(file.modified.toMSecsSinceEpoch()));
+                              QString::number(file.modified.toMSecsSinceEpoch()),
+                              active ? QStringLiteral("a") : QStringLiteral("-"));
     }
     for (const core::Color side : {core::Color::White, core::Color::Black}) {
         const std::size_t i = side == core::Color::White ? 0 : 1;
         Side& data = sideData(side);
         const bool listChanged = data.files != files[i];
         data.files = files[i];
+        data.allFiles = all[i];
         if (stamps[i] != data.builtFrom && m_pendingWrites == 0) {
             data.builtFrom = stamps[i];
             rebuild(side);
@@ -179,7 +253,7 @@ void RepertoireStore::libraryChanged() {
 void RepertoireStore::rebuild(core::Color side) {
     Side& data = sideData(side);
     const int generation = ++data.generation;
-    if (data.files.isEmpty()) {
+    if (data.allFiles.isEmpty()) {
         data.built.reset();
         data.building = false;
         emit changed(side);
@@ -187,12 +261,14 @@ void RepertoireStore::rebuild(core::Color side) {
     }
     data.building = true;
     emit changed(side);
-    const QStringList paths = data.files;
-    whenReady(this, QtConcurrent::run([side, paths] {
+    const QStringList paths = data.allFiles;
+    const QStringList active = data.files;
+    whenReady(this, QtConcurrent::run([side, paths, active] {
                   auto built = std::make_shared<BuiltRepertoire>();
                   built->side = side;
                   for (const QString& path : paths) {
                       built->files.push_back(readFile(path));
+                      built->files.back().active = active.contains(path);
                   }
                   built->tree = treeOf(side, built->files);
                   return built;
@@ -269,8 +345,12 @@ RepertoireStore::Added RepertoireStore::addLine(core::Color side, std::span<cons
         m_beforeEdit();
     }
     Side& data = sideData(side);
-    if (!data.built || data.built->files.empty()) {
-        return result; // NoFile
+    const auto firstActive =
+        data.built ? std::find_if(data.built->files.begin(), data.built->files.end(),
+                                  [](const RepertoireFile& file) { return file.active; })
+                   : std::vector<RepertoireFile>::iterator{};
+    if (!data.built || firstActive == data.built->files.end()) {
+        return result; // NoFile: no active repertoire file
     }
     BuiltRepertoire& built = *data.built;
     catchUp(built);
@@ -291,7 +371,9 @@ RepertoireStore::Added RepertoireStore::addLine(core::Color side, std::span<cons
     for (int k = 0; k < book.plies; ++k) {
         position.play(line[static_cast<std::size_t>(k)]);
     }
-    repertoire::Source source{0, 0, core::Game::root()};
+    // Not in the tree at all: the first active file.
+    repertoire::Source source{static_cast<int>(firstActive - built.files.begin()), 0,
+                              core::Game::root()};
     if (const repertoire::Entry* entry = built.tree.find(position.hash());
         entry != nullptr && !entry->sources.empty()) {
         source = entry->sources.front();

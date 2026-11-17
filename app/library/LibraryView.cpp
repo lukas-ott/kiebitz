@@ -511,62 +511,14 @@ LibraryView::LibraryView(Library& library, RepertoireStore& store, const AppStyl
             emit openGameRequested(file, 0);
         }
     });
-    // Right-click a folder or file to set its type.
+    // Right-click a file or folder: open, rename, trash, its type; the empty space: a new folder.
     m_files->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_files, &QWidget::customContextMenuRequested, this, [this](QPoint at) {
-        QTreeWidgetItem* item = m_files->itemAt(at);
-        if (item == nullptr) {
-            return;
-        }
-        // A file, or every file in a folder (one file per opening is the usual way).
-        QStringList paths;
-        const std::function<void(QTreeWidgetItem*)> collect = [&](QTreeWidgetItem* node) {
-            if (node->data(0, kKindRole).toInt() == kFile) {
-                paths << node->data(0, kKeyRole).toString();
-            }
-            for (int i = 0; i < node->childCount(); ++i) {
-                collect(node->child(i));
-            }
-        };
-        collect(item);
-        if (paths.isEmpty()) {
-            return;
-        }
         QMenu menu(this);
-        const bool isFile = item->data(0, kKindRole).toInt() == kFile;
-        const QString itemPath =
-            isFile ? item->data(0, kKeyRole).toString()
-                   : QDir(m_library.folder()).filePath(item->data(0, kKeyRole).toString());
-        if (const auto file = fileOf(item)) {
-            menu.addAction(tr("Open"), this, [this, file] { emit openGameRequested(file, 0); });
-            menu.addSeparator();
+        fillContextMenu(menu, m_files->itemAt(at));
+        if (!menu.isEmpty()) {
+            menu.exec(m_files->viewport()->mapToGlobal(at));
         }
-        menu.addAction(tr("Rename"), this, [this, item] { m_files->editItem(item, 0); });
-        menu.addAction(tr("Show in Finder"), this, [itemPath] {
-            QProcess::startDetached(QStringLiteral("/usr/bin/open"),
-                                    {QStringLiteral("-R"), itemPath});
-        });
-        menu.addAction(tr("Move to Trash"), this, [this, itemPath] { askTrash(itemPath); });
-        menu.addSeparator();
-        QMenu* type = menu.addMenu(tr("File Type"));
-        const int current =
-            item->data(0, kKindRole).toInt() == kFile ? item->data(0, kFileKindRole).toInt() : -1;
-        const int currentSide = item->data(0, kSideRole).toInt();
-        const auto add = [&](const QString& text, FileKind kind, int side) {
-            auto* action = type->addAction(text, this, [this, paths, kind, side] {
-                emit fileKindRequested(paths, static_cast<int>(kind), side);
-            });
-            action->setCheckable(true);
-            action->setChecked(current == static_cast<int>(kind) &&
-                               (side < 0 || side == currentSide));
-        };
-        add(tr("Game"), FileKind::Game, -1);
-        add(tr("Repertoire for White"), FileKind::Repertoire, 0);
-        add(tr("Repertoire for Black"), FileKind::Repertoire, 1);
-        add(tr("Tournament"), FileKind::Tournament, -1);
-        add(tr("Puzzles"), FileKind::Puzzle, -1);
-        add(tr("Other"), FileKind::Other, -1);
-        menu.exec(m_files->viewport()->mapToGlobal(at));
     });
 
     m_fileSearch = new QLineEdit;
@@ -611,7 +563,7 @@ LibraryView::LibraryView(Library& library, RepertoireStore& store, const AppStyl
     }
     connect(m_newButtons[0], &QPushButton::clicked, this,
             [this] { emit newFileRequested(QDir(m_library.folder()).filePath(targetFolder())); });
-    connect(m_newButtons[1], &QPushButton::clicked, this, &LibraryView::askNewFolder);
+    connect(m_newButtons[1], &QPushButton::clicked, this, [this] { askNewFolder(); });
     auto* filters = new QHBoxLayout;
     filters->setSpacing(6);
     filters->addWidget(m_fileSearch, 1);
@@ -934,6 +886,7 @@ LibraryView::LibraryView(Library& library, RepertoireStore& store, const AppStyl
     // keep their own size.
     repBox->addStretch();
     m_detail->addWidget(repertoirePage);
+    connect(&m_store, &RepertoireStore::activeChanged, this, &LibraryView::showActive);
     connect(&m_store, &RepertoireStore::changed, this, [this] {
         if (m_detail->currentIndex() == kRepertoirePage) {
             refreshRepertoire();
@@ -1135,6 +1088,53 @@ void LibraryView::updateIcons() {
     }
     m_gamesIcon->setPixmap(makeIcon(iconOf(m_kind), c.text, c.dimmed, 22).pixmap(22, 22));
     m_repIcon->setPixmap(makeIcon(IconKind::Branch, c.text, c.dimmed, 22).pixmap(22, 22));
+    showActive();
+}
+
+void LibraryView::showActive() {
+    const auto& c = m_style.colors();
+    const QDir root(m_library.folder());
+    for (QTreeWidgetItemIterator it(m_files); *it != nullptr; ++it) {
+        QTreeWidgetItem* item = *it;
+        const int kind = item->data(0, kKindRole).toInt();
+        const bool file = kind == kFile;
+        if (!file && kind != kFolder) {
+            continue;
+        }
+        const bool repertoire =
+            file && item->data(0, kFileKindRole).toInt() == static_cast<int>(FileKind::Repertoire);
+        const QString key = item->data(0, kKeyRole).toString();
+        const QString name = file ? root.relativeFilePath(key) : key;
+        // A folder: when it holds repertoire files and isn't an active repertoire.
+        bool holds = repertoire;
+        const std::function<void(const QTreeWidgetItem*)> look = [&](const QTreeWidgetItem* node) {
+            for (int i = 0; i < node->childCount() && !holds; ++i) {
+                holds = node->child(i)->data(0, kFileKindRole).toInt() ==
+                            static_cast<int>(FileKind::Repertoire) &&
+                        node->child(i)->data(0, kKindRole).toInt() == kFile;
+                look(node->child(i));
+            }
+        };
+        if (!file) {
+            look(item);
+        }
+        const bool inactive = holds && !m_store.isActive(name);
+        item->setForeground(0, inactive ? c.dimmed : c.text);
+        if (repertoire) {
+            const auto side =
+                item->data(0, kSideRole).toInt() == 0 ? core::Color::White : core::Color::Black;
+            QString tip = item->data(0, kNameRole).toString() + QStringLiteral("  ·  ") +
+                          typeName(FileKind::Repertoire, side);
+            if (inactive) {
+                tip += QStringLiteral("  ·  ") + tr("not active");
+            }
+            item->setToolTip(0, tip);
+        } else if (!file) {
+            item->setToolTip(0, inactive ? tr("Not an active repertoire: practice, the theory "
+                                              "check and the Explorer leave it out")
+                                         : QString());
+        }
+    }
 }
 
 // ---- Files tree --------------------------------------------------------------------------------
@@ -1239,6 +1239,7 @@ void LibraryView::refreshFiles() {
         item->setExpanded(firstTime ? item->parent() == nullptr : expanded.contains(path));
     }
     m_rebuilding = false;
+    showActive();
     applyFilters();
 
     // A folder just made: select it, with the folders around it open.
@@ -1764,12 +1765,100 @@ QString LibraryView::targetFolder() const {
 }
 
 void LibraryView::askNewFolder() {
+    askNewFolder(targetFolder());
+}
+
+void LibraryView::askNewFolder(const QString& parent) {
     NewFolderDialog dialog(this);
     if (dialog.exec() != QDialog::Accepted || dialog.name().isEmpty()) {
         return;
     }
-    if (const QString error = createFolder(targetFolder(), dialog.name()); !error.isEmpty()) {
+    if (const QString error = createFolder(parent, dialog.name()); !error.isEmpty()) {
         notice(this, tr("New Folder"), error);
+    }
+}
+
+void LibraryView::fillContextMenu(QMenu& menu, QTreeWidgetItem* item) {
+    if (item == nullptr) {
+        menu.addAction(tr("New Folder…"), this, [this] { askNewFolder(QString()); })
+            ->setObjectName(QStringLiteral("newFolder"));
+        return;
+    }
+    // A file, or every file in a folder (one file per opening is the usual way).
+    QStringList paths;
+    const std::function<void(QTreeWidgetItem*)> collect = [&](QTreeWidgetItem* node) {
+        if (node->data(0, kKindRole).toInt() == kFile) {
+            paths << node->data(0, kKeyRole).toString();
+        }
+        for (int i = 0; i < node->childCount(); ++i) {
+            collect(node->child(i));
+        }
+    };
+    collect(item);
+    const bool isFile = item->data(0, kKindRole).toInt() == kFile;
+    const QString itemPath =
+        isFile ? item->data(0, kKeyRole).toString()
+               : QDir(m_library.folder()).filePath(item->data(0, kKeyRole).toString());
+    if (const auto file = fileOf(item)) {
+        menu.addAction(tr("Open"), this, [this, file] { emit openGameRequested(file, 0); });
+        menu.addSeparator();
+    }
+    if (!isFile) {
+        const QString folder = item->data(0, kKeyRole).toString();
+        menu.addAction(tr("New Folder…"), this, [this, folder] { askNewFolder(folder); })
+            ->setObjectName(QStringLiteral("newFolderInside"));
+        menu.addSeparator();
+    }
+    menu.addAction(tr("Rename"), this, [this, item] { m_files->editItem(item, 0); })
+        ->setObjectName(QStringLiteral("rename"));
+    menu.addAction(tr("Show in Finder"), this, [itemPath] {
+        QProcess::startDetached(QStringLiteral("/usr/bin/open"), {QStringLiteral("-R"), itemPath});
+    });
+    menu.addAction(tr("Move to Trash"), this, [this, itemPath] { askTrash(itemPath); })
+        ->setObjectName(QStringLiteral("trash"));
+    if (paths.isEmpty()) {
+        return; // an empty folder has no files to give a type
+    }
+    menu.addSeparator();
+    QMenu* type = menu.addMenu(tr("File Type"));
+    const int current =
+        item->data(0, kKindRole).toInt() == kFile ? item->data(0, kFileKindRole).toInt() : -1;
+    const int currentSide = item->data(0, kSideRole).toInt();
+    const auto add = [&](const QString& text, FileKind kind, int side) {
+        auto* action = type->addAction(text, this, [this, paths, kind, side] {
+            emit fileKindRequested(paths, static_cast<int>(kind), side);
+        });
+        action->setCheckable(true);
+        action->setChecked(current == static_cast<int>(kind) && (side < 0 || side == currentSide));
+    };
+    add(tr("Game"), FileKind::Game, -1);
+    add(tr("Repertoire for White"), FileKind::Repertoire, 0);
+    add(tr("Repertoire for Black"), FileKind::Repertoire, 1);
+    add(tr("Tournament"), FileKind::Tournament, -1);
+    add(tr("Puzzles"), FileKind::Puzzle, -1);
+    add(tr("Other"), FileKind::Other, -1);
+    // A folder with repertoire files: a repertoire, played now or not.
+    bool repertoires = false;
+    const std::function<void(QTreeWidgetItem*)> look = [&](QTreeWidgetItem* node) {
+        repertoires = repertoires || (node->data(0, kKindRole).toInt() == kFile &&
+                                      node->data(0, kFileKindRole).toInt() ==
+                                          static_cast<int>(FileKind::Repertoire));
+        for (int i = 0; i < node->childCount() && !repertoires; ++i) {
+            look(node->child(i));
+        }
+    };
+    if (!isFile) {
+        look(item);
+    }
+    if (repertoires) {
+        const QString folder = item->data(0, kKeyRole).toString();
+        auto* active = menu.addAction(tr("Active Repertoire"), this,
+                                      [this, folder](bool on) { m_store.setActive(folder, on); });
+        active->setObjectName(QStringLiteral("activeRepertoire"));
+        active->setCheckable(true);
+        active->setChecked(m_store.isActive(folder));
+        active->setToolTip(tr("Practice, the theory check and the Explorer use the "
+                              "repertoires you play now; the others stay in the Library"));
     }
 }
 
@@ -1811,6 +1900,7 @@ QString LibraryView::moveToFolder(const QStringList& paths, const QString& folde
         }
         emit pathMoved(from, to);
         if (info.isDir()) {
+            m_store.folderMoved(root.relativeFilePath(from), root.relativeFilePath(to));
             m_selectAfterScan = root.relativeFilePath(to); // keep the folder in view
         }
     }
@@ -1833,6 +1923,10 @@ QString LibraryView::rename(const QString& path, const QString& name) {
         return tr("“%1” couldn't be renamed.").arg(info.fileName());
     }
     emit pathMoved(path, to);
+    if (info.isDir()) {
+        const QDir root(m_library.folder());
+        m_store.folderMoved(root.relativeFilePath(path), root.relativeFilePath(to));
+    }
     m_selectAfterScan = info.isDir() ? QDir(m_library.folder()).relativeFilePath(to) : to;
     m_library.rescan();
     return {};

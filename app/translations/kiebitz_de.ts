@@ -1,4 +1,5 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
 <TS version="2.1" language="de_DE">
 <context>
     <name>AddDatabaseDialog</name>
@@ -11,8 +12,8 @@
         <translation>PGN in .7z, etwa 2,6 GB zum Laden</translation>
     </message>
     <message>
-        <source>CC BY-NC 4.0: free for non-commercial use, credit Lumbra's Gigabase.</source>
-        <translation>CC BY-NC 4.0: frei für nicht-kommerzielle Nutzung, Quelle: Lumbra's Gigabase.</translation>
+        <source>CC BY-NC 4.0: free for non-commercial use, credit Lumbra&apos;s Gigabase.</source>
+        <translation>CC BY-NC 4.0: frei für nicht-kommerzielle Nutzung, Quelle: Lumbra&apos;s Gigabase.</translation>
     </message>
     <message>
         <source>Over 6 million online games of strong players, updated every month.</source>
@@ -138,7 +139,7 @@
         <translation>%1 und %2 weitere</translation>
     </message>
     <message>
-        <source>The theme's own</source>
+        <source>The theme&apos;s own</source>
         <translation>Die des Themas</translation>
     </message>
     <message>
@@ -385,7 +386,7 @@
         <translation>Lichess hat um eine kurze Pause gebeten</translation>
     </message>
     <message>
-        <source>Couldn't reach Lichess</source>
+        <source>Couldn&apos;t reach Lichess</source>
         <translation>Lichess nicht erreichbar</translation>
     </message>
 </context>
@@ -396,11 +397,11 @@
         <translation>Wird gestartet</translation>
     </message>
     <message>
-        <source>The archive couldn't be unpacked.</source>
+        <source>The archive couldn&apos;t be unpacked.</source>
         <translation>Das Archiv konnte nicht entpackt werden.</translation>
     </message>
     <message>
-        <source>%1 couldn't be read.</source>
+        <source>%1 couldn&apos;t be read.</source>
         <translation>%1 konnte nicht gelesen werden.</translation>
     </message>
     <message>
@@ -408,7 +409,7 @@
         <translation>Partien werden gelesen</translation>
     </message>
     <message>
-        <source>The archive couldn't be unpacked: %1</source>
+        <source>The archive couldn&apos;t be unpacked: %1</source>
         <translation>Das Archiv konnte nicht entpackt werden: %1</translation>
     </message>
     <message>
@@ -420,19 +421,19 @@
         <translation>Indizierung</translation>
     </message>
     <message>
-        <source>The database couldn't be put in place.</source>
+        <source>The database couldn&apos;t be put in place.</source>
         <translation>Die Datenbank konnte nicht an ihren Platz gelegt werden.</translation>
     </message>
     <message>
-        <source>That isn't one of Kiebitz's databases.</source>
+        <source>That isn&apos;t one of Kiebitz&apos;s databases.</source>
         <translation>Das ist keine der Datenbanken von Kiebitz.</translation>
     </message>
     <message>
-        <source>The database couldn't be removed.</source>
+        <source>The database couldn&apos;t be removed.</source>
         <translation>Die Datenbank konnte nicht entfernt werden.</translation>
     </message>
     <message>
-        <source>Lichess's database isn't answering. Try again later.</source>
+        <source>Lichess&apos;s database isn&apos;t answering. Try again later.</source>
         <translation>Die Datenbank von Lichess antwortet nicht. Versuche es später erneut.</translation>
     </message>
     <message>
@@ -440,7 +441,7 @@
         <translation>Suche nach neuen Monaten</translation>
     </message>
     <message>
-        <source>Couldn't save the download.</source>
+        <source>Couldn&apos;t save the download.</source>
         <translation>Der Download konnte nicht gespeichert werden.</translation>
     </message>
     <message>
@@ -448,11 +449,11 @@
         <translation>Lade Monat %1 von %2</translation>
     </message>
     <message>
-        <source>The download didn't finish. Check the connection and try again.</source>
+        <source>The download didn&apos;t finish. Check the connection and try again.</source>
         <translation>Der Download wurde nicht fertig. Prüfe die Verbindung und versuche es erneut.</translation>
     </message>
     <message>
-        <source>No games were found in Lichess's broadcasts.</source>
+        <source>No games were found in Lichess&apos;s broadcasts.</source>
         <translation>In den Übertragungen von Lichess wurden keine Partien gefunden.</translation>
     </message>
 </context>
@@ -483,8 +484,8 @@
         <translation>Noch keine Datenbanken</translation>
     </message>
     <message>
-        <source>Add a big collection of games, such as Lumbra's Gigabase or one you already have, to search players and openings across millions of games.</source>
-        <translation>Füge eine große Partiensammlung hinzu, etwa Lumbra's Gigabase oder eine, die du schon hast, um Spieler und Eröffnungen in Millionen Partien zu durchsuchen.</translation>
+        <source>Add a big collection of games, such as Lumbra&apos;s Gigabase or one you already have, to search players and openings across millions of games.</source>
+        <translation>Füge eine große Partiensammlung hinzu, etwa Lumbra&apos;s Gigabase oder eine, die du schon hast, um Spieler und Eröffnungen in Millionen Partien zu durchsuchen.</translation>
     </message>
     <message>
         <source>Import</source>
@@ -495,7 +496,7 @@
         <translation>Nicht genug Platz</translation>
     </message>
     <message>
-        <source>Lichess's broadcasts need about %1 of disk space, and %2 is free.</source>
+        <source>Lichess&apos;s broadcasts need about %1 of disk space, and %2 is free.</source>
         <translation>Die Übertragungen von Lichess brauchen etwa %1 Speicherplatz, frei sind %2.</translation>
     </message>
     <message>
@@ -535,7 +536,7 @@
         <translation>%1 Partien  ·  bis %2</translation>
     </message>
     <message>
-        <source>Lichess's broadcasts, CC BY-SA 4.0: credit lichess.org</source>
+        <source>Lichess&apos;s broadcasts, CC BY-SA 4.0: credit lichess.org</source>
         <translation>Übertragungen von Lichess, CC BY-SA 4.0: Quelle lichess.org</translation>
     </message>
     <message>
@@ -609,7 +610,7 @@
         <translation>Tab schließen (⌘W)</translation>
     </message>
     <message>
-        <source>Couldn't save</source>
+        <source>Couldn&apos;t save</source>
         <translation>Sichern nicht möglich</translation>
     </message>
     <message>
@@ -629,7 +630,7 @@
         <translation>%1 wird geöffnet …</translation>
     </message>
     <message>
-        <source>Couldn't open</source>
+        <source>Couldn&apos;t open</source>
         <translation>Öffnen nicht möglich</translation>
     </message>
     <message>
@@ -645,7 +646,7 @@
         <translation>Diese Datei hat %1 Partien. Welche?</translation>
     </message>
     <message>
-        <source>Couldn't read the game</source>
+        <source>Couldn&apos;t read the game</source>
         <translation>Die Partie konnte nicht gelesen werden</translation>
     </message>
     <message>
@@ -675,11 +676,11 @@
 <context>
     <name>kiebitz::app::EngineRegistry</name>
     <message>
-        <source>That program didn't answer as a UCI chess engine.</source>
+        <source>That program didn&apos;t answer as a UCI chess engine.</source>
         <translation>Dieses Programm hat nicht als UCI-Schach-Engine geantwortet.</translation>
     </message>
     <message>
-        <source>That file can't be run as a program.</source>
+        <source>That file can&apos;t be run as a program.</source>
         <translation>Diese Datei kann nicht als Programm ausgeführt werden.</translation>
     </message>
 </context>
@@ -844,8 +845,8 @@
         <translation>Noch keine Datenbanken</translation>
     </message>
     <message>
-        <source>Add a database of games (Lumbra's Gigabase, Caissabase or your own) to see what is played here and how it scores.</source>
-        <translation>Füge eine Partiendatenbank hinzu (Lumbra's Gigabase, Caissabase oder deine eigene), um zu sehen, was hier gespielt wird und wie es abschneidet.</translation>
+        <source>Add a database of games (Lumbra&apos;s Gigabase, Caissabase or your own) to see what is played here and how it scores.</source>
+        <translation>Füge eine Partiendatenbank hinzu (Lumbra&apos;s Gigabase, Caissabase oder deine eigene), um zu sehen, was hier gespielt wird und wie es abschneidet.</translation>
     </message>
     <message>
         <source>Open Databases</source>
@@ -1252,11 +1253,11 @@
         <translation>Dein Bibliotheksordner. Klicke, um hineinzusehen oder einen anderen zu wählen.</translation>
     </message>
     <message>
-        <source>Couldn't move</source>
+        <source>Couldn&apos;t move</source>
         <translation>Verschieben nicht möglich</translation>
     </message>
     <message>
-        <source>Couldn't rename</source>
+        <source>Couldn&apos;t rename</source>
         <translation>Umbenennen nicht möglich</translation>
     </message>
     <message>
@@ -1302,6 +1303,14 @@
     <message>
         <source>Other</source>
         <translation>Andere</translation>
+    </message>
+    <message>
+        <source>Active Repertoire</source>
+        <translation>Aktives Repertoire</translation>
+    </message>
+    <message>
+        <source>Practice, the theory check and the Explorer use the repertoires you play now; the others stay in the Library</source>
+        <translation>Üben, Theorie-Check und Explorer nutzen die Repertoires, die du gerade spielst; die anderen bleiben in der Bibliothek</translation>
     </message>
     <message>
         <source>Search files and games</source>
@@ -1376,7 +1385,7 @@
         <translation>Lösen</translation>
     </message>
     <message>
-        <source>Solve this file's puzzles on the Puzzles page</source>
+        <source>Solve this file&apos;s puzzles on the Puzzles page</source>
         <translation>Die Puzzles dieser Datei auf der Seite Puzzles lösen</translation>
     </message>
     <message>
@@ -1404,7 +1413,7 @@
         <translation>Schach</translation>
     </message>
     <message>
-        <source>Look for common opponent moves this file doesn't answer, in the games of the Explorer's source</source>
+        <source>Look for common opponent moves this file doesn&apos;t answer, in the games of the Explorer&apos;s source</source>
         <translation>Häufige Gegnerzüge suchen, die diese Datei nicht beantwortet, in den Partien der Explorer-Quelle</translation>
     </message>
     <message>
@@ -1438,6 +1447,14 @@
     <message>
         <source>reading…</source>
         <translation>wird gelesen …</translation>
+    </message>
+    <message>
+        <source>not active</source>
+        <translation>nicht aktiv</translation>
+    </message>
+    <message>
+        <source>Not an active repertoire: practice, the theory check and the Explorer leave it out</source>
+        <translation>Kein aktives Repertoire: Üben, Theorie-Check und Explorer lassen es aus</translation>
     </message>
     <message>
         <source>1 folder</source>
@@ -1480,7 +1497,7 @@
         <translation>%1 Kapitel</translation>
     </message>
     <message>
-        <source>Which common opponent moves this file doesn't answer yet, judged by the games of the Explorer's source.</source>
+        <source>Which common opponent moves this file doesn&apos;t answer yet, judged by the games of the Explorer&apos;s source.</source>
         <translation>Welche häufigen Gegnerzüge diese Datei noch nicht beantwortet, gemessen an den Partien der Explorer-Quelle.</translation>
     </message>
     <message>
@@ -1512,7 +1529,7 @@
         <translation>&lt;1% der Partien</translation>
     </message>
     <message>
-        <source>How often you'd meet it from the start, playing this file</source>
+        <source>How often you&apos;d meet it from the start, playing this file</source>
         <translation>Wie oft du ihr vom Start an begegnest, wenn du diese Datei spielst</translation>
     </message>
     <message>
@@ -1560,7 +1577,7 @@
         <translation>Neuer Ordner</translation>
     </message>
     <message>
-        <source>A folder name can't contain “/” or start with a dot.</source>
+        <source>A folder name can&apos;t contain “/” or start with a dot.</source>
         <translation>Ein Ordnername darf kein „/“ enthalten und nicht mit einem Punkt beginnen.</translation>
     </message>
     <message>
@@ -1568,11 +1585,11 @@
         <translation>Dort gibt es schon etwas namens „%1“.</translation>
     </message>
     <message>
-        <source>The folder “%1” couldn't be made.</source>
+        <source>The folder “%1” couldn&apos;t be made.</source>
         <translation>Der Ordner „%1“ konnte nicht angelegt werden.</translation>
     </message>
     <message>
-        <source>A folder can't go into itself.</source>
+        <source>A folder can&apos;t go into itself.</source>
         <translation>Ein Ordner kann nicht in sich selbst.</translation>
     </message>
     <message>
@@ -1580,11 +1597,11 @@
         <translation>In diesem Ordner gibt es schon „%1“.</translation>
     </message>
     <message>
-        <source>“%1” couldn't be moved.</source>
+        <source>“%1” couldn&apos;t be moved.</source>
         <translation>„%1“ konnte nicht verschoben werden.</translation>
     </message>
     <message>
-        <source>A name can't be empty, contain “/” or start with a dot.</source>
+        <source>A name can&apos;t be empty, contain “/” or start with a dot.</source>
         <translation>Ein Name darf nicht leer sein, kein „/“ enthalten und nicht mit einem Punkt beginnen.</translation>
     </message>
     <message>
@@ -1592,7 +1609,7 @@
         <translation>Dort gibt es schon „%1“.</translation>
     </message>
     <message>
-        <source>“%1” couldn't be renamed.</source>
+        <source>“%1” couldn&apos;t be renamed.</source>
         <translation>„%1“ konnte nicht umbenannt werden.</translation>
     </message>
     <message>
@@ -1608,11 +1625,11 @@
         <translation>Offene Partien daraus werden geschlossen.</translation>
     </message>
     <message>
-        <source>Couldn't move to the Trash</source>
+        <source>Couldn&apos;t move to the Trash</source>
         <translation>Konnte nicht in den Papierkorb gelegt werden</translation>
     </message>
     <message>
-        <source>“%1” couldn't be moved to the Trash.</source>
+        <source>“%1” couldn&apos;t be moved to the Trash.</source>
         <translation>„%1“ konnte nicht in den Papierkorb gelegt werden.</translation>
     </message>
     <message>
@@ -1620,7 +1637,7 @@
         <translation>Unbekannt</translation>
     </message>
     <message>
-        <source>This game couldn't be read.</source>
+        <source>This game couldn&apos;t be read.</source>
         <translation>Diese Partie konnte nicht gelesen werden.</translation>
     </message>
     <message>
@@ -1647,30 +1664,30 @@
         <translation>Lichess möchte, dass du dich erneut anmeldest.</translation>
     </message>
     <message>
-        <source>Lichess's explorer isn't answering right now.</source>
+        <source>Lichess&apos;s explorer isn&apos;t answering right now.</source>
         <translation>Der Explorer von Lichess antwortet gerade nicht.</translation>
     </message>
 </context>
 <context>
     <name>kiebitz::app::LichessLogin</name>
     <message>
-        <source>Couldn't wait for Lichess's answer on this Mac.</source>
+        <source>Couldn&apos;t wait for Lichess&apos;s answer on this Mac.</source>
         <translation>Auf diesem Mac konnte nicht auf die Antwort von Lichess gewartet werden.</translation>
     </message>
     <message>
-        <source>Lichess didn't sign Kiebitz in. Try again?</source>
+        <source>Lichess didn&apos;t sign Kiebitz in. Try again?</source>
         <translation>Lichess hat Kiebitz nicht angemeldet. Nochmal versuchen?</translation>
     </message>
     <message>
-        <source>Lichess didn't sign Kiebitz in. Close this tab and try again from Kiebitz.</source>
+        <source>Lichess didn&apos;t sign Kiebitz in. Close this tab and try again from Kiebitz.</source>
         <translation>Lichess hat Kiebitz nicht angemeldet. Schließe diesen Tab und versuche es erneut aus Kiebitz.</translation>
     </message>
     <message>
-        <source>Signed in, but Lichess didn't say who you are. Try again?</source>
+        <source>Signed in, but Lichess didn&apos;t say who you are. Try again?</source>
         <translation>Angemeldet, aber Lichess hat nicht gesagt, wer du bist. Nochmal versuchen?</translation>
     </message>
     <message>
-        <source>Lichess didn't say who you are. Close this tab and try again from Kiebitz.</source>
+        <source>Lichess didn&apos;t say who you are. Close this tab and try again from Kiebitz.</source>
         <translation>Lichess hat nicht gesagt, wer du bist. Schließe diesen Tab und versuche es erneut aus Kiebitz.</translation>
     </message>
     <message>
@@ -1685,11 +1702,11 @@
         <translation>Puzzles werden vorbereitet … %1%</translation>
     </message>
     <message>
-        <source>Couldn't create the puzzles folder.</source>
+        <source>Couldn&apos;t create the puzzles folder.</source>
         <translation>Der Puzzle-Ordner konnte nicht angelegt werden.</translation>
     </message>
     <message>
-        <source>Couldn't save the download.</source>
+        <source>Couldn&apos;t save the download.</source>
         <translation>Der Download konnte nicht gespeichert werden.</translation>
     </message>
     <message>
@@ -1697,7 +1714,7 @@
         <translation>Wird geladen …</translation>
     </message>
     <message>
-        <source>Couldn't save the download (is the disk full?).</source>
+        <source>Couldn&apos;t save the download (is the disk full?).</source>
         <translation>Der Download konnte nicht gespeichert werden (ist das Volume voll?).</translation>
     </message>
     <message>
@@ -1705,7 +1722,7 @@
         <translation>Wird geladen … %1 von %2</translation>
     </message>
     <message>
-        <source>The download didn't finish. Check the connection and try again.</source>
+        <source>The download didn&apos;t finish. Check the connection and try again.</source>
         <translation>Der Download wurde nicht fertig. Prüfe die Verbindung und versuche es erneut.</translation>
     </message>
     <message>
@@ -2060,7 +2077,7 @@
         <translation>Lichess</translation>
     </message>
     <message>
-        <source>%1: time's up</source>
+        <source>%1: time&apos;s up</source>
         <translation>%1: Zeit ist um</translation>
     </message>
     <message>
@@ -2068,7 +2085,7 @@
         <translation>Als Nächstes: %1</translation>
     </message>
     <message>
-        <source>That was the last part of today's plan.</source>
+        <source>That was the last part of today&apos;s plan.</source>
         <translation>Das war der letzte Teil des heutigen Plans.</translation>
     </message>
     <message>
@@ -2144,7 +2161,7 @@
         <translation>Vorbereitung</translation>
     </message>
     <message>
-        <source>The file couldn't be saved.</source>
+        <source>The file couldn&apos;t be saved.</source>
         <translation>Die Datei konnte nicht gespeichert werden.</translation>
     </message>
     <message>
@@ -2631,7 +2648,7 @@
         <translation>IHRE ANTWORTEN</translation>
     </message>
     <message>
-        <source>Your repertoire's move</source>
+        <source>Your repertoire&apos;s move</source>
         <translation>Der Zug deines Repertoires</translation>
     </message>
     <message>
@@ -2698,7 +2715,7 @@
         <translation>%1 bittet, vor dem nächsten Download eine Minute zu warten.</translation>
     </message>
     <message>
-        <source>%1's %2 games couldn't be downloaded: %3</source>
+        <source>%1&apos;s %2 games couldn&apos;t be downloaded: %3</source>
         <translation>Die %2-Partien von %1 konnten nicht geladen werden: %3</translation>
     </message>
     <message>
@@ -2718,7 +2735,7 @@
         <translation>Suche Turnierpartien …</translation>
     </message>
     <message>
-        <source>Couldn't reach %1 to look up %2. Try again in a moment.</source>
+        <source>Couldn&apos;t reach %1 to look up %2. Try again in a moment.</source>
         <translation>%1 war nicht erreichbar, um %2 nachzuschlagen. Versuche es gleich noch einmal.</translation>
     </message>
     <message>
@@ -2726,11 +2743,11 @@
         <translation>Partie wird gelöscht …</translation>
     </message>
     <message>
-        <source>That game wasn't found in the profile's files.</source>
+        <source>That game wasn&apos;t found in the profile&apos;s files.</source>
         <translation>Diese Partie wurde in den Dateien des Profils nicht gefunden.</translation>
     </message>
     <message>
-        <source>Couldn't reach FIDE's rating list (on Lichess) right now.</source>
+        <source>Couldn&apos;t reach FIDE&apos;s rating list (on Lichess) right now.</source>
         <translation>Die FIDE-Elo-Liste (über Lichess) ist gerade nicht erreichbar.</translation>
     </message>
     <message>
@@ -2738,23 +2755,23 @@
         <translation>Wird gestartet …</translation>
     </message>
     <message>
-        <source>Couldn't write the downloaded games (is the disk full?).</source>
+        <source>Couldn&apos;t write the downloaded games (is the disk full?).</source>
         <translation>Die geladenen Partien konnten nicht gespeichert werden (ist das Volume voll?).</translation>
     </message>
     <message>
-        <source>Downloading %1's games again, with their clocks…</source>
+        <source>Downloading %1&apos;s games again, with their clocks…</source>
         <translation>Die Partien von %1 werden erneut geladen, mit Bedenkzeiten …</translation>
     </message>
     <message>
-        <source>Downloading %1's games from Lichess…</source>
+        <source>Downloading %1&apos;s games from Lichess…</source>
         <translation>Die Partien von %1 werden von Lichess geladen …</translation>
     </message>
     <message>
-        <source>Looking up %1's games on chess.com…</source>
+        <source>Looking up %1&apos;s games on chess.com…</source>
         <translation>Die Partien von %1 werden auf chess.com gesucht …</translation>
     </message>
     <message>
-        <source>Downloading %1's games from chess.com… %2 of %3 months</source>
+        <source>Downloading %1&apos;s games from chess.com… %2 of %3 months</source>
         <translation>Die Partien von %1 werden von chess.com geladen … %2 von %3 Monaten</translation>
     </message>
     <message>
@@ -2805,7 +2822,7 @@
         <translation>Abgleichen</translation>
     </message>
     <message>
-        <source>Download the new games of this profile's accounts</source>
+        <source>Download the new games of this profile&apos;s accounts</source>
         <translation>Die neuen Partien der Konten dieses Profils laden</translation>
     </message>
     <message>
@@ -2913,7 +2930,7 @@
         <translation>WERTUNG</translation>
     </message>
     <message>
-        <source>Performance: the rating their results were worth against their opponents' ratings</source>
+        <source>Performance: the rating their results were worth against their opponents&apos; ratings</source>
         <translation>Leistung: die Wertung, die ihre Ergebnisse gegen die Wertungen ihrer Gegner wert waren</translation>
     </message>
     <message>
@@ -2977,7 +2994,7 @@
         <translation>Lichess</translation>
     </message>
     <message>
-        <source>Kiebitz is signed in as %1 now (not %2): that's the account you logged in to on Lichess.</source>
+        <source>Kiebitz is signed in as %1 now (not %2): that&apos;s the account you logged in to on Lichess.</source>
         <translation>Kiebitz ist jetzt als %1 angemeldet (nicht %2): Das ist das Konto, mit dem du dich bei Lichess angemeldet hast.</translation>
     </message>
     <message>
@@ -3069,7 +3086,7 @@
         <translation>Anmelden</translation>
     </message>
     <message>
-        <source>For faster downloads, and Lichess's opening explorer. Your browser opens Lichess's sign-in page.</source>
+        <source>For faster downloads, and Lichess&apos;s opening explorer. Your browser opens Lichess&apos;s sign-in page.</source>
         <translation>Für schnellere Downloads und den Eröffnungs-Explorer von Lichess. Dein Browser öffnet die Anmeldeseite von Lichess.</translation>
     </message>
     <message>
@@ -3085,7 +3102,7 @@
         <translation>Am Brett</translation>
     </message>
     <message>
-        <source>Add a database in Databases (Lichess's broadcasts, Caissabase) to find their tournament games by themselves</source>
+        <source>Add a database in Databases (Lichess&apos;s broadcasts, Caissabase) to find their tournament games by themselves</source>
         <translation>Füge unter Datenbanken eine Datenbank hinzu (Übertragungen von Lichess, Caissabase), damit Turnierpartien von selbst gefunden werden</translation>
     </message>
     <message>
@@ -3109,7 +3126,7 @@
         <translation>Keine Turniere in diesen Partien</translation>
     </message>
     <message>
-        <source>You haven't played them in these games.</source>
+        <source>You haven&apos;t played them in these games.</source>
         <translation>Du hast in diesen Partien nicht gegen sie gespielt.</translation>
     </message>
     <message>
@@ -3117,7 +3134,7 @@
         <translation>Dein Ergebnis: %1</translation>
     </message>
     <message>
-        <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase's online database.</source>
+        <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase&apos;s online database.</source>
         <translation>In der Zwischenablage sind keine Partien. Kopiere zuerst Partien als PGN, zum Beispiel in der Online-Datenbank von ChessBase.</translation>
     </message>
     <message>
@@ -3133,7 +3150,7 @@
         <translation>Mit Lichess anmelden</translation>
     </message>
     <message>
-        <source>For Lichess's opening explorer, and faster downloads of your games.</source>
+        <source>For Lichess&apos;s opening explorer, and faster downloads of your games.</source>
         <translation>Für den Eröffnungs-Explorer von Lichess und schnellere Downloads deiner Partien.</translation>
     </message>
     <message>
@@ -3161,7 +3178,7 @@
         <translation>Hier sind noch keine Partien.</translation>
     </message>
     <message>
-        <source>No repertoire yet. Set a file's type to Repertoire (right-click it in the Library) to check these games against it.</source>
+        <source>No repertoire yet. Set a file&apos;s type to Repertoire (right-click it in the Library) to check these games against it.</source>
         <translation>Noch kein Repertoire. Stelle die Art einer Datei auf Repertoire (Rechtsklick in der Bibliothek), um diese Partien damit zu vergleichen.</translation>
     </message>
     <message>
@@ -3233,15 +3250,15 @@
         <translation>Löschen</translation>
     </message>
     <message>
-        <source>It's taken out of the profile's PGN files. If the game is in there twice, the other copy stays.</source>
+        <source>It&apos;s taken out of the profile&apos;s PGN files. If the game is in there twice, the other copy stays.</source>
         <translation>Sie wird aus den PGN-Dateien des Profils entfernt. Ist die Partie zweimal darin, bleibt die andere Kopie.</translation>
     </message>
     <message>
-        <source>Give the profile a full name (first and last) to find it in FIDE's rating list.</source>
+        <source>Give the profile a full name (first and last) to find it in FIDE&apos;s rating list.</source>
         <translation>Gib dem Profil einen vollen Namen (Vor- und Nachname), um es in der FIDE-Elo-Liste zu finden.</translation>
     </message>
     <message>
-        <source>Looking it up in FIDE's rating list…</source>
+        <source>Looking it up in FIDE&apos;s rating list…</source>
         <translation>Wird in der FIDE-Elo-Liste gesucht …</translation>
     </message>
     <message>
@@ -3249,7 +3266,7 @@
         <translation>Für dieses Profil ist kein FIDE-Spieler gewählt.</translation>
     </message>
     <message>
-        <source>No player called %1 in FIDE's rating list.</source>
+        <source>No player called %1 in FIDE&apos;s rating list.</source>
         <translation>Niemand namens %1 in der FIDE-Elo-Liste.</translation>
     </message>
     <message>
@@ -3301,15 +3318,15 @@
         <translation>Nicht diese Person</translation>
     </message>
     <message>
-        <source>There's no %1 account called “%2”.</source>
+        <source>There&apos;s no %1 account called “%2”.</source>
         <translation>Es gibt kein %1-Konto namens „%2“.</translation>
     </message>
     <message>
-        <source>Check the spelling: it's the name in the account's address, lichess.org/@/name.</source>
+        <source>Check the spelling: it&apos;s the name in the account&apos;s address, lichess.org/@/name.</source>
         <translation>Prüfe die Schreibweise: Es ist der Name in der Adresse des Kontos, lichess.org/@/name.</translation>
     </message>
     <message>
-        <source>Check the spelling: it's the name in the account's address, chess.com/member/name.</source>
+        <source>Check the spelling: it&apos;s the name in the account&apos;s address, chess.com/member/name.</source>
         <translation>Prüfe die Schreibweise: Es ist der Name in der Adresse des Kontos, chess.com/member/name.</translation>
     </message>
     <message>
@@ -3530,7 +3547,7 @@
         <translation>Noch kein Repertoire</translation>
     </message>
     <message>
-        <source>Set a file's type to Repertoire (right-click it in the Library), and games are checked against it here.</source>
+        <source>Set a file&apos;s type to Repertoire (right-click it in the Library), and games are checked against it here.</source>
         <translation>Stelle die Art einer Datei auf Repertoire (Rechtsklick in der Bibliothek), dann werden die Partien hier damit verglichen.</translation>
     </message>
     <message>
@@ -3554,7 +3571,7 @@
         <translation>Variante hinzufügen</translation>
     </message>
     <message>
-        <source>Add this game's moves up to here to the repertoire</source>
+        <source>Add this game&apos;s moves up to here to the repertoire</source>
         <translation>Die Züge dieser Partie bis hier zum Repertoire hinzufügen</translation>
     </message>
     <message>
@@ -3566,7 +3583,7 @@
         <translation>Bis Zug</translation>
     </message>
     <message>
-        <source>The lines through positions you got wrong and haven't answered right twice since</source>
+        <source>The lines through positions you got wrong and haven&apos;t answered right twice since</source>
         <translation>Die Varianten durch Stellungen, die du falsch hattest und seitdem nicht zweimal richtig beantwortet hast</translation>
     </message>
     <message>
@@ -3630,7 +3647,7 @@
         <translation>Das Buch spielt</translation>
     </message>
     <message>
-        <source>%1 isn't covered yet</source>
+        <source>%1 isn&apos;t covered yet</source>
         <translation>%1 ist noch nicht abgedeckt</translation>
     </message>
     <message>
@@ -3661,7 +3678,7 @@
 <context>
     <name>kiebitz::app::RepertoireStore</name>
     <message>
-        <source>Couldn't add the line: the file changed.</source>
+        <source>Couldn&apos;t add the line: the file changed.</source>
         <translation>Die Variante konnte nicht hinzugefügt werden: Die Datei hat sich geändert.</translation>
     </message>
 </context>
@@ -3832,7 +3849,7 @@
         <translation>Layout</translation>
     </message>
     <message>
-        <source>Flowing text, or rows with White's and Black's moves.</source>
+        <source>Flowing text, or rows with White&apos;s and Black&apos;s moves.</source>
         <translation>Fließtext oder Zeilen mit den Zügen von Weiß und Schwarz.</translation>
     </message>
     <message>
@@ -3960,7 +3977,7 @@
         <translation>Mindestens gespielt</translation>
     </message>
     <message>
-        <source>How often an opponent's move must be played in a position to count as a gap.</source>
+        <source>How often an opponent&apos;s move must be played in a position to count as a gap.</source>
         <translation>Wie oft ein Gegnerzug in einer Stellung gespielt sein muss, um als Lücke zu zählen.</translation>
     </message>
     <message>
@@ -3968,7 +3985,7 @@
         <translation>Mindestens Partien</translation>
     </message>
     <message>
-        <source>Positions with fewer games aren't judged.</source>
+        <source>Positions with fewer games aren&apos;t judged.</source>
         <translation>Stellungen mit weniger Partien werden nicht bewertet.</translation>
     </message>
     <message>
@@ -4057,7 +4074,7 @@
 <context>
     <name>kiebitz::app::StockfishDownload</name>
     <message>
-        <source>Couldn't reach GitHub to find the latest Stockfish.</source>
+        <source>Couldn&apos;t reach GitHub to find the latest Stockfish.</source>
         <translation>GitHub war nicht erreichbar, um das neueste Stockfish zu finden.</translation>
     </message>
     <message>
@@ -4065,27 +4082,27 @@
         <translation>Die neueste Stockfish-Version hat keinen Download für diesen Mac.</translation>
     </message>
     <message>
-        <source>Couldn't create the engines folder.</source>
+        <source>Couldn&apos;t create the engines folder.</source>
         <translation>Der Engine-Ordner konnte nicht angelegt werden.</translation>
     </message>
     <message>
-        <source>Couldn't save the download.</source>
+        <source>Couldn&apos;t save the download.</source>
         <translation>Der Download konnte nicht gespeichert werden.</translation>
     </message>
     <message>
-        <source>Couldn't save the download (is the disk full?).</source>
+        <source>Couldn&apos;t save the download (is the disk full?).</source>
         <translation>Der Download konnte nicht gespeichert werden (ist das Volume voll?).</translation>
     </message>
     <message>
-        <source>The download didn't finish. Check the connection and try again.</source>
+        <source>The download didn&apos;t finish. Check the connection and try again.</source>
         <translation>Der Download wurde nicht fertig. Prüfe die Verbindung und versuche es erneut.</translation>
     </message>
     <message>
-        <source>The download was damaged (its checksum doesn't match). Try again.</source>
+        <source>The download was damaged (its checksum doesn&apos;t match). Try again.</source>
         <translation>Der Download war beschädigt (die Prüfsumme stimmt nicht). Versuche es erneut.</translation>
     </message>
     <message>
-        <source>Couldn't unpack the download.</source>
+        <source>Couldn&apos;t unpack the download.</source>
         <translation>Der Download konnte nicht entpackt werden.</translation>
     </message>
     <message>
@@ -4100,11 +4117,11 @@
         <translation>Lichess bittet Kiebitz, langsamer zu machen. Versuche es in einer Minute erneut.</translation>
     </message>
     <message>
-        <source>The tablebase isn't answering right now.</source>
+        <source>The tablebase isn&apos;t answering right now.</source>
         <translation>Die Endspieldatenbank antwortet gerade nicht.</translation>
     </message>
     <message>
-        <source>The tablebase's answer couldn't be read.</source>
+        <source>The tablebase&apos;s answer couldn&apos;t be read.</source>
         <translation>Die Antwort der Endspieldatenbank konnte nicht gelesen werden.</translation>
     </message>
     <message>
@@ -4148,7 +4165,7 @@
         <translation>Eine Niederlage, aber die 50-Züge-Regel rettet sie ins Remis</translation>
     </message>
     <message>
-        <source>Depends on the 50-move rule: the tablebase can't say for sure</source>
+        <source>Depends on the 50-move rule: the tablebase can&apos;t say for sure</source>
         <translation>Hängt von der 50-Züge-Regel ab: Die Endspieldatenbank kann es nicht sicher sagen</translation>
     </message>
 </context>
@@ -4171,7 +4188,7 @@
         <translation>Stopp</translation>
     </message>
     <message>
-        <source>time's up</source>
+        <source>time&apos;s up</source>
         <translation>Zeit ist um</translation>
     </message>
     <message>
@@ -4289,7 +4306,7 @@
         <translation>Alle Repertoires</translation>
     </message>
     <message>
-        <source>Time's up</source>
+        <source>Time&apos;s up</source>
         <translation>Zeit ist um</translation>
     </message>
     <message>
@@ -4352,7 +4369,7 @@
 <context>
     <name>kiebitz::app::UciEngine</name>
     <message>
-        <source>%1 couldn't be started.</source>
+        <source>%1 couldn&apos;t be started.</source>
         <translation>%1 konnte nicht gestartet werden.</translation>
     </message>
     <message>

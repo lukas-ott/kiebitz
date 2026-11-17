@@ -18,6 +18,7 @@ class QComboBox;
 class QFrame;
 class QLabel;
 class QLineEdit;
+class QMenu;
 class QPushButton;
 class QStackedWidget;
 class QTableView;
@@ -92,6 +93,8 @@ public:
     /// Moves a file or folder to the Trash; its open tabs close. Empty on success, else the
     /// error. Tests can put something else in place of the Trash.
     QString moveToTrash(const QString& path);
+    /// The right-click menu of a file or folder (nullptr: the empty space under them).
+    void fillContextMenu(QMenu& menu, QTreeWidgetItem* item);
     void setTrashForTests(std::function<bool(const QString&)> trash) { m_trash = std::move(trash); }
 
     /// For tests: what the repertoire overview shows ("1,840", "412", "move 24").
@@ -144,6 +147,8 @@ private:
     void showPreviewPly(bool animate);
     void openSelectedGame();
     void updateIcons();
+    /// Folders and repertoire files outside an active repertoire: dimmed, and said so.
+    void showActive();
     void rememberExpanded();
     [[nodiscard]] int selectedRow() const;
     [[nodiscard]] std::shared_ptr<PgnFile> fileOf(const QTreeWidgetItem* item) const;
@@ -151,6 +156,7 @@ private:
     /// (relative; empty = the top).
     [[nodiscard]] QString targetFolder() const;
     void askNewFolder();
+    void askNewFolder(const QString& parent);
     void askTrash(const QString& path);
 
     Library& m_library;

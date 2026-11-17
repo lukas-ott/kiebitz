@@ -368,6 +368,32 @@ TEST_F(LibraryTreeTest, NewFoldersAndMovingFiles) {
     }
     EXPECT_NE(view->createFolder(QStringLiteral("OTB"), QStringLiteral("Blitz")), QString());
 
+    // An empty folder can still be edited: a folder inside it, renamed, trashed (no file type).
+    const auto actions = [&](QTreeWidgetItem* at) {
+        QMenu menu;
+        view->fillContextMenu(menu, at);
+        QStringList names;
+        for (const QAction* action : menu.actions()) {
+            if (!action->objectName().isEmpty()) {
+                names << action->objectName();
+            }
+            if (action->menu() != nullptr) {
+                names << QStringLiteral("type");
+            }
+        }
+        return names;
+    };
+    EXPECT_EQ(actions(item(QStringLiteral("Blitz"))),
+              (QStringList{"newFolderInside", "rename", "trash"}));
+    EXPECT_TRUE(actions(item(QStringLiteral("OTB"))).contains(QStringLiteral("type")));
+    EXPECT_EQ(actions(nullptr), QStringList{"newFolder"}); // the empty space under the files
+    EXPECT_EQ(view->rename(path("OTB/Blitz"), QStringLiteral("Bullet")), QString());
+    ASSERT_TRUE(scanned.wait(5000));
+    ASSERT_NE(item(QStringLiteral("Bullet")), nullptr);
+    EXPECT_EQ(view->rename(path("OTB/Bullet"), QStringLiteral("Blitz")), QString());
+    ASSERT_TRUE(scanned.wait(5000));
+    ASSERT_NE(item(QStringLiteral("Blitz")), nullptr);
+
     // Open top.pgn, then move it into the new folder: the tab saves to its new place.
     QSignalSpy opened(&window, &MainWindow::fileOpened);
     window.openFile(path("top.pgn"));
@@ -866,6 +892,81 @@ TEST_F(DocumentsTest, GamesAreCheckedAgainstEveryRepertoireFile) {
     QApplication::processEvents();
     EXPECT_EQ(tabs->tabText(tabs->currentIndex()), QStringLiteral("Open Games"));
     EXPECT_EQ(fen(), here);
+}
+
+TEST_F(DocumentsTest, OnlyActiveRepertoiresAreCheckedAgainst) {
+    // One repertoire played now, one from before: both White.
+    ASSERT_TRUE(QDir(folder.path()).mkpath(QStringLiteral("Repertoires/Now")));
+    ASSERT_TRUE(QDir(folder.path()).mkpath(QStringLiteral("Repertoires/Before/Sub")));
+    writeFile(path("Repertoires/Now/Open Games.pgn"),
+              "[FileType \"Repertoire\"]\n[Orientation \"white\"]\n\n1. e4 e5 2. Nf3 *\n");
+    writeFile(path("Repertoires/Before/Sub/Queens Gambit.pgn"),
+              "[FileType \"Repertoire\"]\n[Orientation \"white\"]\n\n1. d4 d5 2. c4 *\n");
+    scanLibrary();
+    auto& store = window.repertoires();
+    const auto d4 = [] {
+        core::Position position;
+        position.play(position.parseSan("d4").value());
+        return position.hash();
+    }();
+    // Every folder is active until set otherwise.
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* built = store.get(core::Color::White);
+            return built != nullptr && built->tree.find(d4) != nullptr;
+        },
+        5000));
+    EXPECT_EQ(store.files(core::Color::White).size(), 2);
+
+    // "Before" isn't played any more: out of the tree, but still read (its card, its gaps).
+    store.setActive(QStringLiteral("Repertoires/Before"), false);
+    EXPECT_FALSE(store.isActive(QStringLiteral("Repertoires/Before/Sub/Queens Gambit.pgn")));
+    EXPECT_TRUE(store.isActive(QStringLiteral("Repertoires/Now/Open Games.pgn")));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* built = store.get(core::Color::White);
+            return built != nullptr && built->tree.find(d4) == nullptr && built->files.size() == 2;
+        },
+        5000));
+    ASSERT_EQ(store.files(core::Color::White).size(), 1);
+    EXPECT_TRUE(store.files(core::Color::White)[0].endsWith(u"Open Games.pgn"));
+    const auto* queens = store.builtFile(path("Repertoires/Before/Sub/Queens Gambit.pgn"));
+    ASSERT_NE(queens, nullptr);
+    EXPECT_FALSE(queens->active);
+    EXPECT_EQ(queens->games.size(), 1U);
+    // A line added goes into an active file, never the inactive one.
+    const core::Position start;
+    const std::vector<core::Move> c4{start.parseSan("c4").value()};
+    const auto added = store.addLine(core::Color::White, c4, true);
+    EXPECT_TRUE(added.path.endsWith(u"Open Games.pgn")) << added.path.toStdString();
+
+    // The Library shows it: the folder dimmed, its files "not active".
+    auto* files = window.findChild<QTreeWidget*>(QStringLiteral("libraryFiles"));
+    ASSERT_NE(files, nullptr);
+    const auto item = [&](const QString& text) -> QTreeWidgetItem* {
+        const auto found = files->findItems(text, Qt::MatchExactly | Qt::MatchRecursive);
+        return found.isEmpty() ? nullptr : found.front();
+    };
+    ASSERT_TRUE(QTest::qWaitFor([&] { return item(QStringLiteral("Before")) != nullptr; }, 5000));
+    const QColor dimmed = style.colors().dimmed;
+    EXPECT_EQ(item(QStringLiteral("Before"))->foreground(0).color(), dimmed);
+    EXPECT_NE(item(QStringLiteral("Now"))->foreground(0).color(), dimmed);
+    EXPECT_TRUE(item(QStringLiteral("Queens Gambit"))->toolTip(0).endsWith(u"not active"));
+
+    // A folder inside can be played again; the setting is kept, and follows a rename.
+    store.setActive(QStringLiteral("Repertoires/Before/Sub"), true);
+    EXPECT_TRUE(store.isActive(QStringLiteral("Repertoires/Before/Sub/Queens Gambit.pgn")));
+    store.setActive(QStringLiteral("Repertoires/Before/Sub"), false); // as around it: no setting
+    EXPECT_FALSE(store.activeSetting(QStringLiteral("Repertoires/Before/Sub")).has_value());
+    store.folderMoved(QStringLiteral("Repertoires/Before"), QStringLiteral("Archive"));
+    EXPECT_FALSE(store.isActive(QStringLiteral("Archive/Sub/Queens Gambit.pgn")));
+    EXPECT_FALSE(store.activeSetting(QStringLiteral("Repertoires/Before")).has_value());
+    const QVariantMap saved =
+        QSettings().value(QString::fromLatin1(kiebitz::app::RepertoireStore::kActiveKey)).toMap();
+    EXPECT_EQ(saved.value(QStringLiteral("Archive")), QVariant(false));
+    // Active again, as every folder is by default: no setting left.
+    store.setActive(QStringLiteral("Archive"), true);
+    EXPECT_FALSE(store.activeSetting(QStringLiteral("Archive")).has_value());
 }
 
 TEST_F(DocumentsTest, PracticingARepertoireFile) {

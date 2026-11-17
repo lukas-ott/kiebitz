@@ -1,4 +1,5 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
 <TS version="2.1" language="nb_NO">
 <context>
     <name>AddDatabaseDialog</name>
@@ -11,8 +12,8 @@
         <translation>PGN i .7z, omtrent 2,6 GB å laste ned</translation>
     </message>
     <message>
-        <source>CC BY-NC 4.0: free for non-commercial use, credit Lumbra's Gigabase.</source>
-        <translation>CC BY-NC 4.0: fritt for ikke-kommersiell bruk, oppgi Lumbra's Gigabase som kilde.</translation>
+        <source>CC BY-NC 4.0: free for non-commercial use, credit Lumbra&apos;s Gigabase.</source>
+        <translation>CC BY-NC 4.0: fritt for ikke-kommersiell bruk, oppgi Lumbra&apos;s Gigabase som kilde.</translation>
     </message>
     <message>
         <source>Over 6 million online games of strong players, updated every month.</source>
@@ -138,7 +139,7 @@
         <translation>%1 og %2 til</translation>
     </message>
     <message>
-        <source>The theme's own</source>
+        <source>The theme&apos;s own</source>
         <translation>Temaets egen</translation>
     </message>
     <message>
@@ -385,7 +386,7 @@
         <translation>Lichess ba om en kort pause</translation>
     </message>
     <message>
-        <source>Couldn't reach Lichess</source>
+        <source>Couldn&apos;t reach Lichess</source>
         <translation>Fikk ikke kontakt med Lichess</translation>
     </message>
 </context>
@@ -396,11 +397,11 @@
         <translation>Starter</translation>
     </message>
     <message>
-        <source>The archive couldn't be unpacked.</source>
+        <source>The archive couldn&apos;t be unpacked.</source>
         <translation>Arkivet kunne ikke pakkes ut.</translation>
     </message>
     <message>
-        <source>%1 couldn't be read.</source>
+        <source>%1 couldn&apos;t be read.</source>
         <translation>%1 kunne ikke leses.</translation>
     </message>
     <message>
@@ -408,7 +409,7 @@
         <translation>Leser partier</translation>
     </message>
     <message>
-        <source>The archive couldn't be unpacked: %1</source>
+        <source>The archive couldn&apos;t be unpacked: %1</source>
         <translation>Arkivet kunne ikke pakkes ut: %1</translation>
     </message>
     <message>
@@ -420,19 +421,19 @@
         <translation>Indeksering</translation>
     </message>
     <message>
-        <source>The database couldn't be put in place.</source>
+        <source>The database couldn&apos;t be put in place.</source>
         <translation>Databasen kunne ikke legges på plass.</translation>
     </message>
     <message>
-        <source>That isn't one of Kiebitz's databases.</source>
-        <translation>Det er ikke en av Kiebitz' databaser.</translation>
+        <source>That isn&apos;t one of Kiebitz&apos;s databases.</source>
+        <translation>Det er ikke en av Kiebitz&apos; databaser.</translation>
     </message>
     <message>
-        <source>The database couldn't be removed.</source>
+        <source>The database couldn&apos;t be removed.</source>
         <translation>Databasen kunne ikke fjernes.</translation>
     </message>
     <message>
-        <source>Lichess's database isn't answering. Try again later.</source>
+        <source>Lichess&apos;s database isn&apos;t answering. Try again later.</source>
         <translation>Lichess sin database svarer ikke. Prøv igjen senere.</translation>
     </message>
     <message>
@@ -440,7 +441,7 @@
         <translation>Ser etter nye måneder</translation>
     </message>
     <message>
-        <source>Couldn't save the download.</source>
+        <source>Couldn&apos;t save the download.</source>
         <translation>Kunne ikke lagre nedlastingen.</translation>
     </message>
     <message>
@@ -448,11 +449,11 @@
         <translation>Laster ned måned %1 av %2</translation>
     </message>
     <message>
-        <source>The download didn't finish. Check the connection and try again.</source>
+        <source>The download didn&apos;t finish. Check the connection and try again.</source>
         <translation>Nedlastingen ble ikke ferdig. Sjekk forbindelsen og prøv igjen.</translation>
     </message>
     <message>
-        <source>No games were found in Lichess's broadcasts.</source>
+        <source>No games were found in Lichess&apos;s broadcasts.</source>
         <translation>Ingen partier ble funnet i Lichess sine overføringer.</translation>
     </message>
 </context>
@@ -483,8 +484,8 @@
         <translation>Ingen databaser ennå</translation>
     </message>
     <message>
-        <source>Add a big collection of games, such as Lumbra's Gigabase or one you already have, to search players and openings across millions of games.</source>
-        <translation>Legg til en stor partisamling, som Lumbra's Gigabase eller en du allerede har, for å søke etter spillere og åpninger i millioner av partier.</translation>
+        <source>Add a big collection of games, such as Lumbra&apos;s Gigabase or one you already have, to search players and openings across millions of games.</source>
+        <translation>Legg til en stor partisamling, som Lumbra&apos;s Gigabase eller en du allerede har, for å søke etter spillere og åpninger i millioner av partier.</translation>
     </message>
     <message>
         <source>Import</source>
@@ -495,7 +496,7 @@
         <translation>Ikke nok plass</translation>
     </message>
     <message>
-        <source>Lichess's broadcasts need about %1 of disk space, and %2 is free.</source>
+        <source>Lichess&apos;s broadcasts need about %1 of disk space, and %2 is free.</source>
         <translation>Lichess sine overføringer trenger omtrent %1 diskplass, og %2 er ledig.</translation>
     </message>
     <message>
@@ -535,7 +536,7 @@
         <translation>%1 partier  ·  til og med %2</translation>
     </message>
     <message>
-        <source>Lichess's broadcasts, CC BY-SA 4.0: credit lichess.org</source>
+        <source>Lichess&apos;s broadcasts, CC BY-SA 4.0: credit lichess.org</source>
         <translation>Lichess sine overføringer, CC BY-SA 4.0: kreditt til lichess.org</translation>
     </message>
     <message>
@@ -609,7 +610,7 @@
         <translation>Lukk fane (⌘W)</translation>
     </message>
     <message>
-        <source>Couldn't save</source>
+        <source>Couldn&apos;t save</source>
         <translation>Kunne ikke lagre</translation>
     </message>
     <message>
@@ -629,7 +630,7 @@
         <translation>Åpner %1 …</translation>
     </message>
     <message>
-        <source>Couldn't open</source>
+        <source>Couldn&apos;t open</source>
         <translation>Kunne ikke åpne</translation>
     </message>
     <message>
@@ -645,7 +646,7 @@
         <translation>Denne filen har %1 partier. Hvilket?</translation>
     </message>
     <message>
-        <source>Couldn't read the game</source>
+        <source>Couldn&apos;t read the game</source>
         <translation>Kunne ikke lese partiet</translation>
     </message>
     <message>
@@ -675,11 +676,11 @@
 <context>
     <name>kiebitz::app::EngineRegistry</name>
     <message>
-        <source>That program didn't answer as a UCI chess engine.</source>
+        <source>That program didn&apos;t answer as a UCI chess engine.</source>
         <translation>Det programmet svarte ikke som en UCI-sjakkmotor.</translation>
     </message>
     <message>
-        <source>That file can't be run as a program.</source>
+        <source>That file can&apos;t be run as a program.</source>
         <translation>Den filen kan ikke kjøres som et program.</translation>
     </message>
 </context>
@@ -844,8 +845,8 @@
         <translation>Ingen databaser ennå</translation>
     </message>
     <message>
-        <source>Add a database of games (Lumbra's Gigabase, Caissabase or your own) to see what is played here and how it scores.</source>
-        <translation>Legg til en partidatabase (Lumbra's Gigabase, Caissabase eller din egen) for å se hva som spilles her og hvordan det scorer.</translation>
+        <source>Add a database of games (Lumbra&apos;s Gigabase, Caissabase or your own) to see what is played here and how it scores.</source>
+        <translation>Legg til en partidatabase (Lumbra&apos;s Gigabase, Caissabase eller din egen) for å se hva som spilles her og hvordan det scorer.</translation>
     </message>
     <message>
         <source>Open Databases</source>
@@ -1252,11 +1253,11 @@
         <translation>Bibliotekmappen din. Klikk for å se inni eller velge en annen.</translation>
     </message>
     <message>
-        <source>Couldn't move</source>
+        <source>Couldn&apos;t move</source>
         <translation>Kunne ikke flytte</translation>
     </message>
     <message>
-        <source>Couldn't rename</source>
+        <source>Couldn&apos;t rename</source>
         <translation>Kunne ikke gi nytt navn</translation>
     </message>
     <message>
@@ -1302,6 +1303,14 @@
     <message>
         <source>Other</source>
         <translation>Annet</translation>
+    </message>
+    <message>
+        <source>Active Repertoire</source>
+        <translation>Aktivt repertoar</translation>
+    </message>
+    <message>
+        <source>Practice, the theory check and the Explorer use the repertoires you play now; the others stay in the Library</source>
+        <translation>Øving, teorisjekken og Utforsker bruker repertoarene du spiller nå; de andre blir liggende i biblioteket</translation>
     </message>
     <message>
         <source>Search files and games</source>
@@ -1376,7 +1385,7 @@
         <translation>Løs</translation>
     </message>
     <message>
-        <source>Solve this file's puzzles on the Puzzles page</source>
+        <source>Solve this file&apos;s puzzles on the Puzzles page</source>
         <translation>Løs oppgavene i denne filen på siden Oppgaver</translation>
     </message>
     <message>
@@ -1404,7 +1413,7 @@
         <translation>Sjakk</translation>
     </message>
     <message>
-        <source>Look for common opponent moves this file doesn't answer, in the games of the Explorer's source</source>
+        <source>Look for common opponent moves this file doesn&apos;t answer, in the games of the Explorer&apos;s source</source>
         <translation>Finn vanlige motstandertrekk denne filen ikke svarer på, i partiene fra utforskerens kilde</translation>
     </message>
     <message>
@@ -1438,6 +1447,14 @@
     <message>
         <source>reading…</source>
         <translation>leser …</translation>
+    </message>
+    <message>
+        <source>not active</source>
+        <translation>ikke aktivt</translation>
+    </message>
+    <message>
+        <source>Not an active repertoire: practice, the theory check and the Explorer leave it out</source>
+        <translation>Ikke et aktivt repertoar: øving, teorisjekken og Utforsker hopper over det</translation>
     </message>
     <message>
         <source>1 folder</source>
@@ -1480,7 +1497,7 @@
         <translation>%1 kapitler</translation>
     </message>
     <message>
-        <source>Which common opponent moves this file doesn't answer yet, judged by the games of the Explorer's source.</source>
+        <source>Which common opponent moves this file doesn&apos;t answer yet, judged by the games of the Explorer&apos;s source.</source>
         <translation>Hvilke vanlige motstandertrekk denne filen ikke svarer på ennå, vurdert ut fra partiene i utforskerens kilde.</translation>
     </message>
     <message>
@@ -1512,7 +1529,7 @@
         <translation>&lt;1 % av partiene</translation>
     </message>
     <message>
-        <source>How often you'd meet it from the start, playing this file</source>
+        <source>How often you&apos;d meet it from the start, playing this file</source>
         <translation>Hvor ofte du møter den fra start når du spiller denne filen</translation>
     </message>
     <message>
@@ -1560,7 +1577,7 @@
         <translation>Ny mappe</translation>
     </message>
     <message>
-        <source>A folder name can't contain “/” or start with a dot.</source>
+        <source>A folder name can&apos;t contain “/” or start with a dot.</source>
         <translation>Et mappenavn kan ikke inneholde «/» eller begynne med punktum.</translation>
     </message>
     <message>
@@ -1568,11 +1585,11 @@
         <translation>Det finnes allerede noe som heter «%1» der.</translation>
     </message>
     <message>
-        <source>The folder “%1” couldn't be made.</source>
+        <source>The folder “%1” couldn&apos;t be made.</source>
         <translation>Mappen «%1» kunne ikke opprettes.</translation>
     </message>
     <message>
-        <source>A folder can't go into itself.</source>
+        <source>A folder can&apos;t go into itself.</source>
         <translation>En mappe kan ikke flyttes inn i seg selv.</translation>
     </message>
     <message>
@@ -1580,11 +1597,11 @@
         <translation>Det finnes allerede «%1» i den mappen.</translation>
     </message>
     <message>
-        <source>“%1” couldn't be moved.</source>
+        <source>“%1” couldn&apos;t be moved.</source>
         <translation>«%1» kunne ikke flyttes.</translation>
     </message>
     <message>
-        <source>A name can't be empty, contain “/” or start with a dot.</source>
+        <source>A name can&apos;t be empty, contain “/” or start with a dot.</source>
         <translation>Et navn kan ikke være tomt, inneholde «/» eller begynne med punktum.</translation>
     </message>
     <message>
@@ -1592,7 +1609,7 @@
         <translation>Det finnes allerede «%1» der.</translation>
     </message>
     <message>
-        <source>“%1” couldn't be renamed.</source>
+        <source>“%1” couldn&apos;t be renamed.</source>
         <translation>«%1» kunne ikke få nytt navn.</translation>
     </message>
     <message>
@@ -1608,11 +1625,11 @@
         <translation>Åpne partier fra den lukkes.</translation>
     </message>
     <message>
-        <source>Couldn't move to the Trash</source>
+        <source>Couldn&apos;t move to the Trash</source>
         <translation>Kunne ikke flytte til papirkurven</translation>
     </message>
     <message>
-        <source>“%1” couldn't be moved to the Trash.</source>
+        <source>“%1” couldn&apos;t be moved to the Trash.</source>
         <translation>«%1» kunne ikke flyttes til papirkurven.</translation>
     </message>
     <message>
@@ -1620,7 +1637,7 @@
         <translation>Ukjent</translation>
     </message>
     <message>
-        <source>This game couldn't be read.</source>
+        <source>This game couldn&apos;t be read.</source>
         <translation>Dette partiet kunne ikke leses.</translation>
     </message>
     <message>
@@ -1647,30 +1664,30 @@
         <translation>Lichess vil at du logger inn igjen.</translation>
     </message>
     <message>
-        <source>Lichess's explorer isn't answering right now.</source>
+        <source>Lichess&apos;s explorer isn&apos;t answering right now.</source>
         <translation>Utforskeren til Lichess svarer ikke akkurat nå.</translation>
     </message>
 </context>
 <context>
     <name>kiebitz::app::LichessLogin</name>
     <message>
-        <source>Couldn't wait for Lichess's answer on this Mac.</source>
+        <source>Couldn&apos;t wait for Lichess&apos;s answer on this Mac.</source>
         <translation>Kunne ikke vente på svaret fra Lichess på denne Macen.</translation>
     </message>
     <message>
-        <source>Lichess didn't sign Kiebitz in. Try again?</source>
+        <source>Lichess didn&apos;t sign Kiebitz in. Try again?</source>
         <translation>Lichess logget ikke inn Kiebitz. Prøve igjen?</translation>
     </message>
     <message>
-        <source>Lichess didn't sign Kiebitz in. Close this tab and try again from Kiebitz.</source>
+        <source>Lichess didn&apos;t sign Kiebitz in. Close this tab and try again from Kiebitz.</source>
         <translation>Lichess logget ikke inn Kiebitz. Lukk denne fanen og prøv igjen fra Kiebitz.</translation>
     </message>
     <message>
-        <source>Signed in, but Lichess didn't say who you are. Try again?</source>
+        <source>Signed in, but Lichess didn&apos;t say who you are. Try again?</source>
         <translation>Logget inn, men Lichess sa ikke hvem du er. Prøve igjen?</translation>
     </message>
     <message>
-        <source>Lichess didn't say who you are. Close this tab and try again from Kiebitz.</source>
+        <source>Lichess didn&apos;t say who you are. Close this tab and try again from Kiebitz.</source>
         <translation>Lichess sa ikke hvem du er. Lukk denne fanen og prøv igjen fra Kiebitz.</translation>
     </message>
     <message>
@@ -1685,11 +1702,11 @@
         <translation>Klargjør oppgavene … %1 %</translation>
     </message>
     <message>
-        <source>Couldn't create the puzzles folder.</source>
+        <source>Couldn&apos;t create the puzzles folder.</source>
         <translation>Kunne ikke opprette oppgavemappen.</translation>
     </message>
     <message>
-        <source>Couldn't save the download.</source>
+        <source>Couldn&apos;t save the download.</source>
         <translation>Kunne ikke lagre nedlastingen.</translation>
     </message>
     <message>
@@ -1697,7 +1714,7 @@
         <translation>Laster ned …</translation>
     </message>
     <message>
-        <source>Couldn't save the download (is the disk full?).</source>
+        <source>Couldn&apos;t save the download (is the disk full?).</source>
         <translation>Kunne ikke lagre nedlastingen (er disken full?).</translation>
     </message>
     <message>
@@ -1705,7 +1722,7 @@
         <translation>Laster ned … %1 av %2</translation>
     </message>
     <message>
-        <source>The download didn't finish. Check the connection and try again.</source>
+        <source>The download didn&apos;t finish. Check the connection and try again.</source>
         <translation>Nedlastingen ble ikke ferdig. Sjekk forbindelsen og prøv igjen.</translation>
     </message>
     <message>
@@ -2060,7 +2077,7 @@
         <translation>Lichess</translation>
     </message>
     <message>
-        <source>%1: time's up</source>
+        <source>%1: time&apos;s up</source>
         <translation>%1: tiden er ute</translation>
     </message>
     <message>
@@ -2068,7 +2085,7 @@
         <translation>Neste: %1</translation>
     </message>
     <message>
-        <source>That was the last part of today's plan.</source>
+        <source>That was the last part of today&apos;s plan.</source>
         <translation>Det var siste del av dagens plan.</translation>
     </message>
     <message>
@@ -2144,7 +2161,7 @@
         <translation>Forberedelse</translation>
     </message>
     <message>
-        <source>The file couldn't be saved.</source>
+        <source>The file couldn&apos;t be saved.</source>
         <translation>Filen kunne ikke lagres.</translation>
     </message>
     <message>
@@ -2631,7 +2648,7 @@
         <translation>DERES SVAR</translation>
     </message>
     <message>
-        <source>Your repertoire's move</source>
+        <source>Your repertoire&apos;s move</source>
         <translation>Repertoarets trekk</translation>
     </message>
     <message>
@@ -2698,7 +2715,7 @@
         <translation>%1 ber deg vente et minutt før neste nedlasting.</translation>
     </message>
     <message>
-        <source>%1's %2 games couldn't be downloaded: %3</source>
+        <source>%1&apos;s %2 games couldn&apos;t be downloaded: %3</source>
         <translation>%2-partiene til %1 kunne ikke lastes ned: %3</translation>
     </message>
     <message>
@@ -2718,7 +2735,7 @@
         <translation>Ser etter turneringspartier …</translation>
     </message>
     <message>
-        <source>Couldn't reach %1 to look up %2. Try again in a moment.</source>
+        <source>Couldn&apos;t reach %1 to look up %2. Try again in a moment.</source>
         <translation>Fikk ikke kontakt med %1 for å slå opp %2. Prøv igjen om litt.</translation>
     </message>
     <message>
@@ -2726,11 +2743,11 @@
         <translation>Sletter partiet …</translation>
     </message>
     <message>
-        <source>That game wasn't found in the profile's files.</source>
+        <source>That game wasn&apos;t found in the profile&apos;s files.</source>
         <translation>Fant ikke det partiet i profilens filer.</translation>
     </message>
     <message>
-        <source>Couldn't reach FIDE's rating list (on Lichess) right now.</source>
+        <source>Couldn&apos;t reach FIDE&apos;s rating list (on Lichess) right now.</source>
         <translation>Fikk ikke kontakt med FIDEs ratingliste (via Lichess) akkurat nå.</translation>
     </message>
     <message>
@@ -2738,23 +2755,23 @@
         <translation>Starter …</translation>
     </message>
     <message>
-        <source>Couldn't write the downloaded games (is the disk full?).</source>
+        <source>Couldn&apos;t write the downloaded games (is the disk full?).</source>
         <translation>Kunne ikke skrive de nedlastede partiene (er disken full?).</translation>
     </message>
     <message>
-        <source>Downloading %1's games again, with their clocks…</source>
+        <source>Downloading %1&apos;s games again, with their clocks…</source>
         <translation>Laster ned partiene til %1 på nytt, med klokkene …</translation>
     </message>
     <message>
-        <source>Downloading %1's games from Lichess…</source>
+        <source>Downloading %1&apos;s games from Lichess…</source>
         <translation>Laster ned partiene til %1 fra Lichess …</translation>
     </message>
     <message>
-        <source>Looking up %1's games on chess.com…</source>
+        <source>Looking up %1&apos;s games on chess.com…</source>
         <translation>Ser etter partiene til %1 på chess.com …</translation>
     </message>
     <message>
-        <source>Downloading %1's games from chess.com… %2 of %3 months</source>
+        <source>Downloading %1&apos;s games from chess.com… %2 of %3 months</source>
         <translation>Laster ned partiene til %1 fra chess.com … %2 av %3 måneder</translation>
     </message>
     <message>
@@ -2805,7 +2822,7 @@
         <translation>Synkroniser</translation>
     </message>
     <message>
-        <source>Download the new games of this profile's accounts</source>
+        <source>Download the new games of this profile&apos;s accounts</source>
         <translation>Last ned de nye partiene fra kontoene i denne profilen</translation>
     </message>
     <message>
@@ -2913,7 +2930,7 @@
         <translation>RATING</translation>
     </message>
     <message>
-        <source>Performance: the rating their results were worth against their opponents' ratings</source>
+        <source>Performance: the rating their results were worth against their opponents&apos; ratings</source>
         <translation>Prestasjon: ratingen resultatene deres var verdt mot motstandernes rating</translation>
     </message>
     <message>
@@ -2977,7 +2994,7 @@
         <translation>Lichess</translation>
     </message>
     <message>
-        <source>Kiebitz is signed in as %1 now (not %2): that's the account you logged in to on Lichess.</source>
+        <source>Kiebitz is signed in as %1 now (not %2): that&apos;s the account you logged in to on Lichess.</source>
         <translation>Kiebitz er nå logget inn som %1 (ikke %2): det er kontoen du logget inn med på Lichess.</translation>
     </message>
     <message>
@@ -3069,7 +3086,7 @@
         <translation>Logg inn</translation>
     </message>
     <message>
-        <source>For faster downloads, and Lichess's opening explorer. Your browser opens Lichess's sign-in page.</source>
+        <source>For faster downloads, and Lichess&apos;s opening explorer. Your browser opens Lichess&apos;s sign-in page.</source>
         <translation>For raskere nedlastinger og åpningsutforskeren til Lichess. Nettleseren åpner innloggingssiden til Lichess.</translation>
     </message>
     <message>
@@ -3085,7 +3102,7 @@
         <translation>Over brettet</translation>
     </message>
     <message>
-        <source>Add a database in Databases (Lichess's broadcasts, Caissabase) to find their tournament games by themselves</source>
+        <source>Add a database in Databases (Lichess&apos;s broadcasts, Caissabase) to find their tournament games by themselves</source>
         <translation>Legg til en database under Databaser (Lichess sine overføringer, Caissabase) for å finne turneringspartiene av seg selv</translation>
     </message>
     <message>
@@ -3109,7 +3126,7 @@
         <translation>Ingen turneringer i disse partiene</translation>
     </message>
     <message>
-        <source>You haven't played them in these games.</source>
+        <source>You haven&apos;t played them in these games.</source>
         <translation>Du har ikke spilt mot dem i disse partiene.</translation>
     </message>
     <message>
@@ -3117,7 +3134,7 @@
         <translation>Din score: %1</translation>
     </message>
     <message>
-        <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase's online database.</source>
+        <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase&apos;s online database.</source>
         <translation>Det er ingen partier på utklippstavlen. Kopier partier som PGN først, for eksempel i ChessBase sin nettdatabase.</translation>
     </message>
     <message>
@@ -3133,7 +3150,7 @@
         <translation>Logg inn med Lichess</translation>
     </message>
     <message>
-        <source>For Lichess's opening explorer, and faster downloads of your games.</source>
+        <source>For Lichess&apos;s opening explorer, and faster downloads of your games.</source>
         <translation>For åpningsutforskeren til Lichess og raskere nedlasting av partiene dine.</translation>
     </message>
     <message>
@@ -3161,7 +3178,7 @@
         <translation>Ingen partier her ennå.</translation>
     </message>
     <message>
-        <source>No repertoire yet. Set a file's type to Repertoire (right-click it in the Library) to check these games against it.</source>
+        <source>No repertoire yet. Set a file&apos;s type to Repertoire (right-click it in the Library) to check these games against it.</source>
         <translation>Ikke noe repertoar ennå. Sett en fils type til Repertoar (høyreklikk på den i Biblioteket) for å sjekke disse partiene mot det.</translation>
     </message>
     <message>
@@ -3233,15 +3250,15 @@
         <translation>Slett</translation>
     </message>
     <message>
-        <source>It's taken out of the profile's PGN files. If the game is in there twice, the other copy stays.</source>
+        <source>It&apos;s taken out of the profile&apos;s PGN files. If the game is in there twice, the other copy stays.</source>
         <translation>Det fjernes fra profilens PGN-filer. Hvis partiet finnes to ganger, blir den andre kopien.</translation>
     </message>
     <message>
-        <source>Give the profile a full name (first and last) to find it in FIDE's rating list.</source>
+        <source>Give the profile a full name (first and last) to find it in FIDE&apos;s rating list.</source>
         <translation>Gi profilen et fullt navn (fornavn og etternavn) for å finne det i FIDEs ratingliste.</translation>
     </message>
     <message>
-        <source>Looking it up in FIDE's rating list…</source>
+        <source>Looking it up in FIDE&apos;s rating list…</source>
         <translation>Slår opp i FIDEs ratingliste …</translation>
     </message>
     <message>
@@ -3249,7 +3266,7 @@
         <translation>Ingen FIDE-spiller er valgt for denne profilen.</translation>
     </message>
     <message>
-        <source>No player called %1 in FIDE's rating list.</source>
+        <source>No player called %1 in FIDE&apos;s rating list.</source>
         <translation>Ingen spiller som heter %1 i FIDEs ratingliste.</translation>
     </message>
     <message>
@@ -3301,15 +3318,15 @@
         <translation>Ikke dem</translation>
     </message>
     <message>
-        <source>There's no %1 account called “%2”.</source>
+        <source>There&apos;s no %1 account called “%2”.</source>
         <translation>Det finnes ingen %1-konto som heter «%2».</translation>
     </message>
     <message>
-        <source>Check the spelling: it's the name in the account's address, lichess.org/@/name.</source>
+        <source>Check the spelling: it&apos;s the name in the account&apos;s address, lichess.org/@/name.</source>
         <translation>Sjekk stavemåten: det er navnet i kontoens adresse, lichess.org/@/navn.</translation>
     </message>
     <message>
-        <source>Check the spelling: it's the name in the account's address, chess.com/member/name.</source>
+        <source>Check the spelling: it&apos;s the name in the account&apos;s address, chess.com/member/name.</source>
         <translation>Sjekk stavemåten: det er navnet i kontoens adresse, chess.com/member/navn.</translation>
     </message>
     <message>
@@ -3530,7 +3547,7 @@
         <translation>Ikke noe repertoar ennå</translation>
     </message>
     <message>
-        <source>Set a file's type to Repertoire (right-click it in the Library), and games are checked against it here.</source>
+        <source>Set a file&apos;s type to Repertoire (right-click it in the Library), and games are checked against it here.</source>
         <translation>Sett en fils type til Repertoar (høyreklikk på den i Biblioteket), så sjekkes partiene mot det her.</translation>
     </message>
     <message>
@@ -3554,7 +3571,7 @@
         <translation>Legg til linje</translation>
     </message>
     <message>
-        <source>Add this game's moves up to here to the repertoire</source>
+        <source>Add this game&apos;s moves up to here to the repertoire</source>
         <translation>Legg til trekkene i dette partiet frem hit i repertoaret</translation>
     </message>
     <message>
@@ -3566,7 +3583,7 @@
         <translation>Til trekk</translation>
     </message>
     <message>
-        <source>The lines through positions you got wrong and haven't answered right twice since</source>
+        <source>The lines through positions you got wrong and haven&apos;t answered right twice since</source>
         <translation>Linjene gjennom stillinger du tok feil i og ikke har svart riktig på to ganger siden</translation>
     </message>
     <message>
@@ -3630,7 +3647,7 @@
         <translation>Boken spiller</translation>
     </message>
     <message>
-        <source>%1 isn't covered yet</source>
+        <source>%1 isn&apos;t covered yet</source>
         <translation>%1 er ikke dekket ennå</translation>
     </message>
     <message>
@@ -3661,7 +3678,7 @@
 <context>
     <name>kiebitz::app::RepertoireStore</name>
     <message>
-        <source>Couldn't add the line: the file changed.</source>
+        <source>Couldn&apos;t add the line: the file changed.</source>
         <translation>Kunne ikke legge til linjen: filen er endret.</translation>
     </message>
 </context>
@@ -3832,7 +3849,7 @@
         <translation>Oppsett</translation>
     </message>
     <message>
-        <source>Flowing text, or rows with White's and Black's moves.</source>
+        <source>Flowing text, or rows with White&apos;s and Black&apos;s moves.</source>
         <translation>Løpende tekst, eller rader med hvits og svarts trekk.</translation>
     </message>
     <message>
@@ -3960,7 +3977,7 @@
         <translation>Spilt minst</translation>
     </message>
     <message>
-        <source>How often an opponent's move must be played in a position to count as a gap.</source>
+        <source>How often an opponent&apos;s move must be played in a position to count as a gap.</source>
         <translation>Hvor ofte et motstandertrekk må være spilt i en stilling for å telle som et hull.</translation>
     </message>
     <message>
@@ -3968,7 +3985,7 @@
         <translation>Minst antall partier</translation>
     </message>
     <message>
-        <source>Positions with fewer games aren't judged.</source>
+        <source>Positions with fewer games aren&apos;t judged.</source>
         <translation>Stillinger med færre partier vurderes ikke.</translation>
     </message>
     <message>
@@ -4057,7 +4074,7 @@
 <context>
     <name>kiebitz::app::StockfishDownload</name>
     <message>
-        <source>Couldn't reach GitHub to find the latest Stockfish.</source>
+        <source>Couldn&apos;t reach GitHub to find the latest Stockfish.</source>
         <translation>Fikk ikke kontakt med GitHub for å finne nyeste Stockfish.</translation>
     </message>
     <message>
@@ -4065,27 +4082,27 @@
         <translation>Den nyeste Stockfish-versjonen har ingen nedlasting for denne Macen.</translation>
     </message>
     <message>
-        <source>Couldn't create the engines folder.</source>
+        <source>Couldn&apos;t create the engines folder.</source>
         <translation>Kunne ikke opprette motormappen.</translation>
     </message>
     <message>
-        <source>Couldn't save the download.</source>
+        <source>Couldn&apos;t save the download.</source>
         <translation>Kunne ikke lagre nedlastingen.</translation>
     </message>
     <message>
-        <source>Couldn't save the download (is the disk full?).</source>
+        <source>Couldn&apos;t save the download (is the disk full?).</source>
         <translation>Kunne ikke lagre nedlastingen (er disken full?).</translation>
     </message>
     <message>
-        <source>The download didn't finish. Check the connection and try again.</source>
+        <source>The download didn&apos;t finish. Check the connection and try again.</source>
         <translation>Nedlastingen ble ikke ferdig. Sjekk forbindelsen og prøv igjen.</translation>
     </message>
     <message>
-        <source>The download was damaged (its checksum doesn't match). Try again.</source>
+        <source>The download was damaged (its checksum doesn&apos;t match). Try again.</source>
         <translation>Nedlastingen var skadet (sjekksummen stemmer ikke). Prøv igjen.</translation>
     </message>
     <message>
-        <source>Couldn't unpack the download.</source>
+        <source>Couldn&apos;t unpack the download.</source>
         <translation>Kunne ikke pakke ut nedlastingen.</translation>
     </message>
     <message>
@@ -4100,11 +4117,11 @@
         <translation>Lichess ber Kiebitz om å roe ned. Prøv igjen om et minutt.</translation>
     </message>
     <message>
-        <source>The tablebase isn't answering right now.</source>
+        <source>The tablebase isn&apos;t answering right now.</source>
         <translation>Sluttspilltabellen svarer ikke akkurat nå.</translation>
     </message>
     <message>
-        <source>The tablebase's answer couldn't be read.</source>
+        <source>The tablebase&apos;s answer couldn&apos;t be read.</source>
         <translation>Svaret fra sluttspilltabellen kunne ikke leses.</translation>
     </message>
     <message>
@@ -4148,7 +4165,7 @@
         <translation>Et tap, men 50-trekksregelen redder det til remis</translation>
     </message>
     <message>
-        <source>Depends on the 50-move rule: the tablebase can't say for sure</source>
+        <source>Depends on the 50-move rule: the tablebase can&apos;t say for sure</source>
         <translation>Avhenger av 50-trekksregelen: sluttspilltabellen kan ikke si det sikkert</translation>
     </message>
 </context>
@@ -4171,7 +4188,7 @@
         <translation>Stopp</translation>
     </message>
     <message>
-        <source>time's up</source>
+        <source>time&apos;s up</source>
         <translation>tiden er ute</translation>
     </message>
     <message>
@@ -4289,7 +4306,7 @@
         <translation>Alle repertoarer</translation>
     </message>
     <message>
-        <source>Time's up</source>
+        <source>Time&apos;s up</source>
         <translation>Tiden er ute</translation>
     </message>
     <message>
@@ -4352,7 +4369,7 @@
 <context>
     <name>kiebitz::app::UciEngine</name>
     <message>
-        <source>%1 couldn't be started.</source>
+        <source>%1 couldn&apos;t be started.</source>
         <translation>%1 kunne ikke startes.</translation>
     </message>
     <message>

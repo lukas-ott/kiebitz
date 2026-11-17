@@ -870,9 +870,12 @@ void MainWindow::practiceWholeRepertoire(int depth) {
         showStatus(tr("Reading the repertoire…"), 3000);
         return;
     }
-    // Every chapter of every file of the side, merged in the background.
+    // Every chapter of every active file of the side, merged in the background.
     std::vector<core::Game> games;
     for (const RepertoireFile& file : built->files) {
+        if (!file.active) {
+            continue;
+        }
         games.insert(games.end(), file.games.begin(), file.games.end());
     }
     whenReady(

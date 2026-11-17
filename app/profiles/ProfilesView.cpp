@@ -1722,6 +1722,9 @@ QString ProfilesView::theoryFingerprint(const Profile& profile) const {
             continue;
         }
         for (const RepertoireFile& file : built->files) {
+            if (!file.active) {
+                continue; // not checked against
+            }
             parts << QStringLiteral("%1:%2").arg(file.file->path).arg(file.textHash);
         }
     }

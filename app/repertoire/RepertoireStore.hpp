@@ -11,6 +11,7 @@
 
 #include <array>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -25,9 +26,12 @@ struct RepertoireFile {
     std::shared_ptr<PgnFile> file; ///< with its text; shared with tabs that show its games
     std::vector<core::Game> games; ///< parsed; index = game index in the file
     std::size_t textHash = 0;      ///< of the text the games were parsed from
+    /// In a folder that is an active repertoire: in the tree. An inactive file is read (its
+    /// card, gaps and start work) but nothing is checked or practised against it.
+    bool active = true;
 };
 
-/// All repertoire files of one side, merged into one tree of positions.
+/// All repertoire files of one side; the active ones merged into one tree of positions.
 struct BuiltRepertoire {
     core::Color side = core::Color::White;
     std::vector<RepertoireFile> files;
@@ -40,6 +44,11 @@ struct BuiltRepertoire {
 /// Library); which side it is for comes from its [Orientation] header. All repertoire files of
 /// a side are merged into one tree, so a game can be checked against every one of them at once,
 /// and the tree knows which file each position comes from ("in book in Philidor Defense").
+///
+/// A folder of them is a repertoire, active or not: files in an inactive folder (one you used
+/// to play, one you're still learning) open and read as repertoires but stay out of the tree.
+/// Folders are active unless set otherwise; a setting holds for the folders inside too, until
+/// one of them has its own. The settings are kept on this Mac, by folder.
 ///
 /// The store watches the Library, rebuilds a side's tree in the background when its files
 /// change, adds lines to the right file (and saves it), changes file types, and loads the
@@ -58,8 +67,20 @@ public:
 
     /// The built repertoire of a side, or null (no repertoire files, or still being read).
     [[nodiscard]] const BuiltRepertoire* get(core::Color side) const;
-    /// The Library's repertoire files of a side, known before they are built.
+    /// The Library's active repertoire files of a side, known before they are built.
     [[nodiscard]] const QStringList& files(core::Color side) const;
+
+    /// Whether a file or folder (its path in the Library: "Repertoires/Sharp/Grünfeld.pgn") is
+    /// in an active repertoire: the nearest folder above it with a setting decides; none: yes.
+    [[nodiscard]] bool isActive(const QString& name) const;
+    /// A folder's own setting, if it has one.
+    [[nodiscard]] std::optional<bool> activeSetting(const QString& folder) const;
+    /// Makes a folder (and the folders inside without settings of their own) an active
+    /// repertoire or not; the trees are built again.
+    void setActive(const QString& folder, bool active);
+    /// A folder was renamed or moved in the Library: its settings go with it.
+    void folderMoved(const QString& from, const QString& to);
+    static constexpr auto kActiveKey = "repertoire.activeFolders";
     [[nodiscard]] bool isBuilding(core::Color side) const;
 
     /// Opening names; null until loaded (loadOpenings() starts it, openingsReady() follows).
@@ -126,6 +147,8 @@ public:
 signals:
     /// A side's repertoire was (re)built, or its files changed.
     void changed(kiebitz::core::Color side);
+    /// Folders were made active or inactive.
+    void activeChanged();
     void openingsReady();
     /// The store changed a file's text (a line added, a header set): open games of it reload
     /// from `file`, which holds the new text.
@@ -134,7 +157,8 @@ signals:
 
 private:
     struct Side {
-        QStringList files;
+        QStringList files;     ///< the active ones
+        QStringList allFiles;  ///< active or not: all are read
         QStringList builtFrom; ///< "path|size|mtime" the current build used
         std::shared_ptr<BuiltRepertoire> built;
         int generation = 0; ///< a newer build or edit makes older results stale
@@ -142,6 +166,7 @@ private:
     };
 
     void libraryChanged();
+    void saveActive() const;
     void rebuild(core::Color side);
     /// Re-reads games whose text changed since the build (a tab saved into the file).
     static void catchUp(BuiltRepertoire& built);
@@ -158,6 +183,7 @@ private:
 
     Library& m_library;
     std::array<Side, 2> m_sides;
+    std::map<QString, bool> m_active; ///< folder (in the Library) → active
     int m_pendingWrites = 0;
     std::shared_ptr<const repertoire::OpeningNames> m_openings;
     bool m_openingsLoading = false;
