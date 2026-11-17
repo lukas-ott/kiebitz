@@ -274,7 +274,8 @@ int DatabaseManager::importFile(const QString& path, const QString& name, const 
             }
             process.waitForFinished(-1);
         }
-        if (result.cancelled) {
+        // A cancel counts until the database is in place, not only while reading.
+        if (result.cancelled || cancel->load()) {
             fail(QStringLiteral("cancelled"));
             return;
         }
@@ -291,6 +292,10 @@ int DatabaseManager::importFile(const QString& path, const QString& name, const 
         writer->reset(); // closes the files before the folder is renamed
         if (!error.empty()) {
             fail(QString::fromStdString(error));
+            return;
+        }
+        if (cancel->load()) {
+            fail(QStringLiteral("cancelled"));
             return;
         }
         if (!QDir().rename(part, folder)) {
