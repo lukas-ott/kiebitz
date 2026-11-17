@@ -111,6 +111,7 @@ struct GameQuery {
     std::string text;     ///< in a player's name, the event or site (any case), or the ECO
     std::string fromDate; ///< a pgnDatePrefix(); empty: no limit
     std::string toDate;
+    std::uint8_t speeds = 0; ///< only games at these speeds (bits: 1 << Speed); 0: all
     enum class Order : std::uint8_t {
         Id,
         White,
@@ -126,8 +127,8 @@ struct GameQuery {
     bool descending = false;
     /// All games as stored: nothing to search, filter or sort.
     [[nodiscard]] bool plain() const {
-        return text.empty() && fromDate.empty() && toDate.empty() && order == Order::Id &&
-               !descending;
+        return text.empty() && fromDate.empty() && toDate.empty() && speeds == 0 &&
+               order == Order::Id && !descending;
     }
 };
 
@@ -235,6 +236,9 @@ public:
                                              const std::atomic<bool>* cancelled = nullptr) const;
     /// A whole game: headers and moves.
     [[nodiscard]] std::optional<core::Game> game(GameId id) const;
+    /// Each game's speed (from its [TimeControl] or event when it was imported), by id - 1:
+    /// Unknown for games from a set-up position, or a database from before speeds were kept.
+    [[nodiscard]] std::vector<Speed> speeds() const;
 
     /// The results of the player(s) called any of `names` (any case), in finished games.
     [[nodiscard]] Record record(std::span<const std::string> names) const;

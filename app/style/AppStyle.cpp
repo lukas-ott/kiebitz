@@ -235,11 +235,25 @@ void AppStyle::apply() {
         palette.setColor(QPalette::Disabled, role, c.dimmed);
     }
     QApplication::setPalette(palette);
-    m_app.setStyleSheet(styleSheet(c, writeCheckImage(c.accent), m_textScale));
+    QString css = styleSheet(c, writeCheckImage(c.accent), m_textScale);
+    // Combo boxes: a chevron that says a list opens (the style sheet hides the native one).
+    if (const QString down = writeIconImage(IconKind::Down, QStringLiteral("down"), c.muted, 12);
+        !down.isEmpty()) {
+        css += QStringLiteral("\nQComboBox::down-arrow { image: url(%1); width: 12px; "
+                              "height: 12px; }\nQComboBox { padding-right: 24px; }\n"
+                              "QComboBox::drop-down { width: 22px; }\n")
+                   .arg(down);
+    }
+    m_app.setStyleSheet(css);
     emit changed();
 }
 
 QString AppStyle::writeCheckImage(const QColor& color) {
+    return writeIconImage(IconKind::Check, QStringLiteral("check"), color, 14);
+}
+
+QString AppStyle::writeIconImage(IconKind kind, const QString& prefix, const QColor& color,
+                                 int pixels) {
     if (!m_images) {
         m_images = std::make_unique<QTemporaryDir>();
     }
@@ -247,13 +261,13 @@ QString AppStyle::writeCheckImage(const QColor& color) {
         return {};
     }
     // One file per colour (a style sheet may cache an image by its path); a @2x one for Retina.
-    const QString name = QStringLiteral("check-%1").arg(color.name(QColor::HexRgb).mid(1));
+    const QString name = QStringLiteral("%1-%2").arg(prefix, color.name(QColor::HexRgb).mid(1));
     const QString path = m_images->filePath(name + QStringLiteral(".png"));
     if (!QFileInfo::exists(path)) {
         for (const int scale : {1, 2}) {
-            const int size = 14 * scale;
+            const int size = pixels * scale;
             const QImage image =
-                makeIcon(IconKind::Check, color, color, size)
+                makeIcon(kind, color, color, size)
                     .pixmap(size, size)
                     .toImage()
                     .scaled(size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -675,6 +689,19 @@ QPushButton[role="chip"] {
 }
 QPushButton[role="chip"]:hover { color: @text; }
 QPushButton[role="chip"]:checked { background: @accentTint; color: @accent; border-color: @accent; }
+/* The notation's symbol bar: !, ?, ± ... a click each; ticked: the move has it */
+QPushButton[role="symbol"] {
+    background: transparent;
+    color: @muted;
+    border: none;
+    border-radius: 5px;
+    padding: 2px 6px;
+    min-width: 14px;
+    font-size: 13px;
+}
+QPushButton[role="symbol"]:hover { background: @raised; color: @text; }
+QPushButton[role="symbol"]:checked { background: @accentTint; color: @accent; }
+QPushButton[role="symbol"]:disabled { color: @dimmed; }
 /* A line in your prep (the Prepare tab): the line, and an x to take it out */
 QWidget[role="prepChip"] { background: @accentTint; border-radius: 12px; }
 QPushButton[role="chipText"] {

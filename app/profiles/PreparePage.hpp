@@ -7,9 +7,12 @@
 
 #include <QWidget>
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
+class QComboBox;
+class QGridLayout;
 class QHBoxLayout;
 class QKeyEvent;
 class QLabel;
@@ -47,6 +50,10 @@ public:
     void show(const QString& profileId, const QString& part, bool force = false);
     /// Your colour against them.
     void setYourColour(core::Color you);
+    /// Only games from `year` on (0: all), at these speeds (bits: 1 << gamedb::Speed; 0: all).
+    /// The speeds are the profile page's filter.
+    void setFilter(int sinceYear, std::uint8_t speeds);
+    void setSpeeds(std::uint8_t speeds) { setFilter(m_sinceYear, speeds); }
     /// The board's colours and pieces, as on the Board page.
     void setBoardLook(const BoardTheme& theme, const QString& pieces);
 
@@ -80,6 +87,8 @@ private:
     void showPath();
     void showMoves();
     void showPrep();
+    void showYears();
+    void showWeak();
     void toggleLine(const std::vector<core::Move>& line);
     void createPrepFile();
 
@@ -92,8 +101,12 @@ private:
     QHBoxLayout* m_path = nullptr;
     std::vector<QPushButton*> m_steps; ///< start, back, forward, end
     QLabel* m_summary = nullptr;
+    QComboBox* m_since = nullptr;
+    QLabel* m_count = nullptr; ///< "34 of 58 games"
     QLabel* m_whose = nullptr; ///< "Your moves" / "Their replies"
     QTreeWidget* m_moves = nullptr;
+    QWidget* m_weak = nullptr; ///< "Where they struggle"
+    QGridLayout* m_weakRows = nullptr;
     QWidget* m_prep = nullptr;
     FlowLayout* m_chips = nullptr;
     QPushButton* m_create = nullptr;
@@ -102,6 +115,8 @@ private:
     QString m_stamp;   ///< what the analysis shown was worked out from
     int m_request = 0; ///< newer requests win
     core::Color m_you = core::Color::White;
+    int m_sinceYear = 0;       ///< the filter: games from this year on (0: all)
+    std::uint8_t m_speeds = 0; ///< bits: 1 << gamedb::Speed; 0: all
     std::shared_ptr<const Analysis> m_analysis;
     std::unique_ptr<repertoire::PrepTree> m_tree; ///< the player's games against your colour
     std::vector<core::Move> m_line;               ///< where you are

@@ -35,6 +35,8 @@ public:
     void setDatabase(std::shared_ptr<const gamedb::Database> db);
     void setText(const QString& text);
     void setDates(const std::string& from, const std::string& to);
+    /// Only games at these speeds (bits: 1 << gamedb::Speed); 0: all.
+    void setSpeeds(std::uint8_t speeds);
     [[nodiscard]] const gamedb::GameInfo* at(int row) const;
     /// "Searching…", "The first 10,000 are shown", or empty.
     [[nodiscard]] QString status() const { return m_status; }

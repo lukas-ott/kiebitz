@@ -34,6 +34,9 @@ struct GameDocument {
     bool modified = false;         ///< changed since it was opened or saved
     /// A side's whole repertoire, all its files merged, to practise (not a file of its own).
     std::optional<core::Color> wholeRepertoire;
+    /// A database game opened from the Explorer while a file was in front: that file's tab
+    /// (its document id), which "Merge" adds the moves to. 0: not a preview.
+    int previewOf = 0;
 
     /// The tab title: "White – Black" when the players are known, else the file name, else
     /// "New game". A leading "• " marks unsaved changes.

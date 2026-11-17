@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Icons.hpp"
+
 #include <QColor>
 #include <QObject>
 #include <QString>
@@ -84,6 +86,9 @@ private:
                                             int textScale = 100);
     /// Draws the tick for the style sheet; returns its path.
     [[nodiscard]] QString writeCheckImage(const QColor& color);
+    /// An icon as a PNG for the style sheet (and a @2x one), in `color`: its path.
+    [[nodiscard]] QString writeIconImage(IconKind kind, const QString& prefix, const QColor& color,
+                                         int pixels);
 
     QApplication& m_app;
     QString m_themeId;              ///< as set: "" follows macOS

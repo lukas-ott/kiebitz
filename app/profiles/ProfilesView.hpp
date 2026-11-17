@@ -3,6 +3,7 @@
 #include "board/BoardTheme.hpp"
 #include "kiebitz/core/game.hpp"
 #include "kiebitz/gamedb/database.hpp"
+#include "kiebitz/gamedb/facts.hpp"
 #include "kiebitz/repertoire/theory.hpp"
 
 #include <QWidget>
@@ -27,6 +28,7 @@ namespace kiebitz::app {
 class ElidedLabel;
 
 class ActivityChart;
+class RatingChart;
 class AppStyle;
 class DateRange;
 class GamesModel;
@@ -92,6 +94,17 @@ private:
     void addOtbGames();
     void showFideCard();
     void showPhoto();
+    /// Performance, rating, opponents, events, against you: worked out in the background.
+    void showFacts();
+    void showFacts(const gamedb::PlayerFacts& facts);
+    /// Their ratings from every source, read again when the profile's games changed.
+    void showRatings();
+    /// The line for the speed and source chosen (or the nearest there is).
+    void showRatingLine();
+    /// The speed chips ticked: the filter for every tab.
+    void speedsChanged();
+    /// The rating source box: on the Overview tab, when there is a rating to choose.
+    void showRatingFrom();
     /// The game selected in the Games tab, deleted from the profile (after asking).
     void deleteSelectedGame();
 
@@ -116,8 +129,12 @@ private:
     QVBoxLayout* m_accounts = nullptr;    ///< the account cards, one above the other
     class MultiChoice* m_parts = nullptr; ///< games from: accounts, over the board, databases
     QString m_part;                       ///< the part looked at ("" = all)
-    std::uint8_t m_speeds = 0;            ///< the time control looked at (bits: 1 << Speed; 0: all)
-    QStackedWidget* m_pages = nullptr;    ///< Overview | Games | Repertoire | Prepare
+    /// The time controls looked at, on every tab: "All", or some of the speeds. Classical takes
+    /// in correspondence and games without a known speed (over the board, mostly classical).
+    QPushButton* m_allSpeeds = nullptr;
+    std::vector<std::pair<gamedb::Speed, QPushButton*>> m_speedChips;
+    std::uint8_t m_speeds = 0;         ///< the same as bits: 1 << Speed; 0: all
+    QStackedWidget* m_pages = nullptr; ///< Overview | Games | Repertoire | Prepare
     class PreparePage* m_prepare = nullptr;
     QPushButton* m_showRepertoire = nullptr; ///< your own profile only
     QPushButton* m_showPrepare = nullptr;    ///< someone else's only
@@ -129,7 +146,27 @@ private:
     QLabel* m_blackText = nullptr;
     ResultBar* m_blackBar = nullptr;
     ActivityChart* m_activity = nullptr;
+    RatingChart* m_rating = nullptr;
+    /// Where the rating line comes from: FIDE (the over-the-board games), or an account.
+    struct RatingSource {
+        QString key; ///< "fide", or the account's id
+        QString text;
+        gamedb::RatingHistory history;
+    };
+    std::vector<RatingSource> m_ratingSources;
+    class QComboBox* m_ratingFrom = nullptr; ///< in the filters, on the Overview tab
+    QWidget* m_ratingFromBox = nullptr;      ///< "Rating" and m_ratingFrom
+    QString m_ratingSource = QStringLiteral("fide");
+    QLabel* m_ratingSpeedText = nullptr; ///< the speed of the line: "Classical"
+    QString m_ratingStamp;               ///< the profile and databases the sources were read from
+    int m_ratingsRequest = 0;
+    QLabel* m_performance = nullptr; ///< "Performance 2148 · opponents 2067 · 34 games"
+    QLabel* m_opponents = nullptr;   ///< who they played most
+    QLabel* m_events = nullptr;      ///< their latest tournaments
+    QWidget* m_vsYouTile = nullptr;  ///< your results against them (someone else's profile)
+    QLabel* m_vsYou = nullptr;
     int m_statsRequest = 0;
+    int m_factsRequest = 0;
     // The theory check
     QLabel* m_theorySummary = nullptr;
     QTreeWidget* m_theory = nullptr;

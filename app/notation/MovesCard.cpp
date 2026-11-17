@@ -75,6 +75,34 @@ MovesCard::MovesCard(AppStyle& style, QWidget* parent) : QFrame(parent), m_style
     titleRow->addWidget(views);
     layout->addLayout(titleRow);
 
+    // A database game looked at next to a file: its moves (up to where you are) can go into
+    // that file, or the preview closes.
+    m_mergeBar = new QFrame;
+    m_mergeBar->setObjectName(QStringLiteral("mergeBar"));
+    m_mergeBar->setProperty("statTile", true);
+    auto* mergeBox = new QHBoxLayout(m_mergeBar);
+    mergeBox->setContentsMargins(12, 8, 8, 8);
+    mergeBox->setSpacing(8);
+    auto* mergeText = ui::label(tr("Preview"), "emptyHint");
+    mergeText->setToolTip(tr("A game from a database. Step to the move you want, then merge: "
+                             "its moves up to there go into the file, as a variation where "
+                             "they differ."));
+    mergeBox->addWidget(mergeText, 1);
+    m_merge = new QPushButton;
+    m_merge->setObjectName(QStringLiteral("mergeIntoFile"));
+    m_merge->setProperty("role", "primary");
+    m_merge->setFocusPolicy(Qt::NoFocus);
+    connect(m_merge, &QPushButton::clicked, this, &MovesCard::mergeRequested);
+    mergeBox->addWidget(m_merge);
+    auto* closePreview = new QPushButton(tr("Close"));
+    closePreview->setObjectName(QStringLiteral("closePreview"));
+    closePreview->setProperty("role", "secondary");
+    closePreview->setFocusPolicy(Qt::NoFocus);
+    connect(closePreview, &QPushButton::clicked, this, &MovesCard::previewCloseRequested);
+    mergeBox->addWidget(closePreview);
+    m_mergeBar->hide();
+    layout->addWidget(m_mergeBar);
+
     // The moves, and under them (at a branch point) the continuations to choose from (↑ ↓ to
     // choose, → to play). They share one area, so the continuations only take the move list's
     // room: the comment box, the buttons and the panels below stay where they are.
@@ -106,6 +134,48 @@ MovesCard::MovesCard(AppStyle& style, QWidget* parent) : QFrame(parent), m_style
     areaLayout->addWidget(m_forkScroll);
     movesArea->setMinimumHeight(kNotationMin + layout::kCardSpacing + kContinuationsMax);
     layout->addWidget(movesArea, 1);
+
+    // Symbols for the current move, a click each: how good it is, who stands better, and
+    // a few more. Ticked: the move has it.
+    auto* symbols = new QWidget;
+    symbols->setObjectName(QStringLiteral("symbolBar"));
+    auto* symbolsBox = new QHBoxLayout(symbols);
+    symbolsBox->setContentsMargins(0, 0, 0, 0);
+    symbolsBox->setSpacing(1);
+    const auto symbolGroup = [&](std::initializer_list<std::pair<std::uint8_t, QString>> group) {
+        for (const auto& [nag, tip] : group) {
+            const auto text = core::nagSymbol(nag);
+            auto* button = new QPushButton(
+                QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())));
+            button->setObjectName(QStringLiteral("symbol:%1").arg(nag));
+            button->setProperty("role", "symbol");
+            button->setCheckable(true);
+            button->setFocusPolicy(Qt::NoFocus);
+            button->setToolTip(tip);
+            connect(button, &QPushButton::clicked, this,
+                    [this, which = nag] { emit symbolClicked(which); });
+            symbolsBox->addWidget(button);
+            m_symbols.emplace_back(nag, button);
+        }
+        symbolsBox->addSpacing(8);
+    };
+    symbolGroup({{3, tr("Brilliant move")},
+                 {1, tr("Good move")},
+                 {5, tr("Interesting move")},
+                 {6, tr("Dubious move")},
+                 {2, tr("Mistake")},
+                 {4, tr("Blunder")}});
+    symbolGroup({{18, tr("White is winning")},
+                 {16, tr("White is better")},
+                 {14, tr("White is slightly better")},
+                 {10, tr("Equal")},
+                 {15, tr("Black is slightly better")},
+                 {17, tr("Black is better")},
+                 {19, tr("Black is winning")},
+                 {13, tr("Unclear")}});
+    symbolGroup({{7, tr("Only move")}, {146, tr("Novelty")}});
+    symbolsBox->addStretch();
+    layout->addWidget(symbols);
 
     // The current move's comment, edited in place, under a header naming the move.
     m_commentTitle = ui::label(QString(), "cardTitle");
@@ -150,6 +220,20 @@ void MovesCard::setRows(bool rows) {
     }
 }
 
+void MovesCard::setMergeTarget(const QString& target) {
+    m_mergeBar->setVisible(!target.isEmpty());
+    m_merge->setText(tr("Merge into %1").arg(target));
+}
+
+void MovesCard::showSymbols(const core::Game& game, core::NodeId id) {
+    // The symbols it has; the game's start has none.
+    const auto& nags = game.node(id).nags;
+    for (const auto& [nag, button] : m_symbols) {
+        button->setChecked(std::find(nags.begin(), nags.end(), nag) != nags.end());
+        button->setEnabled(id != core::Game::root());
+    }
+}
+
 void MovesCard::showComment(const core::Game& game, core::NodeId id) {
     {
         const QSignalBlocker block(m_commentBox);
@@ -160,6 +244,7 @@ void MovesCard::showComment(const core::Game& game, core::NodeId id) {
                                              ? tr("Add a comment about the game…")
                                              : tr("Add a comment about this move…"));
     }
+    showSymbols(game, id);
     // "COMMENT · 12… Nf6": which move the box belongs to.
     const QString move = id == core::Game::root() ? tr("GAME") : numbered(game, id);
     m_commentTitle->setText(tr("COMMENT") + QStringLiteral("  ·  ") + move);

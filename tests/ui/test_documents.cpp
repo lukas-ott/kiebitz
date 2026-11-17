@@ -3,6 +3,7 @@
 
 #include "MainWindow.hpp"
 #include "board/BoardView.hpp"
+#include "explorer/ExplorerPanel.hpp"
 #include "kiebitz/pgn/pgn.hpp"
 #include "library/Library.hpp"
 #include "library/LibraryView.hpp"
@@ -1264,6 +1265,74 @@ TEST_F(DocumentsTest, NagsAreExclusivePerGroup) {
     window.saveCurrentAs(path("nags.pgn"));
     ASSERT_TRUE(saved.wait(5000));
     EXPECT_NE(readFile(path("nags.pgn")).find("1. e4 $5 $16"), std::string::npos);
+}
+
+TEST_F(DocumentsTest, TheSymbolBarMarksTheCurrentMoveWithAClick) {
+    window.showSection(MainWindow::Section::Board);
+    const auto symbol = [&](int nag) {
+        return window.findChild<QPushButton*>(QStringLiteral("symbol:%1").arg(nag));
+    };
+    ASSERT_NE(symbol(1), nullptr);
+    EXPECT_FALSE(symbol(1)->isEnabled()); // the start: no move to mark
+    play("e4");
+    EXPECT_TRUE(symbol(1)->isEnabled());
+    QTest::mouseClick(symbol(1), Qt::LeftButton);  // !
+    QTest::mouseClick(symbol(16), Qt::LeftButton); // ±, alongside
+    EXPECT_TRUE(symbol(1)->isChecked());
+    EXPECT_TRUE(symbol(16)->isChecked());
+    QTest::mouseClick(symbol(3), Qt::LeftButton); // !! takes the place of !
+    EXPECT_FALSE(symbol(1)->isChecked());
+    EXPECT_TRUE(symbol(3)->isChecked());
+    QTest::mouseClick(symbol(16), Qt::LeftButton); // ± again: off
+    EXPECT_FALSE(symbol(16)->isChecked());
+    QSignalSpy saved(&window, &MainWindow::fileSaved);
+    window.saveCurrentAs(path("symbols.pgn"));
+    ASSERT_TRUE(saved.wait(5000));
+    EXPECT_NE(readFile(path("symbols.pgn")).find("1. e4 $3 *"), std::string::npos)
+        << readFile(path("symbols.pgn"));
+    // Another move: its own symbols (none).
+    play("e5");
+    EXPECT_FALSE(symbol(3)->isChecked());
+}
+
+TEST_F(DocumentsTest, ADatabaseGameIsPreviewedAndMergedIntoTheFileUpToTheMoveShown) {
+    writeFile(path("prep.pgn"), "[White \"?\"]\n[Black \"?\"]\n\n1. e4 e5 *\n");
+    open(path("prep.pgn"));
+    const int tabsBefore = tabs->count();
+    auto* explorer = window.findChild<kiebitz::app::ExplorerPanel*>();
+    ASSERT_NE(explorer, nullptr);
+    const auto game =
+        pgn::parseGame("[White \"Giri\"]\n[Black \"Carlsen\"]\n[Date \"2026.11.11\"]\n\n"
+                       "1. e4 c5 2. Nf3 d6 3. d4 cxd4 1/2-1/2")
+            .value();
+    emit explorer->openGameRequested(game);
+    ASSERT_EQ(tabs->count(), tabsBefore + 1);
+    auto* bar = window.findChild<QWidget*>(QStringLiteral("mergeBar"));
+    auto* merge = window.findChild<QPushButton*>(QStringLiteral("mergeIntoFile"));
+    ASSERT_NE(bar, nullptr);
+    ASSERT_NE(merge, nullptr);
+    EXPECT_TRUE(bar->isVisible());
+    EXPECT_EQ(merge->text(), QStringLiteral("Merge into prep"));
+    // To the end, then two moves back: up to 2... d6.
+    action(window, QStringLiteral("Go to End"))->trigger();
+    action(window, QStringLiteral("Back"))->trigger();
+    action(window, QStringLiteral("Back"))->trigger();
+    QTest::mouseClick(merge, Qt::LeftButton);
+    // The preview is gone; the file shows the merged line, at its last move.
+    EXPECT_EQ(tabs->count(), tabsBefore);
+    EXPECT_FALSE(bar->isVisible());
+    EXPECT_EQ(fen(), "rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3");
+    saveAndWait();
+    const std::string text = readFile(path("prep.pgn"));
+    EXPECT_NE(text.find("1. e4 e5 (1... c5 2. Nf3 d6 {Giri – Carlsen, 2026}) *"), std::string::npos)
+        << text;
+
+    // Closed without merging: back to the file, unchanged.
+    emit explorer->openGameRequested(game);
+    QTest::mouseClick(window.findChild<QPushButton*>(QStringLiteral("closePreview")),
+                      Qt::LeftButton);
+    EXPECT_EQ(tabs->count(), tabsBefore);
+    EXPECT_FALSE(bar->isVisible());
 }
 
 TEST_F(DocumentsTest, CommentBoxEditsTheCurrentMoveAndKeepsItsArrowKeys) {

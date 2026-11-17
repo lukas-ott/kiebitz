@@ -1744,6 +1744,14 @@
         <translation> — Kiebitz</translation>
     </message>
     <message>
+        <source>Merge</source>
+        <translation>Slå sammen</translation>
+    </message>
+    <message>
+        <source>The game starts from another position than the file.</source>
+        <translation>Partiet starter fra en annen stilling enn filen.</translation>
+    </message>
+    <message>
         <source>New File</source>
         <translation>Ny fil</translation>
     </message>
@@ -2186,6 +2194,82 @@
         <translation>Trekk i rader, med kommentarer og varianter imellom</translation>
     </message>
     <message>
+        <source>Preview</source>
+        <translation>Forhåndsvisning</translation>
+    </message>
+    <message>
+        <source>A game from a database. Step to the move you want, then merge: its moves up to there go into the file, as a variation where they differ.</source>
+        <translation>Et parti fra en database. Gå til trekket du vil, og slå sammen: trekkene fram dit går inn i filen, som en variant der de skiller seg.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Lukk</translation>
+    </message>
+    <message>
+        <source>Brilliant move</source>
+        <translation>Glimrende trekk</translation>
+    </message>
+    <message>
+        <source>Good move</source>
+        <translation>Godt trekk</translation>
+    </message>
+    <message>
+        <source>Interesting move</source>
+        <translation>Interessant trekk</translation>
+    </message>
+    <message>
+        <source>Dubious move</source>
+        <translation>Tvilsomt trekk</translation>
+    </message>
+    <message>
+        <source>Mistake</source>
+        <translation>Feil</translation>
+    </message>
+    <message>
+        <source>Blunder</source>
+        <translation>Bukk</translation>
+    </message>
+    <message>
+        <source>White is winning</source>
+        <translation>Hvit står til gevinst</translation>
+    </message>
+    <message>
+        <source>White is better</source>
+        <translation>Hvit står bedre</translation>
+    </message>
+    <message>
+        <source>White is slightly better</source>
+        <translation>Hvit står litt bedre</translation>
+    </message>
+    <message>
+        <source>Equal</source>
+        <translation>Likt</translation>
+    </message>
+    <message>
+        <source>Black is slightly better</source>
+        <translation>Svart står litt bedre</translation>
+    </message>
+    <message>
+        <source>Black is better</source>
+        <translation>Svart står bedre</translation>
+    </message>
+    <message>
+        <source>Black is winning</source>
+        <translation>Svart står til gevinst</translation>
+    </message>
+    <message>
+        <source>Unclear</source>
+        <translation>Uklart</translation>
+    </message>
+    <message>
+        <source>Only move</source>
+        <translation>Eneste trekk</translation>
+    </message>
+    <message>
+        <source>Novelty</source>
+        <translation>Nyvinning</translation>
+    </message>
+    <message>
         <source>Start (Home)</source>
         <translation>Start (Home)</translation>
     </message>
@@ -2200,6 +2284,10 @@
     <message>
         <source>End (End)</source>
         <translation>Slutt (End)</translation>
+    </message>
+    <message>
+        <source>Merge into %1</source>
+        <translation>Legg inn i %1</translation>
     </message>
     <message>
         <source>Add a comment about the game…</source>
@@ -2487,8 +2575,24 @@
         <translation>Slutt (End)</translation>
     </message>
     <message>
+        <source>Since</source>
+        <translation>Siden</translation>
+    </message>
+    <message>
+        <source>WHERE THEY STRUGGLE</source>
+        <translation>DER DE SLITER</translation>
+    </message>
+    <message>
+        <source>Their lines with at least 3 finished games where they score under 50%, worst first. A click goes there.</source>
+        <translation>Linjene deres med minst 3 ferdige partier der de scorer under 50 %, de svakeste først. Et klikk går dit.</translation>
+    </message>
+    <message>
         <source>Reading their games…</source>
         <translation>Leser partiene …</translation>
+    </message>
+    <message>
+        <source>%1 of %2 games</source>
+        <translation>%1 av %2 partier</translation>
     </message>
     <message>
         <source>No games of theirs with Black.</source>
@@ -2505,6 +2609,14 @@
     <message>
         <source>Their %1 games with White</source>
         <translation>Deres %1 partier med hvit</translation>
+    </message>
+    <message>
+        <source>%1% · %2 games</source>
+        <translation>%1% · %2 partier</translation>
+    </message>
+    <message>
+        <source>All years</source>
+        <translation>Alle år</translation>
     </message>
     <message>
         <source>Start</source>
@@ -2777,6 +2889,14 @@
         <translation>RESULTATER</translation>
     </message>
     <message>
+        <source>Also correspondence games, and games without a time control (over the board, mostly classical)</source>
+        <translation>Også korrespondansepartier, og partier uten tidskontroll (over brettet, som regel klassisk)</translation>
+    </message>
+    <message>
+        <source>Rating</source>
+        <translation>Rating</translation>
+    </message>
+    <message>
         <source>AS WHITE</source>
         <translation>SOM HVIT</translation>
     </message>
@@ -2787,6 +2907,26 @@
     <message>
         <source>ACTIVITY</source>
         <translation>AKTIVITET</translation>
+    </message>
+    <message>
+        <source>RATING</source>
+        <translation>RATING</translation>
+    </message>
+    <message>
+        <source>Performance: the rating their results were worth against their opponents' ratings</source>
+        <translation>Prestasjon: ratingen resultatene deres var verdt mot motstandernes rating</translation>
+    </message>
+    <message>
+        <source>MOST PLAYED</source>
+        <translation>OFTEST MØTT</translation>
+    </message>
+    <message>
+        <source>EVENTS</source>
+        <translation>TURNERINGER</translation>
+    </message>
+    <message>
+        <source>AGAINST YOU</source>
+        <translation>MOT DEG</translation>
     </message>
     <message>
         <source>Search players, events, ECO</source>
@@ -2955,6 +3095,26 @@
     <message>
         <source>The player on ChessBase: copy their games there and paste them here</source>
         <translation>Spilleren hos ChessBase: kopier partiene der og lim dem inn her</translation>
+    </message>
+    <message>
+        <source>Performance %1  ·  opponents %2  ·  %3</source>
+        <translation>Prestasjon %1  ·  motstandere %2  ·  %3</translation>
+    </message>
+    <message>
+        <source>No games yet</source>
+        <translation>Ingen partier ennå</translation>
+    </message>
+    <message>
+        <source>No tournaments in these games</source>
+        <translation>Ingen turneringer i disse partiene</translation>
+    </message>
+    <message>
+        <source>You haven't played them in these games.</source>
+        <translation>Du har ikke spilt mot dem i disse partiene.</translation>
+    </message>
+    <message>
+        <source>Your score: %1</source>
+        <translation>Din score: %1</translation>
     </message>
     <message>
         <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase's online database.</source>
@@ -3354,6 +3514,13 @@
     <message>
         <source>no solution</source>
         <translation>ingen løsning</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::RatingChart</name>
+    <message>
+        <source>No rated games</source>
+        <translation>Ingen ratede partier</translation>
     </message>
 </context>
 <context>

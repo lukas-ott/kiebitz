@@ -160,6 +160,13 @@ private:
     void newFile(const QString& folder = {});
     /// Opens a game (from a database) in a new tab, not tied to a file.
     void openGameCopy(const core::Game& game);
+    /// A database game from the Explorer: a preview tab, mergeable into the file in front.
+    void openGamePreview(const core::Game& game);
+    /// The preview's moves up to its current one go into its file; the preview closes.
+    void mergePreview();
+    void closePreview();
+    /// The tab a preview merges into, or null.
+    [[nodiscard]] GameDocument* previewTarget(const GameDocument& preview) const;
 
     // Repertoires
     /// Adds a line to a side's repertoire; asks before adding a second answer. False if

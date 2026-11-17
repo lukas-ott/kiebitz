@@ -82,6 +82,13 @@ void GamesModel::setDates(const std::string& from, const std::string& to) {
     }
 }
 
+void GamesModel::setSpeeds(std::uint8_t speeds) {
+    if (speeds != m_query.speeds) {
+        m_query.speeds = speeds;
+        refresh();
+    }
+}
+
 void GamesModel::sort(int column, Qt::SortOrder order) {
     using Order = gamedb::GameQuery::Order;
     static constexpr std::array kOrders{Order::White,    Order::WhiteElo, Order::Black,
@@ -121,8 +128,8 @@ void GamesModel::refresh() {
         return;
     }
     // Only sorting: "Sorting…"; a database that isn't prepared for it yet takes longer.
-    const bool onlySorting =
-        m_query.text.empty() && m_query.fromDate.empty() && m_query.toDate.empty();
+    const bool onlySorting = m_query.text.empty() && m_query.fromDate.empty() &&
+                             m_query.toDate.empty() && m_query.speeds == 0;
     if (!onlySorting) {
         setStatus(tr("Searching…"));
     } else if (m_db->hasSortIndexes()) {

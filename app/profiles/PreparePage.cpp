@@ -2,6 +2,7 @@
 
 #include "ProfileStore.hpp"
 #include "board/BoardView.hpp"
+#include "kiebitz/gamedb/database.hpp"
 #include "repertoire/RepertoireStore.hpp"
 #include "style/AppStyle.hpp"
 #include "style/Icons.hpp"
@@ -9,20 +10,24 @@
 #include "widgets/ResultBar.hpp"
 
 #include <QButtonGroup>
+#include <QComboBox>
 #include <QDate>
 #include <QFutureWatcher>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLocale>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <tuple>
 #include <utility>
 
@@ -59,6 +64,22 @@ QString moveText(std::span<const core::Move> before, core::Move move) {
         .arg(QString::fromStdString(position.san(move)));
 }
 
+/// "1. e4 c5 2. Nf3 d6 3. Bb5+": a line from the start.
+QString lineText(std::span<const core::Move> line) {
+    core::Position position;
+    QStringList parts;
+    for (const core::Move move : line) {
+        if (position.sideToMove() == core::Color::White) {
+            parts << QStringLiteral("%1.").arg(position.fullmoveNumber());
+        } else if (parts.isEmpty()) {
+            parts << QStringLiteral("%1…").arg(position.fullmoveNumber());
+        }
+        parts << QString::fromStdString(position.san(move));
+        position.play(move);
+    }
+    return parts.join(u' ');
+}
+
 /// "Sep 2026" from yyyymmdd (a year alone: "2026"), or empty.
 QString monthText(int date) {
     const int year = date / 10000;
@@ -77,7 +98,8 @@ QString monthText(int date) {
 /// The player's games (read in the background).
 struct PreparePage::Analysis {
     std::vector<repertoire::PlayedGame> games;
-    QString name; ///< the player, for the prep file
+    std::vector<std::uint8_t> speeds; ///< each game's speed: 1 << gamedb::Speed
+    QString name;                     ///< the player, for the prep file
 };
 
 PreparePage::PreparePage(ProfileStore& store, RepertoireStore& repertoires, const AppStyle& style,
@@ -149,6 +171,7 @@ PreparePage::PreparePage(ProfileStore& store, RepertoireStore& repertoires, cons
     left->addLayout(colourRow);
     m_summary = label(QString(), "emptyHint");
     m_summary->setObjectName(QStringLiteral("prepareSummary"));
+    m_summary->setWordWrap(true);
     left->addWidget(m_summary);
     left->addStretch();
     box->addLayout(left);
@@ -156,6 +179,21 @@ PreparePage::PreparePage(ProfileStore& store, RepertoireStore& repertoires, cons
     // Right: the way here, the moves at this position, your prep.
     auto* right = new QVBoxLayout;
     right->setSpacing(8);
+    // Which of their games: since a year (the speeds are the page's filter).
+    auto* filters = new QHBoxLayout;
+    filters->setSpacing(6);
+    filters->addWidget(label(tr("Since"), "emptyHint"));
+    m_since = new QComboBox;
+    m_since->setObjectName(QStringLiteral("prepareSince"));
+    m_since->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    connect(m_since, &QComboBox::activated, this,
+            [this] { setFilter(m_since->currentData().toInt(), m_speeds); });
+    filters->addWidget(m_since);
+    filters->addStretch();
+    m_count = label(QString(), "emptyHint");
+    m_count->setObjectName(QStringLiteral("prepareCount"));
+    filters->addWidget(m_count);
+    right->addLayout(filters);
     auto* pathRow = new QHBoxLayout;
     pathRow->setSpacing(0);
     m_path = new QHBoxLayout;
@@ -207,7 +245,25 @@ PreparePage::PreparePage(ProfileStore& store, RepertoireStore& repertoires, cons
             stepTo(std::move(next));
         }
     });
-    right->addWidget(m_moves, 1);
+    right->addWidget(m_moves);
+
+    // Where they struggle: their lines with your colour where they score worst.
+    m_weak = new QWidget;
+    m_weak->setObjectName(QStringLiteral("prepareWeak"));
+    auto* weakBox = new QVBoxLayout(m_weak);
+    weakBox->setContentsMargins(0, 8, 0, 0);
+    weakBox->setSpacing(6);
+    auto* weakTitle = label(tr("WHERE THEY STRUGGLE"), "cardTitle");
+    weakTitle->setToolTip(tr("Their lines with at least 3 finished games where they score "
+                             "under 50%, worst first. A click goes there."));
+    weakBox->addWidget(weakTitle);
+    m_weakRows = new QGridLayout;
+    m_weakRows->setHorizontalSpacing(12);
+    m_weakRows->setVerticalSpacing(4);
+    m_weakRows->setColumnStretch(0, 1);
+    weakBox->addLayout(m_weakRows);
+    m_weak->hide();
+    right->addWidget(m_weak);
 
     // Your prep: the lines chosen, then the file.
     m_prep = new QWidget;
@@ -229,6 +285,7 @@ PreparePage::PreparePage(ProfileStore& store, RepertoireStore& repertoires, cons
     m_chips = new FlowLayout(chips, 6);
     prepBox->addWidget(chips);
     right->addWidget(m_prep);
+    right->addStretch(); // the room the moves leave
     box->addLayout(right, 1);
     setFocusPolicy(Qt::ClickFocus); // a click on the page takes the arrow keys
     showPrep();
@@ -308,12 +365,14 @@ void PreparePage::show(const QString& profileId, const QString& part, bool force
                     return;
                 }
                 m_analysis = watcher->result();
+                showYears();
                 build();
             });
     watcher->setFuture(QtConcurrent::run([db, names, name = profile->name] {
         auto analysis = std::make_shared<Analysis>();
         analysis->name = name;
         const auto all = db->games(1, static_cast<std::size_t>(db->gameCount()));
+        const std::vector<gamedb::Speed> speeds = db->speeds();
         for (const gamedb::GameInfo& info : all) {
             const bool asWhite = names.contains(QString::fromStdString(info.white).toLower());
             const bool asBlack = names.contains(QString::fromStdString(info.black).toLower());
@@ -341,6 +400,11 @@ void PreparePage::show(const QString& profileId, const QString& part, bool force
             }
             one.date = repertoire::dateNumber(info.date);
             analysis->games.push_back(std::move(one));
+            using gamedb::Speed;
+            const auto index = static_cast<std::size_t>(info.id - 1);
+            const Speed speed = index < speeds.size() ? speeds[index] : Speed::Unknown;
+            analysis->speeds.push_back(
+                static_cast<std::uint8_t>(1U << static_cast<unsigned>(speed)));
         }
         return std::shared_ptr<const Analysis>(std::move(analysis));
     }));
@@ -352,10 +416,30 @@ void PreparePage::build() {
         showLine();
         return;
     }
+    // Their games with the other colour that pass the filter.
+    std::vector<repertoire::PlayedGame> kept;
+    std::uint64_t theirs = 0;
+    for (std::size_t i = 0; i < m_analysis->games.size(); ++i) {
+        const repertoire::PlayedGame& game = m_analysis->games[i];
+        if (game.side == m_you) {
+            continue;
+        }
+        ++theirs;
+        const bool recent = m_sinceYear == 0 || game.date / 10000 >= m_sinceYear;
+        const bool speed = m_speeds == 0 || (m_speeds & m_analysis->speeds[i]) != 0;
+        if (recent && speed) {
+            kept.push_back(game);
+        }
+    }
     const BuiltRepertoire* yours = m_repertoires.get(m_you);
-    m_tree = std::make_unique<repertoire::PrepTree>(m_analysis->games, m_you,
+    m_tree = std::make_unique<repertoire::PrepTree>(kept, m_you,
                                                     yours != nullptr ? &yours->tree : nullptr);
     const std::uint64_t games = m_tree->games();
+    showWeak();
+    m_count->setText(
+        games == theirs
+            ? QString()
+            : tr("%1 of %2 games").arg(QLocale().toString(games), QLocale().toString(theirs)));
     if (games == 0) {
         m_summary->setText(m_you == core::Color::White ? tr("No games of theirs with Black.")
                                                        : tr("No games of theirs with White."));
@@ -366,6 +450,77 @@ void PreparePage::build() {
     }
     showLine();
     emit ready();
+}
+
+void PreparePage::setFilter(int sinceYear, std::uint8_t speeds) {
+    if (sinceYear == m_sinceYear && speeds == m_speeds) {
+        return;
+    }
+    m_sinceYear = sinceYear;
+    m_speeds = speeds;
+    showYears();
+    build(); // where you are stays: its moves are counted again
+}
+
+void PreparePage::showWeak() {
+    while (const QLayoutItem* item = m_weakRows->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
+    const std::vector<repertoire::WeakLine> weak =
+        m_tree ? m_tree->weakLines(3, 5) : std::vector<repertoire::WeakLine>{};
+    m_weak->setVisible(!weak.empty());
+    const bool theyAreWhite = m_you == core::Color::Black;
+    int row = 0;
+    for (const repertoire::WeakLine& line : weak) {
+        const QString text = lineText(line.line);
+        auto* go = new QPushButton;
+        go->setObjectName(QStringLiteral("prepareWeak:%1").arg(row));
+        go->setProperty("role", "link");
+        go->setFocusPolicy(Qt::NoFocus);
+        go->setToolTip(text);
+        go->setText(go->fontMetrics().elidedText(text, Qt::ElideRight, 380));
+        connect(go, &QPushButton::clicked, this, [this, moves = line.line] { stepTo(moves); });
+        auto* bar = new ResultBar(m_style, 14);
+        bar->setFixedWidth(150);
+        bar->setResults(theyAreWhite ? line.won : line.lost, line.drawn,
+                        theyAreWhite ? line.lost : line.won);
+        // At least 3 games: always "games".
+        auto* score = label(tr("%1% · %2 games")
+                                .arg(qRound(line.score() * 100))
+                                .arg(QLocale().toString(line.games)),
+                            "emptyHint");
+        score->setObjectName(QStringLiteral("prepareWeakScore:%1").arg(row));
+        m_weakRows->addWidget(go, row, 0, Qt::AlignLeft | Qt::AlignVCenter);
+        m_weakRows->addWidget(bar, row, 1, Qt::AlignVCenter);
+        m_weakRows->addWidget(score, row, 2);
+        ++row;
+    }
+}
+
+void PreparePage::showYears() {
+    // "All years", then each year they played, newest first.
+    std::vector<int> years;
+    if (m_analysis) {
+        for (const repertoire::PlayedGame& game : m_analysis->games) {
+            if (const int year = game.date / 10000; year > 0) {
+                years.push_back(year);
+            }
+        }
+    }
+    std::sort(years.begin(), years.end(), std::greater<>());
+    years.erase(std::unique(years.begin(), years.end()), years.end());
+    if (m_sinceYear != 0 && std::find(years.begin(), years.end(), m_sinceYear) == years.end()) {
+        years.push_back(m_sinceYear); // chosen before: kept, even without games now
+        std::sort(years.begin(), years.end(), std::greater<>());
+    }
+    const QSignalBlocker block(m_since);
+    m_since->clear();
+    m_since->addItem(tr("All years"), 0);
+    for (const int year : years) {
+        m_since->addItem(QString::number(year), year);
+    }
+    m_since->setCurrentIndex(std::max(0, m_since->findData(m_sinceYear)));
 }
 
 void PreparePage::stepTo(std::vector<core::Move> line) {
@@ -524,6 +679,12 @@ void PreparePage::showMoves() {
         item->setFirstColumnSpanned(true);
         item->setFlags(Qt::NoItemFlags);
     }
+    // As tall as its rows (up to 12; more scroll): what comes under it ("Where they
+    // struggle", your prep) stays close.
+    const int rows = std::min(m_moves->topLevelItemCount(), 12);
+    const int rowHeight = rows > 0 ? std::max(m_moves->sizeHintForRow(0), 24) : 24;
+    m_moves->setFixedHeight(m_moves->header()->sizeHint().height() + (rows * rowHeight) +
+                            (2 * m_moves->frameWidth()) + 4);
 }
 
 void PreparePage::toggleLine(const std::vector<core::Move>& line) {

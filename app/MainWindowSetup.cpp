@@ -792,6 +792,13 @@ QWidget* MainWindow::buildBoardPage() {
     connect(m_notation, &NotationView::commentEditRequested, this, &MainWindow::editComment);
     connect(m_notation, &NotationView::startRequested, this, &MainWindow::setFileStart);
     connect(m_moves, &MovesCard::commentEdited, this, &MainWindow::onCommentEdited);
+    connect(m_moves, &MovesCard::mergeRequested, this, &MainWindow::mergePreview);
+    connect(m_moves, &MovesCard::previewCloseRequested, this, &MainWindow::closePreview);
+    connect(m_moves, &MovesCard::symbolClicked, this, [this](std::uint8_t nag) {
+        if (const GameDocument* d = doc()) {
+            toggleNag(d->current, nag);
+        }
+    });
     connect(m_moves, &MovesCard::startRequested, this, &MainWindow::goToStart);
     connect(m_moves, &MovesCard::backRequested, this, &MainWindow::goBack);
     connect(m_moves, &MovesCard::forwardRequested, this, &MainWindow::goForward);
@@ -849,7 +856,7 @@ QWidget* MainWindow::buildPanelsCard() {
             playMoves({move});
         }
     });
-    connect(m_explorer, &ExplorerPanel::openGameRequested, this, &MainWindow::openGameCopy);
+    connect(m_explorer, &ExplorerPanel::openGameRequested, this, &MainWindow::openGamePreview);
     connect(m_explorer, &ExplorerPanel::showDatabasesRequested, this,
             [this] { showSection(Section::Databases); });
     panels->addTab(m_explorer, tr("Explorer"));

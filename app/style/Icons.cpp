@@ -43,6 +43,14 @@ void draw(QPainter& painter, IconKind kind, const QColor& color, int size) {
         painter.drawLine(QPointF(12.0, 3.5), QPointF(12.0, 12.5));
         chevron(6.5, true);
         break;
+    case IconKind::Down: {
+        QPainterPath path;
+        path.moveTo(3.5, 6.0);
+        path.lineTo(8.0, 10.5);
+        path.lineTo(12.5, 6.0);
+        painter.drawPath(path);
+        break;
+    }
     case IconKind::Close:
         painter.drawLine(QPointF(4.5, 4.5), QPointF(11.5, 11.5));
         painter.drawLine(QPointF(11.5, 4.5), QPointF(4.5, 11.5));

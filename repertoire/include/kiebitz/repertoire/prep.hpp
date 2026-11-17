@@ -50,6 +50,23 @@ struct PrepMove {
     }
 };
 
+/// A line where the player scores badly, and their games through it.
+struct WeakLine {
+    std::vector<core::Move> line; ///< from the start
+    std::uint64_t games = 0;
+    std::uint64_t scored = 0;
+    std::uint64_t points2 = 0;
+    std::uint64_t won = 0;
+    std::uint64_t drawn = 0;
+    std::uint64_t lost = 0;
+
+    /// The player's score there, 0..1.
+    [[nodiscard]] double score() const {
+        return scored > 0 ? static_cast<double>(points2) / (2.0 * static_cast<double>(scored))
+                          : 0.0;
+    }
+};
+
 /// The player's games with one colour as a tree of moves, seen from your side (you have the
 /// other colour), with your repertoire for that side alongside.
 class PrepTree {
@@ -72,6 +89,12 @@ public:
     /// The moves after `line`: those in the player's games, most played first; at your move
     /// also your repertoire's moves there that they have never met (0 games), after them.
     [[nodiscard]] std::vector<PrepMove> moves(std::span<const core::Move> line) const;
+
+    /// Where the player scores worst (under 50%), worst first (then the most games): lines
+    /// with at least `minGames` finished games, each as long as all those games go together
+    /// (where they part, a line ends). No line is part of another; at most `count`.
+    [[nodiscard]] std::vector<WeakLine> weakLines(std::uint64_t minGames = 3,
+                                                  std::size_t count = 5) const;
 
     struct FileOptions {
         std::string event;          ///< the file's [Event]: "Preparation: Petra Pawn"

@@ -1,4 +1,5 @@
 #include "kiebitz/gamedb/database.hpp"
+#include "kiebitz/gamedb/facts.hpp"
 #include "kiebitz/gamedb/import.hpp"
 #include "kiebitz/gamedb/scan.hpp"
 
@@ -347,6 +348,14 @@ TEST(GameDatabase, TheExplorerFiltersBySpeedYearPlayerAndRating) {
     EXPECT_EQ(onlyBlitz.moves[0].san, "e4");
     EXPECT_EQ(onlyBlitz.whiteElo, 2000);
 
+    // The games list at one speed, and at two.
+    gamedb::GameQuery query;
+    query.speeds = blitz.speeds;
+    ASSERT_EQ(db.find(query, 10).size(), 1U);
+    EXPECT_EQ(db.find(query, 10)[0].date, "2020.01.01");
+    query.speeds |= 1U << static_cast<unsigned>(gamedb::Speed::Bullet);
+    EXPECT_EQ(db.find(query, 10).size(), 2U);
+
     gamedb::ExploreFilter recent;
     recent.fromYear = 2023;
     EXPECT_EQ(db.explore({}, recent).games, 2U);
@@ -667,4 +676,99 @@ TEST(GameDatabase, ANameIsFoundByItsWordsInAnyOrder) {
     // One or two letters (which most names have) don't search yet: every game.
     EXPECT_EQ(whites("ol").size(), 2U);
     EXPECT_EQ(whites("o").size(), 2U);
+}
+
+TEST(GamedbFacts, PerformanceRatingsOpponentsEventsAndAgainstYou) {
+    using kiebitz::gamedb::GameInfo;
+    using kiebitz::gamedb::GameResult;
+    using kiebitz::gamedb::Speed;
+    const auto game = [](kiebitz::gamedb::GameId id, const char* white, int whiteElo,
+                         const char* black, int blackElo, GameResult result, const char* date,
+                         const char* event) {
+        GameInfo info;
+        info.id = id;
+        info.white = white;
+        info.black = black;
+        info.whiteElo = whiteElo;
+        info.blackElo = blackElo;
+        info.result = result;
+        info.date = date;
+        info.event = event;
+        return info;
+    };
+    // Petra (any case): won against Olsen twice, drew Haug, lost to me (Lukas); one blitz game.
+    const std::vector<GameInfo> games{
+        game(1, "Pawn, Petra", 2100, "Olsen, Per", 2000, GameResult::WhiteWins, "2025.03.10",
+             "Oslo Open 2025"),
+        game(2, "Olsen, Per", 2000, "PAWN, PETRA", 2110, GameResult::BlackWins, "2025.03.11",
+             "Oslo Open 2025"),
+        game(3, "Haug, Lars", 2200, "Pawn, Petra", 2120, GameResult::Draw, "2026.01.05",
+             "Norwegian Ch 2026"),
+        game(4, "Pawn, Petra", 2130, "Lukas", 0, GameResult::BlackWins, "2026.01.20",
+             "Rated Blitz game"),
+        game(5, "Someone", 1900, "Else", 1900, GameResult::Draw, "2026.01.21", "Club"),
+    };
+    const std::vector<std::string> names{"pawn, petra"};
+    const std::vector<std::string> mine{"lukas"};
+    const auto facts = kiebitz::gamedb::playerFacts(games, names, mine);
+    // Rated opponents: 2000, 2000, 2200 (2067); 2½ of 3 = 83% → +280 (400 · log10 5).
+    EXPECT_EQ(facts.rated, 3U);
+    EXPECT_EQ(facts.averageOpponent, 2067);
+    EXPECT_EQ(facts.performance, 2067 + 280);
+    // The last rating of each month, oldest first.
+    ASSERT_EQ(facts.ratings.size(), 2U);
+    EXPECT_EQ(facts.ratings[0], std::make_pair(202503, 2110));
+    EXPECT_EQ(facts.ratings[1], std::make_pair(202601, 2130));
+    // Olsen most (2 games, both won), as first written.
+    ASSERT_EQ(facts.opponents.size(), 3U);
+    EXPECT_EQ(facts.opponents[0].name, "Olsen, Per");
+    EXPECT_EQ(facts.opponents[0].score.won, 2U);
+    // Tournaments, the latest first; "Rated Blitz game" isn't one.
+    ASSERT_EQ(facts.events.size(), 2U);
+    EXPECT_EQ(facts.events[0].name, "Norwegian Ch 2026");
+    EXPECT_EQ(facts.events[1].score.points2(), 4U);
+    // Against me: she lost once.
+    EXPECT_EQ(facts.againstYou.lost, 1U);
+    EXPECT_EQ(facts.againstYou.games(), 1U);
+
+    // Only blitz (game 4): no rated opponent, one game against me.
+    std::vector<Speed> speeds(5, Speed::Classical);
+    speeds[3] = Speed::Blitz;
+    const auto blitz = kiebitz::gamedb::playerFacts(
+        games, names, mine, speeds,
+        static_cast<std::uint8_t>(1U << static_cast<unsigned>(Speed::Blitz)));
+    EXPECT_EQ(blitz.rated, 0U);
+    EXPECT_EQ(blitz.performance, 0);
+    EXPECT_EQ(blitz.againstYou.games(), 1U);
+}
+
+TEST(GamedbFacts, RatingsAreKeptBySpeedWithUnknownSpeedsAsAsked) {
+    using kiebitz::gamedb::GameInfo;
+    using kiebitz::gamedb::Speed;
+    const auto game = [](kiebitz::gamedb::GameId id, int elo, const char* date) {
+        GameInfo info;
+        info.id = id;
+        info.white = "Pawn, Petra";
+        info.black = "X";
+        info.whiteElo = elo;
+        info.date = date;
+        return info;
+    };
+    const std::vector<GameInfo> games{game(1, 2100, "2025.03.01"), game(2, 2120, "2025.03.20"),
+                                      game(3, 1900, "2025.04.02"), game(4, 2130, "2025.05.01")};
+    // Game 3 was blitz; the others have no speed.
+    const std::vector<Speed> speeds{Speed::Unknown, Speed::Unknown, Speed::Blitz, Speed::Unknown};
+    const std::vector<std::string> names{"Pawn, Petra"};
+    kiebitz::gamedb::RatingHistory history;
+    kiebitz::gamedb::addRatings(history, games, names, speeds, Speed::Classical);
+    const auto classical = kiebitz::gamedb::ratingLine(history, Speed::Classical);
+    ASSERT_EQ(classical.size(), 2U);
+    EXPECT_EQ(classical[0], std::make_pair(202503, 2120)); // the month's last game
+    EXPECT_EQ(classical[1], std::make_pair(202505, 2130));
+    EXPECT_EQ(kiebitz::gamedb::ratingLine(history, Speed::Blitz).size(), 1U);
+    // Unknown speeds left out: only the blitz game.
+    kiebitz::gamedb::RatingHistory online;
+    kiebitz::gamedb::addRatings(online, games, names, speeds, Speed::Unknown);
+    EXPECT_TRUE(kiebitz::gamedb::ratingLine(online, Speed::Classical).empty());
+    EXPECT_EQ(kiebitz::gamedb::ratingLine(online, Speed::Blitz).size(), 1U);
 }

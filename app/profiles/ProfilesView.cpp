@@ -18,6 +18,7 @@
 #include "widgets/Message.hpp"
 #include "widgets/MultiChoice.hpp"
 #include "widgets/NameDialog.hpp"
+#include "widgets/RatingChart.hpp"
 #include "widgets/ResultBar.hpp"
 #include "widgets/SortCycle.hpp"
 #include "widgets/SortableItem.hpp"
@@ -404,32 +405,60 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     panelTop->setSpacing(10);
     views->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed); // never squeezed
     panelTop->addWidget(views);
+    panelTop->addSpacing(6);
+    // The time controls looked at: the overview, the games, the rating line and Prepare.
+    // "All" is on when no speed is; a click on it turns them off.
+    using gamedb::Speed;
+    m_allSpeeds = chip(tr("All"), QStringLiteral("profileSpeed:all"));
+    m_allSpeeds->setAutoExclusive(false);
+    m_allSpeeds->setChecked(true);
+    connect(m_allSpeeds, &QPushButton::clicked, this, [this] {
+        for (const auto& [speed, button] : m_speedChips) {
+            button->setChecked(false);
+        }
+        speedsChanged();
+    });
+    panelTop->addWidget(m_allSpeeds);
+    for (const auto& [speed, text, name] :
+         {std::tuple{Speed::Classical, tr("Classical"), "classical"},
+          std::tuple{Speed::Rapid, tr("Rapid"), "rapid"},
+          std::tuple{Speed::Blitz, tr("Blitz"), "blitz"},
+          std::tuple{Speed::Bullet, tr("Bullet"), "bullet"}}) {
+        auto* button = chip(text, QStringLiteral("profileSpeed:") + QString::fromLatin1(name));
+        button->setAutoExclusive(false);
+        if (speed == Speed::Classical) {
+            button->setToolTip(tr("Also correspondence games, and games without a time control "
+                                  "(over the board, mostly classical)"));
+        }
+        connect(button, &QPushButton::clicked, this, &ProfilesView::speedsChanged);
+        panelTop->addWidget(button);
+        m_speedChips.emplace_back(speed, button);
+    }
     panelTop->addStretch();
+    // Where the rating line comes from: FIDE (the over-the-board games), or an account.
+    m_ratingFrom = new QComboBox;
+    m_ratingFrom->setObjectName(QStringLiteral("ratingFrom"));
+    m_ratingFrom->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    connect(m_ratingFrom, &QComboBox::activated, this, [this] {
+        m_ratingSource = m_ratingFrom->currentData().toString();
+        showRatingLine();
+    });
+    m_ratingFromBox = new QWidget;
+    auto* ratingFromRow = new QHBoxLayout(m_ratingFromBox);
+    ratingFromRow->setContentsMargins(0, 0, 0, 0);
+    ratingFromRow->setSpacing(10);
+    ratingFromRow->addWidget(label(tr("Rating"), "emptyHint"));
+    ratingFromRow->addWidget(m_ratingFrom);
+    panelTop->addWidget(m_ratingFromBox);
+    connect(m_pages, &QStackedWidget::currentChanged, this, &ProfilesView::showRatingFrom);
     panelTop->addWidget(label(tr("Games from"), "emptyHint"));
     panelTop->addWidget(m_parts);
 
-    // Overview: the results, by colour, and the games per year, at one time control or all.
+    // Overview: the results, by colour, and the games per year, at the time control looked at.
     auto* overview = new QWidget;
     auto* overviewBox = new QVBoxLayout(overview);
     overviewBox->setContentsMargins(0, 0, 0, 0);
     overviewBox->setSpacing(12);
-    auto* speedsRow = new QHBoxLayout;
-    speedsRow->setSpacing(4);
-    for (const auto& [bits, text, name] :
-         {std::tuple{0U, tr("All"), "all"}, std::tuple{1U << 1U, tr("Bullet"), "bullet"},
-          std::tuple{1U << 2U, tr("Blitz"), "blitz"}, std::tuple{1U << 3U, tr("Rapid"), "rapid"},
-          std::tuple{1U << 4U, tr("Classical"), "classical"},
-          std::tuple{1U << 5U, tr("Correspondence"), "correspondence"}}) {
-        auto* button = chip(text, QStringLiteral("profileSpeed:") + QString::fromLatin1(name));
-        button->setChecked(bits == 0);
-        connect(button, &QPushButton::clicked, this, [this, speedBits = bits] {
-            m_speeds = static_cast<std::uint8_t>(speedBits);
-            showStats();
-        });
-        speedsRow->addWidget(button);
-    }
-    speedsRow->addStretch();
-    overviewBox->addLayout(speedsRow);
 
     auto* results = new QFrame;
     results->setProperty("statTile", true);
@@ -483,8 +512,63 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     activityBox->addWidget(label(tr("ACTIVITY"), "cardTitle"));
     m_activity = new ActivityChart(m_style);
     activityBox->addWidget(m_activity, 1);
-    overviewBox->addWidget(activity, 1);
-    m_pages->addWidget(overview);
+
+    // Their rating over time, and how they played against their opponents' ratings.
+    auto* rating = new QFrame;
+    rating->setProperty("statTile", true);
+    auto* ratingBox = new QVBoxLayout(rating);
+    ratingBox->setContentsMargins(14, 12, 14, 10);
+    ratingBox->setSpacing(8);
+    auto* ratingHead = new QHBoxLayout;
+    ratingHead->addWidget(label(tr("RATING"), "cardTitle"));
+    ratingHead->addSpacing(8);
+    // Which speed the line is (where from is chosen with the filters).
+    m_ratingSpeedText = label(QString(), "emptyHint");
+    m_ratingSpeedText->setObjectName(QStringLiteral("ratingSpeed"));
+    ratingHead->addWidget(m_ratingSpeedText);
+    ratingHead->addSpacing(4);
+    ratingHead->addStretch();
+    m_performance = label(QString(), "emptyHint");
+    m_performance->setObjectName(QStringLiteral("profilePerformance"));
+    m_performance->setToolTip(tr("Performance: the rating their results were worth against "
+                                 "their opponents' ratings"));
+    ratingBox->addLayout(ratingHead);
+    ratingBox->addWidget(m_performance);
+    m_rating = new RatingChart(m_style);
+    ratingBox->addWidget(m_rating);
+
+    // Who they play, where, and how they did against you.
+    auto* people = new QHBoxLayout;
+    people->setSpacing(12);
+    const auto listTile = [&](const QString& caption, const char* name) {
+        auto* tile = new QFrame;
+        tile->setProperty("statTile", true);
+        auto* tileBox = new QVBoxLayout(tile);
+        tileBox->setContentsMargins(14, 12, 14, 12);
+        tileBox->setSpacing(6);
+        tileBox->addWidget(label(caption, "cardTitle"));
+        auto* text = label(QString(), "emptyHint");
+        text->setObjectName(QString::fromLatin1(name));
+        text->setTextFormat(Qt::RichText);
+        text->setWordWrap(true);
+        tileBox->addWidget(text);
+        tileBox->addStretch();
+        people->addWidget(tile, 1);
+        return std::pair{tile, text};
+    };
+    m_opponents = listTile(tr("MOST PLAYED"), "profileOpponents").second;
+    m_events = listTile(tr("EVENTS"), "profileEvents").second;
+    std::tie(m_vsYouTile, m_vsYou) = listTile(tr("AGAINST YOU"), "profileAgainstYou");
+
+    overviewBox->addWidget(rating);
+    overviewBox->addLayout(people);
+    overviewBox->addWidget(activity);
+    overviewBox->addStretch();
+    // Taller than the page on small screens: it scrolls.
+    auto* overviewScroll = new VerticalScrollArea;
+    overviewScroll->setObjectName(QStringLiteral("profileOverview"));
+    overviewScroll->setWidget(overview);
+    m_pages->addWidget(overviewScroll);
 
     // Games: the list, searchable; a double click opens one.
     auto* gamesPage = new QWidget;
@@ -636,14 +720,16 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
     connect(m_prepare, &PreparePage::prepFileRequested, this, &ProfilesView::prepFileRequested);
     m_pages->addWidget(m_prepare);
 
-    auto* panel = new QVBoxLayout;
-    panel->setSpacing(12);
-    panel->addLayout(panelTop);
-    panel->addWidget(m_pages, 1);
-    auto* body = new QHBoxLayout;
-    body->setSpacing(18);
-    body->addWidget(accountsScroll);
-    body->addLayout(panel, 1);
+    // The tabs and "Games from" over both columns: they stay where they are on every tab,
+    // also on Prepare, where the accounts column steps aside.
+    auto* columns = new QHBoxLayout;
+    columns->setSpacing(18);
+    columns->addWidget(accountsScroll);
+    columns->addWidget(m_pages, 1);
+    auto* body = new QVBoxLayout;
+    body->setSpacing(12);
+    body->addLayout(panelTop);
+    body->addLayout(columns, 1);
 
     auto* detail = card();
     auto* box = new QVBoxLayout(detail);
@@ -1239,7 +1325,259 @@ void ProfilesView::showStats() {
     watcher->setFuture(QtConcurrent::run([db = m_db, names = std::move(names), speeds = m_speeds] {
         return db ? db->playerStats(names, speeds) : gamedb::PlayerStats{};
     }));
+    showFacts(); // the rest of the overview, from the games themselves
+    showRatings();
 } // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+void ProfilesView::showFacts() {
+    const Profile* profile = m_store.profile(m_current);
+    std::vector<std::string> names;
+    std::vector<std::string> yours;
+    if (profile != nullptr) {
+        for (const QString& name : ProfileStore::namesOf(*profile, m_part)) {
+            names.push_back(name.toStdString());
+        }
+        // Someone else's: their games against you (your profile's names).
+        if (!profile->main) {
+            for (const Profile& other : m_store.profiles()) {
+                if (other.main) {
+                    for (const QString& name : ProfileStore::namesOf(other, QString())) {
+                        yours.push_back(name.toStdString());
+                    }
+                }
+            }
+        }
+    }
+    m_vsYouTile->setVisible(profile != nullptr && !profile->main);
+    const int request = ++m_factsRequest;
+    // Owned by the view and deleted when done (deleteLater); the analyzer can't see that.
+    auto* watcher = new QFutureWatcher<gamedb::PlayerFacts>(
+        this); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    connect(watcher, &QFutureWatcher<gamedb::PlayerFacts>::finished, this,
+            [this, watcher, request] {
+                watcher->deleteLater();
+                if (request == m_factsRequest) {
+                    showFacts(watcher->result());
+                }
+            });
+    watcher->setFuture(QtConcurrent::run(
+        [db = m_db, names = std::move(names), yours = std::move(yours), speeds = m_speeds] {
+            if (!db) {
+                return gamedb::PlayerFacts{};
+            }
+            const auto games = db->games(1, static_cast<std::size_t>(db->gameCount()));
+            return gamedb::playerFacts(games, names, yours, db->speeds(), speeds);
+        }));
+} // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+void ProfilesView::showRatings() {
+    const Profile* profile = m_store.profile(m_current);
+    if (profile == nullptr) {
+        return;
+    }
+    // Each source with its databases and who the player is in them. Over the board (your
+    // PGN games and the game databases) is FIDE's: a game without a time control there is
+    // classical. An account's games all have one.
+    struct Part {
+        std::shared_ptr<const gamedb::Database> db;
+        std::vector<std::string> names;
+        gamedb::Speed unknownAs = gamedb::Speed::Unknown;
+    };
+    struct Source {
+        QString key;
+        QString text;
+        std::vector<Part> parts;
+    };
+    std::vector<Source> sources;
+    QString stamp = m_current;
+    const auto part = [&](const QString& id, gamedb::Speed unknownAs) {
+        Part one;
+        one.db = m_store.database(m_current, id);
+        for (const QString& name : ProfileStore::namesOf(*profile, id)) {
+            one.names.push_back(name.toStdString());
+        }
+        one.unknownAs = unknownAs;
+        stamp += u'|' + id + u':' + m_store.databaseStamp(m_current, id);
+        return one;
+    };
+    Source fide{QStringLiteral("fide"), QStringLiteral("FIDE"), {}};
+    fide.parts.push_back(part(QStringLiteral("otb"), gamedb::Speed::Classical));
+    for (const auto& [id, name] : profile->sources) {
+        fide.parts.push_back(part(id, gamedb::Speed::Classical));
+    }
+    sources.push_back(std::move(fide));
+    for (const Account& account : profile->accounts) {
+        sources.push_back({account.id,
+                           siteText(account.site) + QStringLiteral(" · ") + account.username,
+                           {part(account.id, gamedb::Speed::Unknown)}});
+    }
+    if (stamp == m_ratingStamp) {
+        return; // the same games: what is shown stands
+    }
+    const bool otherProfile = m_ratingStamp.section(u'|', 0, 0) != m_current;
+    m_ratingStamp = std::move(stamp);
+    if (otherProfile) {
+        // Another player: FIDE, until something else is chosen.
+        m_ratingSource = QStringLiteral("fide");
+        m_ratingSources.clear();
+        showRatingLine();
+    }
+    const int request = ++m_ratingsRequest;
+    using Result = std::vector<RatingSource>;
+    // Owned by the view and deleted when done (deleteLater); the analyzer can't see that.
+    auto* watcher =
+        new QFutureWatcher<Result>(this); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    connect(watcher, &QFutureWatcher<Result>::finished, this, [this, watcher, request] {
+        watcher->deleteLater();
+        if (request == m_ratingsRequest) {
+            m_ratingSources = watcher->result();
+            showRatingLine();
+        }
+    });
+    watcher->setFuture(QtConcurrent::run([sources = std::move(sources)] {
+        Result result;
+        for (const Source& source : sources) {
+            RatingSource read{source.key, source.text, {}};
+            for (const Part& one : source.parts) {
+                if (one.db) {
+                    const auto games =
+                        one.db->games(1, static_cast<std::size_t>(one.db->gameCount()));
+                    gamedb::addRatings(read.history, games, one.names, one.db->speeds(),
+                                       one.unknownAs);
+                }
+            }
+            result.push_back(std::move(read));
+        }
+        return result;
+    }));
+} // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+void ProfilesView::showRatingLine() {
+    const auto has = [&](const RatingSource& source, gamedb::Speed speed) {
+        return !gamedb::ratingLine(source.history, speed).empty();
+    };
+    const auto any = [&](gamedb::Speed speed) {
+        return std::any_of(m_ratingSources.begin(), m_ratingSources.end(),
+                           [&](const RatingSource& source) { return has(source, speed); });
+    };
+    // The speeds ticked (none: every one), the first of them with a rating, else the first.
+    std::vector<gamedb::Speed> ticked;
+    for (const auto& [one, button] : m_speedChips) {
+        if (button->isChecked() || m_speeds == 0) {
+            ticked.push_back(one);
+        }
+    }
+    const auto found = std::find_if(ticked.begin(), ticked.end(), any);
+    const gamedb::Speed speed = found != ticked.end() ? *found : ticked.front();
+    QString text = tr("Classical");
+    if (speed == gamedb::Speed::Rapid) {
+        text = tr("Rapid");
+    } else if (speed == gamedb::Speed::Blitz) {
+        text = tr("Blitz");
+    } else if (speed == gamedb::Speed::Bullet) {
+        text = tr("Bullet");
+    }
+    m_ratingSpeedText->setText(text);
+    // The sources with ratings at that speed; the one chosen, else the first (FIDE first).
+    const QSignalBlocker block(m_ratingFrom);
+    m_ratingFrom->clear();
+    const RatingSource* shown = nullptr;
+    for (const RatingSource& source : m_ratingSources) {
+        if (!has(source, speed)) {
+            continue;
+        }
+        m_ratingFrom->addItem(source.text, source.key);
+        if (source.key == m_ratingSource || shown == nullptr) {
+            shown = &source;
+        }
+    }
+    if (shown != nullptr) {
+        m_ratingFrom->setCurrentIndex(m_ratingFrom->findData(shown->key));
+    }
+    showRatingFrom();
+    m_rating->setRatings(shown != nullptr ? gamedb::ratingLine(shown->history, speed)
+                                          : std::vector<std::pair<int, int>>{});
+}
+
+void ProfilesView::speedsChanged() {
+    const auto bit = [](gamedb::Speed one) {
+        return 1U << static_cast<unsigned>(one);
+    };
+    unsigned bits = 0;
+    for (const auto& [speed, button] : m_speedChips) {
+        if (button->isChecked()) {
+            bits |= bit(speed);
+            if (speed == gamedb::Speed::Classical) {
+                bits |= bit(gamedb::Speed::Correspondence) | bit(gamedb::Speed::Unknown);
+            }
+        }
+    }
+    m_allSpeeds->setChecked(bits == 0);
+    m_speeds = static_cast<std::uint8_t>(bits);
+    m_model->setSpeeds(m_speeds);
+    m_prepare->setSpeeds(m_speeds);
+    showStats();
+    showRatingLine();
+}
+
+void ProfilesView::showRatingFrom() {
+    m_ratingFromBox->setVisible(m_pages->currentIndex() == 0 && m_ratingFrom->count() > 0);
+}
+
+void ProfilesView::showFacts(const gamedb::PlayerFacts& facts) {
+    const auto& c = m_style.colors();
+    m_performance->setText(facts.rated == 0 ? QString()
+                                            : tr("Performance %1  ·  opponents %2  ·  %3")
+                                                  .arg(facts.performance)
+                                                  .arg(facts.averageOpponent)
+                                                  .arg(gamesText(facts.rated)));
+    // A row: a name on the left, its numbers on the right.
+    const auto row = [&](const QString& name, const QString& numbers) {
+        return QStringLiteral("<tr><td style=\"color:%1; padding: 2px 0\">%2</td>"
+                              "<td align=\"right\" nowrap style=\"padding: 2px 0 2px 12px\">"
+                              "%3</td></tr>")
+            .arg(c.text.name(), name.toHtmlEscaped(), numbers);
+    };
+    const auto score = [](const gamedb::Score& s) { // "2 · 75%": games and score
+        return QStringLiteral("%1 · %2").arg(number(s.games()), scoreText(s.won, s.drawn, s.lost));
+    };
+    QString opponents;
+    for (const auto& opponent : facts.opponents) {
+        opponents += row(QString::fromStdString(opponent.name), score(opponent.score));
+    }
+    m_opponents->setText(opponents.isEmpty() ? tr("No games yet")
+                                             : QStringLiteral("<table width=\"100%\">") +
+                                                   opponents + QStringLiteral("</table>"));
+    QString events;
+    for (const auto& event : facts.events) {
+        // "Oslo Open 2025 · 4½/7"; half a point alone is "½".
+        const std::uint64_t whole = event.score.points2() / 2;
+        QString points = whole > 0 ? QString::number(whole) : QString();
+        if (event.score.points2() % 2 == 1) {
+            points += QStringLiteral("½");
+        }
+        if (points.isEmpty()) {
+            points = QStringLiteral("0");
+        }
+        events += row(QString::fromStdString(event.name),
+                      QStringLiteral("%1/%2").arg(points).arg(event.score.games()));
+    }
+    m_events->setText(events.isEmpty() ? tr("No tournaments in these games")
+                                       : QStringLiteral("<table width=\"100%\">") + events +
+                                             QStringLiteral("</table>"));
+    // Against you: from your side.
+    const gamedb::Score& them = facts.againstYou;
+    m_vsYou->setText(
+        them.games() == 0
+            ? tr("You haven't played them in these games.")
+            : QStringLiteral("<span style=\"color:%1; font-size:20px\">+%2 =%3 −%4</span>"
+                             "<br>%5")
+                  .arg(c.text.name())
+                  .arg(them.lost)
+                  .arg(them.drawn)
+                  .arg(them.won)
+                  .arg(tr("Your score: %1").arg(scoreText(them.lost, them.drawn, them.won))));
+}
 
 void ProfilesView::showTheory() {
     const Profile* profile = m_store.profile(m_current);

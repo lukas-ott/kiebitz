@@ -8,6 +8,7 @@ add_library(kiebitz_gamedb
     src/codec.cpp
     src/codec.hpp
     src/database.cpp
+    src/facts.cpp
     src/import.cpp
     src/scan.cpp)
 add_library(kiebitz::gamedb ALIAS kiebitz_gamedb)

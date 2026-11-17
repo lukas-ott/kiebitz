@@ -153,6 +153,8 @@ qt_add_library(kiebitz_ui STATIC
     widgets/Message.hpp
     widgets/NameDialog.cpp
     widgets/NameDialog.hpp
+    widgets/RatingChart.cpp
+    widgets/RatingChart.hpp
     widgets/ResultBar.cpp
     widgets/ResultBar.hpp
     widgets/SortCycle.hpp

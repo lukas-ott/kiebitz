@@ -634,3 +634,36 @@ TEST(RepertoirePrep, PgnDatesBecomeNumbers) {
     EXPECT_EQ(repertoire::dateNumber("????.??.??"), 0);
     EXPECT_EQ(repertoire::dateNumber(""), 0);
 }
+
+TEST(RepertoirePrep, WeakLinesAreWhereTheyScoreWorstAsFarAsTheirGamesGoTogether) {
+    using repertoire::PlayedGame;
+    // The player as Black. 1. e4 c5 2. Nf3 d6 3. Bb5+: three games, all lost. 2. c3: three
+    // games, one won (33%). 1. d4: two games, both lost, too few. 1. e4 e5: three, all won.
+    const std::vector<PlayedGame> games{
+        {movesOf("1. e4 c5 2. Nf3 d6 3. Bb5+ Bd7 4. Bxd7+"), core::Color::Black, 0, 20260101},
+        {movesOf("1. e4 c5 2. Nf3 d6 3. Bb5+ Bd7 4. Bxd7+"), core::Color::Black, 0, 20250101},
+        {movesOf("1. e4 c5 2. Nf3 d6 3. Bb5+ Nd7"), core::Color::Black, 0, 20240101},
+        {movesOf("1. e4 c5 2. c3 Nf6"), core::Color::Black, 2, 20230101},
+        {movesOf("1. e4 c5 2. c3 d5"), core::Color::Black, 0, 20230101},
+        {movesOf("1. e4 c5 2. c3 d5"), core::Color::Black, 0, 20220101},
+        {movesOf("1. d4 Nf6"), core::Color::Black, 0, 20220101},
+        {movesOf("1. d4 d5"), core::Color::Black, 0, 20220101},
+        {movesOf("1. e4 e5 2. Nf3"), core::Color::Black, 2, 20220101},
+        {movesOf("1. e4 e5 2. Nc3"), core::Color::Black, 2, 20220101},
+        {movesOf("1. e4 e5 2. Bc4"), core::Color::Black, 2, 20220101},
+    };
+    const repertoire::PrepTree tree(games, core::Color::White);
+    const auto weak = tree.weakLines(3, 5);
+    ASSERT_EQ(weak.size(), 2U);
+    // 0%: the Bb5+ line, ending where its games part (3... Bd7 or 3... Nd7).
+    EXPECT_EQ(weak[0].line, movesOf("1. e4 c5 2. Nf3 d6 3. Bb5+"));
+    EXPECT_EQ(weak[0].games, 3U);
+    EXPECT_EQ(weak[0].lost, 3U);
+    EXPECT_DOUBLE_EQ(weak[0].score(), 0.0);
+    // 33%: 2. c3. The Sicilian as a whole (1... c5, 6 games, 17%) holds both: left out.
+    EXPECT_EQ(weak[1].line, movesOf("1. e4 c5 2. c3"));
+    EXPECT_EQ(weak[1].won, 1U);
+    // Fewer than asked for: none.
+    EXPECT_TRUE(tree.weakLines(4, 5).size() <= 1U);
+    EXPECT_EQ(tree.weakLines(3, 1).size(), 1U);
+}

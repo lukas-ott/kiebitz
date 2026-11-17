@@ -38,6 +38,7 @@ enum class IconKind : std::uint8_t {
     Pause,     ///< two bars: stop a clock
     Play,      ///< a triangle: start it again
     Stopwatch, ///< a round watch with a button on top: training (sidebar)
+    Down,      ///< a chevron pointing down: a box that opens a list
 };
 
 /// An icon with a normal and a disabled look. `size` is in logical pixels.

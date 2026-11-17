@@ -37,6 +37,7 @@
 #include <QCloseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMimeData>
@@ -44,6 +45,7 @@
 #include <QSettings>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QTabBar>
 #include <QTextCursor>
 #include <QUrl>
 #include <QtConcurrent/QtConcurrentRun>
@@ -181,6 +183,9 @@ void MainWindow::updatePage() {
     m_pages->setCurrentIndex(static_cast<int>(m_section));
     if (d == nullptr) {
         m_enginePanel->setPosition(std::nullopt); // nothing to analyse off the board
+        if (m_moves != nullptr) {                 // null while the window is being built
+            m_moves->setMergeTarget({});
+        }
         m_notation->setGame(nullptr, Game::root());
         m_info->setGame(nullptr);
         m_explorer->setPosition(nullptr, Game::root(), core::Color::White);
@@ -274,6 +279,77 @@ void MainWindow::openGameCopy(const core::Game& game) {
     document->game = game;
     m_documents->add(std::move(document));
     showSection(Section::Board);
+}
+
+void MainWindow::openGamePreview(const core::Game& game) {
+    // Looked at next to the file in front (if it is one): it can go into that file.
+    const GameDocument* front = doc();
+    auto document = std::make_unique<GameDocument>();
+    document->game = game;
+    if (front != nullptr && Documents::inFile(*front)) {
+        document->previewOf = front->id;
+    }
+    m_documents->add(std::move(document));
+    showSection(Section::Board);
+}
+
+GameDocument* MainWindow::previewTarget(const GameDocument& preview) const {
+    if (preview.previewOf == 0) {
+        return nullptr;
+    }
+    for (const auto& document : m_documents->all()) {
+        if (document->id == preview.previewOf) {
+            return document.get();
+        }
+    }
+    return nullptr; // its file was closed meanwhile
+}
+
+void MainWindow::mergePreview() {
+    const GameDocument* preview = doc();
+    GameDocument* target = preview != nullptr ? previewTarget(*preview) : nullptr;
+    if (target == nullptr) {
+        return;
+    }
+    // From the start position of both (a preview from a set-up position can't go in).
+    if (preview->game.positionAt(Game::root()).hash() !=
+        target->game.positionAt(Game::root()).hash()) {
+        notice(this, tr("Merge"), tr("The game starts from another position than the file."));
+        return;
+    }
+    // The moves up to where the preview is; where the file has them already, nothing new.
+    NodeId node = Game::root();
+    for (const core::Move move : lineTo(preview->game, preview->current)) {
+        node = target->game.addMove(node, move);
+    }
+    // Where it came from, on its last move (unless that has a comment already).
+    if (node != Game::root() && target->game.node(node).comment.empty()) {
+        QString source = preview->title();
+        if (source.startsWith(QStringLiteral("• "))) {
+            source.remove(0, 2); // changed in the preview: still the same game
+        }
+        if (const auto date = std::string(preview->game.header("Date"));
+            date.size() >= 4 && date[0] != '?') {
+            source += QStringLiteral(", ") + QString::fromStdString(date.substr(0, 4));
+        }
+        target->game.setComment(node, source.toStdString());
+    }
+    target->current = node;
+    const int targetId = target->id;
+    m_documents->setModified(*target);
+    closePreview();
+    m_documents->select([targetId](const GameDocument& d) { return d.id == targetId; });
+}
+
+void MainWindow::closePreview() {
+    const GameDocument* preview = doc();
+    if (preview == nullptr || preview->previewOf == 0) {
+        return;
+    }
+    const int targetId = preview->previewOf;
+    m_documents->close(m_documents->tabs()->currentIndex());
+    // Back to the file it was looked at with.
+    m_documents->select([targetId](const GameDocument& d) { return d.id == targetId; });
 }
 
 void MainWindow::newFile(const QString& folder) {
@@ -389,6 +465,13 @@ void MainWindow::orientBoard(const GameDocument& document) {
 
 void MainWindow::showDocument() {
     const GameDocument* d = doc();
+    // A preview: "Merge into <file>" over its moves.
+    QString mergeInto;
+    if (const GameDocument* target = previewTarget(*d)) {
+        mergeInto =
+            target->file ? QFileInfo(target->file->path).completeBaseName() : target->title();
+    }
+    m_moves->setMergeTarget(mergeInto);
     orientBoard(*d);
     m_notation->setGame(&d->game, d->current);
     showFileStart();
@@ -956,6 +1039,7 @@ void MainWindow::toggleNag(NodeId id, std::uint8_t nag) {
     d->game.setNags(id, std::move(nags));
     setModified();
     refreshNotation();
+    m_moves->showSymbols(d->game, d->current); // the bar ticks what the move has now
 }
 
 void MainWindow::clearNags(NodeId id) {
@@ -963,6 +1047,7 @@ void MainWindow::clearNags(NodeId id) {
         d->game.setNags(id, {});
         setModified();
         refreshNotation();
+        m_moves->showSymbols(d->game, d->current);
     }
 }
 

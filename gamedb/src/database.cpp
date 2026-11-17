@@ -1166,6 +1166,26 @@ std::vector<GameInfo> Database::find(const GameQuery& asked, std::size_t limit,
         filters += " AND (g.white IN hit OR g.black IN hit OR g.event IN hit OR g.site IN hit OR "
                    "g.eco = ?2)";
     }
+    if (query.speeds != 0) {
+        // Speeds aren't in the table: the games at them, by id, in a table of their own.
+        const std::vector<Speed> speeds = this->speeds();
+        exec(db, "CREATE TEMP TABLE fast (id INTEGER PRIMARY KEY); BEGIN");
+        {
+            const Statement insert(db, "INSERT INTO fast (id) VALUES (?)");
+            for (std::size_t k = 0; k < speeds.size(); ++k) {
+                if (cancelled != nullptr && k % 4096 == 0 && cancelled->load()) {
+                    return {};
+                }
+                if ((query.speeds & (1U << static_cast<unsigned>(speeds[k]))) != 0) {
+                    sqlite3_bind_int64(insert.handle, 1, static_cast<std::int64_t>(k) + 1);
+                    sqlite3_step(insert.handle);
+                    sqlite3_reset(insert.handle);
+                }
+            }
+        }
+        exec(db, "COMMIT");
+        filters += " AND g.id IN fast";
+    }
     if (!query.fromDate.empty() || !query.toDate.empty()) {
         filters += " AND g.date GLOB '[0-9][0-9][0-9][0-9]*'"; // the year known
     }
@@ -1275,6 +1295,21 @@ std::vector<GameInfo> Database::find(const GameQuery& asked, std::size_t limit,
                     " AND (g.date IS NULL OR NOT g.date GLOB '[0-9][0-9][0-9][0-9]*')");
     }
     return run(games, "", order, limit); // ascending dates put "????" last by themselves
+}
+
+std::vector<Speed> Database::speeds() const {
+    std::vector<Speed> result(static_cast<std::size_t>(gameCount()), Speed::Unknown);
+    if (!hasAttributes()) {
+        return result;
+    }
+    const auto* order = m_impl->order.as<std::uint32_t>();
+    const auto* attributes = m_impl->attributes.as<Attributes>();
+    for (std::size_t i = 0; i < m_impl->order.count<std::uint32_t>(); ++i) {
+        if (order[i] < result.size()) {
+            result[order[i]] = static_cast<Speed>(attributes[i].speed);
+        }
+    }
+    return result;
 }
 
 std::optional<core::Game> Database::game(GameId id) const {

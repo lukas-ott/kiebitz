@@ -1744,6 +1744,14 @@
         <translation> — Kiebitz</translation>
     </message>
     <message>
+        <source>Merge</source>
+        <translation>Zusammenführen</translation>
+    </message>
+    <message>
+        <source>The game starts from another position than the file.</source>
+        <translation>Die Partie beginnt in einer anderen Stellung als die Datei.</translation>
+    </message>
+    <message>
         <source>New File</source>
         <translation>Neue Datei</translation>
     </message>
@@ -2186,6 +2194,82 @@
         <translation>Züge in Zeilen, mit Kommentaren und Varianten dazwischen</translation>
     </message>
     <message>
+        <source>Preview</source>
+        <translation>Vorschau</translation>
+    </message>
+    <message>
+        <source>A game from a database. Step to the move you want, then merge: its moves up to there go into the file, as a variation where they differ.</source>
+        <translation>Eine Partie aus einer Datenbank. Geh zum gewünschten Zug und führe sie zusammen: Ihre Züge bis dorthin kommen in die Datei, als Variante, wo sie abweichen.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Brilliant move</source>
+        <translation>Brillanter Zug</translation>
+    </message>
+    <message>
+        <source>Good move</source>
+        <translation>Guter Zug</translation>
+    </message>
+    <message>
+        <source>Interesting move</source>
+        <translation>Interessanter Zug</translation>
+    </message>
+    <message>
+        <source>Dubious move</source>
+        <translation>Zweifelhafter Zug</translation>
+    </message>
+    <message>
+        <source>Mistake</source>
+        <translation>Fehler</translation>
+    </message>
+    <message>
+        <source>Blunder</source>
+        <translation>Grober Fehler</translation>
+    </message>
+    <message>
+        <source>White is winning</source>
+        <translation>Weiß steht auf Gewinn</translation>
+    </message>
+    <message>
+        <source>White is better</source>
+        <translation>Weiß steht besser</translation>
+    </message>
+    <message>
+        <source>White is slightly better</source>
+        <translation>Weiß steht etwas besser</translation>
+    </message>
+    <message>
+        <source>Equal</source>
+        <translation>Ausgeglichen</translation>
+    </message>
+    <message>
+        <source>Black is slightly better</source>
+        <translation>Schwarz steht etwas besser</translation>
+    </message>
+    <message>
+        <source>Black is better</source>
+        <translation>Schwarz steht besser</translation>
+    </message>
+    <message>
+        <source>Black is winning</source>
+        <translation>Schwarz steht auf Gewinn</translation>
+    </message>
+    <message>
+        <source>Unclear</source>
+        <translation>Unklar</translation>
+    </message>
+    <message>
+        <source>Only move</source>
+        <translation>Einziger Zug</translation>
+    </message>
+    <message>
+        <source>Novelty</source>
+        <translation>Neuerung</translation>
+    </message>
+    <message>
         <source>Start (Home)</source>
         <translation>Anfang (Pos1)</translation>
     </message>
@@ -2200,6 +2284,10 @@
     <message>
         <source>End (End)</source>
         <translation>Ende (Ende)</translation>
+    </message>
+    <message>
+        <source>Merge into %1</source>
+        <translation>In %1 übernehmen</translation>
     </message>
     <message>
         <source>Add a comment about the game…</source>
@@ -2487,8 +2575,24 @@
         <translation>Ende (Ende)</translation>
     </message>
     <message>
+        <source>Since</source>
+        <translation>Seit</translation>
+    </message>
+    <message>
+        <source>WHERE THEY STRUGGLE</source>
+        <translation>IHRE SCHWACHSTELLEN</translation>
+    </message>
+    <message>
+        <source>Their lines with at least 3 finished games where they score under 50%, worst first. A click goes there.</source>
+        <translation>Ihre Linien mit mindestens 3 beendeten Partien, in denen sie unter 50 % holen, die schlechtesten zuerst. Ein Klick führt dorthin.</translation>
+    </message>
+    <message>
         <source>Reading their games…</source>
         <translation>Lese die Partien …</translation>
+    </message>
+    <message>
+        <source>%1 of %2 games</source>
+        <translation>%1 von %2 Partien</translation>
     </message>
     <message>
         <source>No games of theirs with Black.</source>
@@ -2505,6 +2609,14 @@
     <message>
         <source>Their %1 games with White</source>
         <translation>%1 Partien mit Weiß</translation>
+    </message>
+    <message>
+        <source>%1% · %2 games</source>
+        <translation>%1% · %2 Partien</translation>
+    </message>
+    <message>
+        <source>All years</source>
+        <translation>Alle Jahre</translation>
     </message>
     <message>
         <source>Start</source>
@@ -2777,6 +2889,14 @@
         <translation>ERGEBNISSE</translation>
     </message>
     <message>
+        <source>Also correspondence games, and games without a time control (over the board, mostly classical)</source>
+        <translation>Auch Fernpartien und Partien ohne Bedenkzeitangabe (am Brett meist klassisch)</translation>
+    </message>
+    <message>
+        <source>Rating</source>
+        <translation>Wertung</translation>
+    </message>
+    <message>
         <source>AS WHITE</source>
         <translation>ALS WEISS</translation>
     </message>
@@ -2787,6 +2907,26 @@
     <message>
         <source>ACTIVITY</source>
         <translation>AKTIVITÄT</translation>
+    </message>
+    <message>
+        <source>RATING</source>
+        <translation>WERTUNG</translation>
+    </message>
+    <message>
+        <source>Performance: the rating their results were worth against their opponents' ratings</source>
+        <translation>Leistung: die Wertung, die ihre Ergebnisse gegen die Wertungen ihrer Gegner wert waren</translation>
+    </message>
+    <message>
+        <source>MOST PLAYED</source>
+        <translation>HÄUFIGSTE GEGNER</translation>
+    </message>
+    <message>
+        <source>EVENTS</source>
+        <translation>TURNIERE</translation>
+    </message>
+    <message>
+        <source>AGAINST YOU</source>
+        <translation>GEGEN DICH</translation>
     </message>
     <message>
         <source>Search players, events, ECO</source>
@@ -2955,6 +3095,26 @@
     <message>
         <source>The player on ChessBase: copy their games there and paste them here</source>
         <translation>Die Person bei ChessBase: Partien dort kopieren und hier einfügen</translation>
+    </message>
+    <message>
+        <source>Performance %1  ·  opponents %2  ·  %3</source>
+        <translation>Leistung %1  ·  Gegner %2  ·  %3</translation>
+    </message>
+    <message>
+        <source>No games yet</source>
+        <translation>Noch keine Partien</translation>
+    </message>
+    <message>
+        <source>No tournaments in these games</source>
+        <translation>Keine Turniere in diesen Partien</translation>
+    </message>
+    <message>
+        <source>You haven't played them in these games.</source>
+        <translation>Du hast in diesen Partien nicht gegen sie gespielt.</translation>
+    </message>
+    <message>
+        <source>Your score: %1</source>
+        <translation>Dein Ergebnis: %1</translation>
     </message>
     <message>
         <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase's online database.</source>
@@ -3354,6 +3514,13 @@
     <message>
         <source>no solution</source>
         <translation>keine Lösung</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::RatingChart</name>
+    <message>
+        <source>No rated games</source>
+        <translation>Keine gewerteten Partien</translation>
     </message>
 </context>
 <context>

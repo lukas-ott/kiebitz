@@ -23,6 +23,7 @@
 #include "style/Icons.hpp"
 #include "widgets/Message.hpp"
 #include "widgets/MultiChoice.hpp"
+#include "widgets/RatingChart.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -1525,6 +1526,257 @@ TEST_F(ProfilesTest, AFidePlayersAccountsAreSuggestedAndNotThemIsRemembered) {
     ProfileStore again(folder.filePath(QStringLiteral("profiles")));
     EXPECT_EQ(again.profile(id)->suggestions.size(), 1U);
     EXPECT_TRUE(again.profile(id)->dismissed.contains(QStringLiteral("chesscom:jwang")));
+}
+
+TEST_F(ProfilesTest, PrepareKeepsTheirGamesSinceAYearAndAtSomeSpeeds) {
+    // Petra's four games with Black: speeds from the events' names (none: classical).
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    const QString id = store.addProfile(QStringLiteral("Petra Pawn"));
+    const QString pgn = folder.filePath(QStringLiteral("petra.pgn"));
+    {
+        QFile file(pgn);
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        const auto one = [&](const char* event, const char* date, const char* result,
+                             const char* moves) {
+            file.write(QByteArray("[Event \"") + event +
+                       "\"]\n[White \"X\"]\n[Black \"Pawn, "
+                       "Petra\"]\n[Date \"" +
+                       date + "\"]\n[Result \"" + result + "\"]\n\n" + moves + " " + result +
+                       "\n\n");
+        };
+        one("Club Championship", "2026.03.01", "0-1", "1. e4 c5 2. Nf3 d6");
+        one("Oslo Blitz", "2025.02.01", "1-0", "1. e4 c5 2. Nf3 Nc6");
+        one("Rapid Open", "2024.04.01", "1-0", "1. e4 e5");
+        one("Rapid Open", "2026.04.01", "1/2-1/2", "1. e4 c5 2. c3");
+    }
+    QSignalSpy added(&store, &ProfileStore::otbAdded);
+    store.addOtbGames(id, {pgn});
+    ASSERT_TRUE(added.wait(5000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(id) && store.profile(id)->all != nullptr; }, 10000));
+
+    kiebitz::app::Library library;
+    kiebitz::app::RepertoireStore repertoires(library);
+    const kiebitz::app::AppStyle style(*qApp);
+    kiebitz::app::PreparePage page(store, repertoires, style);
+    page.resize(1000, 600);
+    page.QWidget::show();
+    QSignalSpy ready(&page, &kiebitz::app::PreparePage::ready);
+    page.show(id, QString());
+    ASSERT_TRUE(ready.wait(10000));
+    auto* moves = page.findChild<QTreeWidget*>(QStringLiteral("prepareMoves"));
+    auto* count = page.findChild<QLabel*>(QStringLiteral("prepareCount"));
+    auto* since = page.findChild<QComboBox*>(QStringLiteral("prepareSince"));
+    ASSERT_NE(moves, nullptr);
+    ASSERT_NE(count, nullptr);
+    ASSERT_NE(since, nullptr);
+    const auto games = [&](const QString& move) {
+        for (int i = 0; i < moves->topLevelItemCount(); ++i) {
+            if (moves->topLevelItem(i)->text(0) == move) {
+                return moves->topLevelItem(i)->text(2).section(QStringLiteral(" "), 0, 0).toInt();
+            }
+        }
+        return 0;
+    };
+    EXPECT_EQ(games(QStringLiteral("1. e4")), 4);
+    EXPECT_TRUE(count->text().isEmpty()); // all of them
+    // The years they played, newest first.
+    ASSERT_EQ(since->count(), 4);
+    EXPECT_EQ(since->itemData(1).toInt(), 2026);
+    EXPECT_EQ(since->itemData(3).toInt(), 2024);
+
+    // Where they struggle: after 1. e4 they score 38% (a win, a draw, two losses), and their
+    // games part there (1... c5, 1... e5). 1... c5 alone is 50%: not a weak line.
+    auto* weak = page.findChild<QWidget*>(QStringLiteral("prepareWeak"));
+    ASSERT_NE(weak, nullptr);
+    EXPECT_TRUE(weak->isVisible());
+    auto* weakScore = page.findChild<QLabel*>(QStringLiteral("prepareWeakScore:0"));
+    ASSERT_NE(weakScore, nullptr);
+    EXPECT_EQ(weakScore->text(), QStringLiteral("38% · 4 games"));
+    EXPECT_EQ(page.findChild<QLabel*>(QStringLiteral("prepareWeakScore:1")), nullptr);
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        QTest::qWait(100); // new rows show on the next turn of the event loop
+        page.grab().save(QDir(dir).filePath(QStringLiteral("prepare-weak.png")));
+    }
+    QTest::mouseClick(page.findChild<QPushButton*>(QStringLiteral("prepareWeak:0")),
+                      Qt::LeftButton);
+    EXPECT_EQ(page.line().size(), 1U);
+    page.stepTo({});
+
+    // The box opens with a click, before anything is chosen.
+    QTest::mouseClick(since, Qt::LeftButton);
+    EXPECT_TRUE(since->view()->isVisible());
+    since->hidePopup();
+    // Since 2025: three games.
+    since->setCurrentIndex(2);
+    emit since->activated(2);
+    EXPECT_EQ(games(QStringLiteral("1. e4")), 3);
+    EXPECT_EQ(count->text(), QStringLiteral("3 of 4 games"));
+    // ... and only blitz (the profile page's speed filter): one.
+    using kiebitz::gamedb::Speed;
+    const auto bit = [](Speed speed) {
+        return 1U << static_cast<unsigned>(speed);
+    };
+    page.setSpeeds(static_cast<std::uint8_t>(bit(Speed::Blitz)));
+    EXPECT_EQ(games(QStringLiteral("1. e4")), 1);
+    EXPECT_EQ(count->text(), QStringLiteral("1 of 4 games"));
+    // Classical, with the games without a speed (the club championship): one.
+    page.setSpeeds(static_cast<std::uint8_t>(bit(Speed::Classical) | bit(Speed::Correspondence) |
+                                             bit(Speed::Unknown)));
+    EXPECT_EQ(games(QStringLiteral("1. e4")), 1);
+    // Every speed: since 2025, three.
+    page.setSpeeds(0);
+    EXPECT_EQ(games(QStringLiteral("1. e4")), 3);
+    // Nothing left out: all four again.
+    page.setFilter(0, 0);
+    EXPECT_EQ(games(QStringLiteral("1. e4")), 4);
+    EXPECT_EQ(since->currentData().toInt(), 0);
+}
+
+TEST(RatingChart, YearLabelsNeverOverlap) {
+    const kiebitz::app::AppStyle style(*qApp);
+    kiebitz::app::RatingChart chart(style);
+    chart.resize(400, 160);
+    // The line starts in December 2022: "2022" would sit on top of "2023", so it gives way.
+    chart.setRatings({{202212, 1560}, {202301, 1570}, {202406, 1600}, {202503, 1640}});
+    auto labels = chart.yearLabels();
+    ASSERT_EQ(labels.size(), 3U);
+    EXPECT_EQ(labels[0].second, 2023);
+    EXPECT_EQ(labels[2].second, 2025);
+    // Started in January: its year is labelled.
+    chart.setRatings({{202201, 1500}, {202301, 1570}, {202503, 1640}});
+    labels = chart.yearLabels();
+    ASSERT_EQ(labels.size(), 4U);
+    EXPECT_EQ(labels[0].second, 2022);
+    // A narrow chart over many years: fewer labels, none overlapping.
+    chart.resize(120, 160);
+    chart.setRatings({{201001, 1500}, {202512, 1900}});
+    labels = chart.yearLabels();
+    for (std::size_t i = 1; i < labels.size(); ++i) {
+        EXPECT_GE(labels[i].first - labels[i - 1].first, 20.0);
+    }
+}
+
+TEST_F(ProfilesTest, TheOverviewShowsRatingPerformanceOpponentsEventsAndAgainstYou) {
+    ProfileStore store(folder.filePath(QStringLiteral("profiles")));
+    store.setServers(server.url(), server.url(), server.url());
+    store.renameProfile(store.profiles()[0].id, QStringLiteral("Lukas Ott"));
+    const QString id = store.addProfile(QStringLiteral("Petra Pawn"));
+    const QString pgn = folder.filePath(QStringLiteral("petra.pgn"));
+    {
+        QFile file(pgn);
+        ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+        const auto one = [&](const char* event, const char* white, const char* whiteElo,
+                             const char* black, const char* blackElo, const char* date,
+                             const char* result) {
+            file.write(QByteArray("[Event \"") + event + "\"]\n[White \"" + white +
+                       "\"]\n[Black \"" + black + "\"]\n[WhiteElo \"" + whiteElo +
+                       "\"]\n[BlackElo \"" + blackElo + "\"]\n[Date \"" + date + "\"]\n[Result \"" +
+                       result + "\"]\n\n1. e4 e5 " + result + "\n\n");
+        };
+        one("Oslo Open 2025", "Pawn, Petra", "2100", "Olsen, Per", "2000", "2025.03.10", "1-0");
+        one("Oslo Open 2025", "Olsen, Per", "2000", "Pawn, Petra", "2110", "2025.03.11", "0-1");
+        one("Norwegian Ch 2026", "Haug, Lars", "2200", "Pawn, Petra", "2120", "2026.01.05",
+            "1/2-1/2");
+        one("Norwegian Ch 2026", "Pawn, Petra", "2130", "Ott, Lukas", "2050", "2026.01.06", "0-1");
+    }
+    QSignalSpy added(&store, &ProfileStore::otbAdded);
+    store.addOtbGames(id, {pgn});
+    ASSERT_TRUE(added.wait(5000));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return !store.busy(id) && store.profile(id)->all != nullptr; }, 10000));
+
+    const kiebitz::app::AppStyle style(*qApp);
+    kiebitz::app::LichessLogin lichess{kiebitz::app::LichessLogin::Storage{}};
+    kiebitz::app::Library library;
+    kiebitz::app::RepertoireStore repertoires(library);
+    kiebitz::app::ProfilesView view(store, lichess, repertoires, style);
+    view.resize(1180, 820);
+    view.show();
+    view.select(id);
+    auto* performance = view.findChild<QLabel*>(QStringLiteral("profilePerformance"));
+    auto* opponents = view.findChild<QLabel*>(QStringLiteral("profileOpponents"));
+    auto* events = view.findChild<QLabel*>(QStringLiteral("profileEvents"));
+    auto* vsYou = view.findChild<QLabel*>(QStringLiteral("profileAgainstYou"));
+    ASSERT_NE(performance, nullptr);
+    ASSERT_NE(opponents, nullptr);
+    ASSERT_NE(events, nullptr);
+    ASSERT_NE(vsYou, nullptr);
+    // Opponents 2000, 2000, 2200, 2050 (2063); 2½ of 4 = 63% → +89.
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !performance->text().isEmpty(); }, 10000));
+    EXPECT_EQ(performance->text(),
+              QStringLiteral("Performance 2152  ·  opponents 2063  ·  4 games"));
+    EXPECT_TRUE(opponents->text().contains(QStringLiteral("Olsen, Per")));
+    EXPECT_TRUE(opponents->text().contains(QStringLiteral("2 · 100%")));
+    // The latest tournament first, with her points.
+    EXPECT_LT(events->text().indexOf(QStringLiteral("Norwegian Ch 2026")),
+              events->text().indexOf(QStringLiteral("Oslo Open 2025")));
+    EXPECT_TRUE(events->text().contains(QStringLiteral("½/2")));
+    EXPECT_TRUE(events->text().contains(QStringLiteral("2/2")));
+    // Her rating: FIDE classical (her games have no time control: classical over the board),
+    // the last of each month. No other speed has ratings.
+    auto* chart = view.findChild<kiebitz::app::RatingChart*>(QStringLiteral("ratingChart"));
+    auto* from = view.findChild<QComboBox*>(QStringLiteral("ratingFrom"));
+    ASSERT_NE(chart, nullptr);
+    ASSERT_NE(from, nullptr);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return chart->ratings().size() == 2; }, 10000));
+    EXPECT_EQ(chart->ratings()[0], std::make_pair(202503, 2110));
+    EXPECT_EQ(chart->ratings()[1], std::make_pair(202601, 2130));
+    auto* ratingSpeed = view.findChild<QLabel*>(QStringLiteral("ratingSpeed"));
+    ASSERT_NE(ratingSpeed, nullptr);
+    EXPECT_EQ(from->count(), 1);
+    EXPECT_EQ(from->currentText(), QStringLiteral("FIDE"));
+    EXPECT_EQ(ratingSpeed->text(), QStringLiteral("Classical"));
+    EXPECT_TRUE(view.findChild<QPushButton*>(QStringLiteral("profileSpeed:all"))->isChecked());
+    // I beat her once: +1 from my side.
+    EXPECT_TRUE(vsYou->isVisible());
+    EXPECT_TRUE(vsYou->text().contains(QStringLiteral("+1 =0 −0")));
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        QTest::qWait(100);
+        view.grab().save(QDir(dir).filePath(QStringLiteral("profile-overview.png")));
+    }
+    // The page's speed filter: blitz has no games, nor ratings; the games list is empty too.
+    auto* table = view.findChild<QTableView*>(QStringLiteral("profileGames"));
+    ASSERT_NE(table, nullptr);
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileSpeed:blitz")),
+                      Qt::LeftButton);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return performance->text().isEmpty(); }, 10000));
+    EXPECT_EQ(ratingSpeed->text(), QStringLiteral("Blitz"));
+    EXPECT_TRUE(chart->ratings().empty());
+    EXPECT_FALSE(from->isVisibleTo(&view));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return table->model()->rowCount() == 0; }, 10000));
+    auto* all = view.findChild<QPushButton*>(QStringLiteral("profileSpeed:all"));
+    auto* blitz = view.findChild<QPushButton*>(QStringLiteral("profileSpeed:blitz"));
+    auto* classical = view.findChild<QPushButton*>(QStringLiteral("profileSpeed:classical"));
+    EXPECT_FALSE(all->isChecked());
+    // Classical too: her games without a time control are; the line is the classical one.
+    QTest::mouseClick(classical, Qt::LeftButton);
+    EXPECT_TRUE(blitz->isChecked());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return !performance->text().isEmpty(); }, 10000));
+    EXPECT_EQ(ratingSpeed->text(), QStringLiteral("Classical"));
+    EXPECT_EQ(chart->ratings().size(), 2U);
+    EXPECT_TRUE(from->isVisibleTo(&view));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return table->model()->rowCount() == 4; }, 10000));
+    // Both off again: "All".
+    QTest::mouseClick(blitz, Qt::LeftButton);
+    QTest::mouseClick(classical, Qt::LeftButton);
+    EXPECT_TRUE(all->isChecked());
+    // "All" turns the speeds off.
+    QTest::mouseClick(blitz, Qt::LeftButton);
+    QTest::mouseClick(all, Qt::LeftButton);
+    EXPECT_TRUE(all->isChecked());
+    EXPECT_FALSE(blitz->isChecked());
+    // The rating source is a filter at the top, on the Overview tab only.
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileShowGames")),
+                      Qt::LeftButton);
+    EXPECT_FALSE(from->isVisibleTo(&view));
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileShowOverview")),
+                      Qt::LeftButton);
+    EXPECT_TRUE(from->isVisibleTo(&view));
+    // My own profile: nothing against myself.
+    view.select(store.profiles()[0].id);
+    EXPECT_FALSE(vsYou->isVisible());
 }
 
 TEST_F(ProfilesTest, PreparingShowsTheirLinesWhatYourRepertoireLacksAndWhereTheyLeaveTheory) {

@@ -114,6 +114,64 @@ std::uint64_t PrepTree::gamesAt(std::span<const core::Move> line) const {
     return node != nullptr ? node->games : 0;
 }
 
+std::vector<WeakLine> PrepTree::weakLines(std::uint64_t minGames, std::size_t count) const {
+    // Every position with enough finished games and a bad score, as deep as its games go
+    // together: a position whose games all go on with one move isn't a line's end.
+    std::vector<WeakLine> found;
+    std::vector<core::Move> line;
+    const auto walk = [&](const auto& self, const Node& node) -> void {
+        const bool together =
+            std::any_of(node.children.begin(), node.children.end(),
+                        [&](const auto& child) { return child.second->games == node.games; });
+        if (!line.empty() && !together && node.scored >= minGames &&
+            node.points2 < node.scored) { // under half the points
+            WeakLine weak;
+            weak.line = line;
+            weak.games = node.games;
+            weak.scored = node.scored;
+            weak.points2 = node.points2;
+            weak.won = node.won;
+            weak.drawn = node.drawn;
+            weak.lost = node.lost;
+            found.push_back(std::move(weak));
+        }
+        for (const auto& [move, child] : node.children) {
+            if (child->scored < minGames) {
+                continue; // nothing deeper has enough either
+            }
+            line.push_back(move);
+            self(self, *child);
+            line.pop_back();
+        }
+    };
+    walk(walk, *m_root);
+    std::stable_sort(found.begin(), found.end(), [](const WeakLine& a, const WeakLine& b) {
+        // a.points2 / a.scored < b.points2 / b.scored, without dividing.
+        const std::uint64_t left = a.points2 * b.scored;
+        const std::uint64_t right = b.points2 * a.scored;
+        return left != right ? left < right : a.games > b.games;
+    });
+    // The worst first; a line inside one taken (or holding one) adds nothing.
+    const auto within = [](const std::vector<core::Move>& shorter,
+                           const std::vector<core::Move>& longer) {
+        return shorter.size() <= longer.size() &&
+               std::equal(shorter.begin(), shorter.end(), longer.begin());
+    };
+    std::vector<WeakLine> result;
+    for (WeakLine& weak : found) {
+        if (result.size() >= count) {
+            break;
+        }
+        const bool overlaps = std::any_of(result.begin(), result.end(), [&](const WeakLine& taken) {
+            return within(taken.line, weak.line) || within(weak.line, taken.line);
+        });
+        if (!overlaps) {
+            result.push_back(std::move(weak));
+        }
+    }
+    return result;
+}
+
 std::vector<PrepMove> PrepTree::moves(std::span<const core::Move> line) const {
     core::Position position;
     for (const core::Move move : line) {
