@@ -5,8 +5,8 @@ with Qt 6 Widgets.
 It opens instantly, keeps your PGN files as the source of truth, and focuses on building
 and training opening repertoires.
 
-Latest release: **[0.3.0](https://github.com/lukas-ott/kiebitz/releases/tag/v0.3.0)** (pre-release,
-Apple silicon). In English, German and Norwegian.
+Latest release: **[1.0.0](https://github.com/lukas-ott/kiebitz/releases/tag/v1.0.0)** (Apple
+silicon). In English, German and Norwegian.
 Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**.
 
 ## What it does
@@ -31,7 +31,8 @@ Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**
   judged by the Explorer's games; and, on a profile, where its games left your repertoire.
 - **Training:** a plan of minutes for openings, middlegame, tactics, endgames and self-study,
   run in order: each part opens its page (your repertoire files, or Lichess puzzles by theme),
-  the time shows on every page, and macOS tells you when a part is over. Today, your streak and
+  the time left shows over every page, and macOS tells you when a part is over. Zen mode
+  hides the rest of the app until the time is up (Esc leaves it). Today, your streak and
   a GitHub-like grid of the days you trained.
 - **Puzzles:** the Lichess puzzle database (over 6 million puzzles, one download) by rating and
   theme, starting around your own rating, or the puzzle files of your Library. Hints, the
@@ -158,10 +159,11 @@ website/  The website: one static page (HTML, CSS, a little JavaScript for the b
 - **v1:** board, PGN viewer and editor, UCI engine analysis (done)
 - **v2:** repertoires, practice, game databases, Explorer, profiles, gap check, puzzles (done)
 - **0.3:** the endgame tablebase in the Explorer, the training plan, German and Norwegian (done)
-- **Since 0.3:** transpositions, the intro tour, openings and In Repertoire, the board editor,
-  position search in databases, update check and problem reports (done)
-- **1.0:** the first proper release; then maybe signing with an Apple Developer ID, older
-  macOS versions, game review
+- **1.0:** the first proper release: transpositions, the intro tour, openings and In
+  Repertoire, the board editor, position search in databases, Zen mode for training, update
+  check and problem reports (done)
+- **Next, maybe:** signing with an Apple Developer ID, older macOS versions and Intel Macs,
+  game review
 
 ## Why "Kiebitz"?
 

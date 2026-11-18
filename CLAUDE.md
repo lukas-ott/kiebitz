@@ -64,5 +64,6 @@ done: game databases, the Explorer tab, profiles, the Lichess login with the Lic
 masters explorer, and the gap check)
 → M9 game import (done, as profiles: Lichess and chess.com sync, over-the-board PGNs, the
 theory check) → M10 large database (= v3; done: import, explorer, header search, positions.bin for
-transpositions and set-up positions). Next: the 1.0 release (version in CMakeLists.txt, then a
-`v1.0.0` tag: `.github/workflows/release.yml` drafts the GitHub release).
+transpositions and set-up positions) → 1.0.0 released (2026-11-18). Releases: the version in
+CMakeLists.txt, then a `vX.Y.Z` tag: `.github/workflows/release.yml` drafts the GitHub release,
+published by hand; then the website, README and spec doc follow.
