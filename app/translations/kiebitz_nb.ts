@@ -4569,10 +4569,6 @@
         <translation>Åpninger</translation>
     </message>
     <message>
-        <source>Middlegame</source>
-        <translation>Midtspill</translation>
-    </message>
-    <message>
         <source>Tactics</source>
         <translation>Taktikk</translation>
     </message>
@@ -4590,10 +4586,6 @@
     <message>
         <source>Pick a file to practise</source>
         <translation>Velg en fil å øve på</translation>
-    </message>
-    <message>
-        <source>Middlegame puzzles</source>
-        <translation>Midtspilloppgaver</translation>
     </message>
     <message>
         <source>Puzzles around your rating</source>

@@ -443,7 +443,7 @@ TEST_F(LayoutTest, TheProfilesPageStaysPutWhileSyncingSearchingAndChoosing) {
 TEST_F(LayoutTest, ATrainingSessionMovesNothing) {
     // Self-study only: the session stays on the Training page.
     QSettings settings;
-    for (const char* part : {"openings", "middlegame", "tactics", "endgames"}) {
+    for (const char* part : {"openings", "tactics", "endgames"}) {
         settings.setValue(QStringLiteral("training/%1/on").arg(QLatin1String(part)), false);
     }
     auto* session = window->findChild<app::TrainingSession*>();

@@ -1027,7 +1027,8 @@ TEST_F(DocumentsTest, PracticingARepertoireFile) {
         window.grab().save(QDir(dir).filePath(QStringLiteral("practice-mistake.png")));
     }
     const auto* summary = window.findChild<QLabel*>(QStringLiteral("practiceSummary"));
-    play("e4"); // right: the opponent answers with the repertoire's reply
+    play("e4");                     // right: the opponent answers with the repertoire's reply
+    EXPECT_FALSE(why->isVisible()); // played: the explanation goes
     ASSERT_TRUE(QTest::qWaitFor([&] { return fen().find(" w ") != std::string::npos; }, 3000));
     play("Nf3");
     ASSERT_TRUE(QTest::qWaitFor([&] { return status->text().startsWith(u"Done"); }, 3000));

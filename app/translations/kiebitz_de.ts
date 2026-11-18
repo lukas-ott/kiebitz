@@ -4569,10 +4569,6 @@
         <translation>Eröffnungen</translation>
     </message>
     <message>
-        <source>Middlegame</source>
-        <translation>Mittelspiel</translation>
-    </message>
-    <message>
         <source>Tactics</source>
         <translation>Taktik</translation>
     </message>
@@ -4590,10 +4586,6 @@
     <message>
         <source>Pick a file to practise</source>
         <translation>Wähle eine Datei zum Üben</translation>
-    </message>
-    <message>
-        <source>Middlegame puzzles</source>
-        <translation>Mittelspiel-Puzzles</translation>
     </message>
     <message>
         <source>Puzzles around your rating</source>

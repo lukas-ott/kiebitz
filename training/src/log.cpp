@@ -90,10 +90,8 @@ std::map<Day, DaySeconds> Log::days(Day from) const {
     while (query.handle != nullptr && sqlite3_step(query.handle) == SQLITE_ROW) {
         const Day day = sqlite3_column_int(query.handle, 0);
         const std::string name = sql::columnText(query.handle, 1);
-        for (const Part part : kAllParts) {
-            if (key(part) == name) {
-                result[day][indexOf(part)] += sqlite3_column_int(query.handle, 2);
-            }
+        if (const auto part = partOf(name)) { // the old middlegame part counts as tactics
+            result[day][indexOf(*part)] += sqlite3_column_int(query.handle, 2);
         }
     }
     return result;

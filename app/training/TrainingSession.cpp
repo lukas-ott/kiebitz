@@ -33,6 +33,22 @@ std::vector<training::Step> TrainingSession::plan() {
         step.minutes = settings.value(settingsKey(step.part, "minutes"), step.minutes).toInt();
         step.on = settings.value(settingsKey(step.part, "on"), step.on).toBool();
     }
+    // A plan saved with the old middlegame part: its minutes go to tactics (once).
+    const QString oldMinutes = QStringLiteral("training/middlegame/minutes");
+    if (settings.contains(oldMinutes)) {
+        const bool on = settings.value(QStringLiteral("training/middlegame/on"), true).toBool();
+        for (training::Step& step : result) {
+            if (step.part == training::Part::Tactics && on) {
+                const bool tacticsSaved = settings.contains(settingsKey(step.part, "minutes"));
+                step.minutes =
+                    (tacticsSaved ? step.minutes : 15) + settings.value(oldMinutes).toInt();
+                step.on = true;
+            }
+        }
+        QSettings writable;
+        writable.remove(QStringLiteral("training/middlegame"));
+        savePlan(result);
+    }
     return result;
 }
 
@@ -66,8 +82,6 @@ QString TrainingSession::name(training::Part part) {
     switch (part) {
     case training::Part::Openings:
         return tr("Openings");
-    case training::Part::Middlegame:
-        return tr("Middlegame");
     case training::Part::Tactics:
         return tr("Tactics");
     case training::Part::Endgames:

@@ -3,6 +3,7 @@
 // clock. Esc leaves it, and so does the end of the session.
 
 #include "MainWindow.hpp"
+#include "repertoire/RepertoirePanel.hpp"
 #include "training/TrainingSession.hpp"
 #include "training/TrainingView.hpp"
 
@@ -10,6 +11,7 @@
 #include <QShortcut>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QTabWidget>
 
 namespace kiebitz::app {
 
@@ -26,7 +28,17 @@ void MainWindow::setZen(bool zen) {
     }
     m_sidebarFrame->setVisible(!zen);
     m_tabRow->setVisible(!zen);
-    m_panelsCard->setVisible(!zen);
+    // The board's panels: only the Repertoire tab (practice) stays; the engine and the explorer
+    // would give the answers away.
+    if (auto* panels = m_panelsCard->findChild<QTabWidget*>(QStringLiteral("panels"))) {
+        for (int i = 0; i < panels->count(); ++i) {
+            const bool practice = panels->widget(i) == m_repertoirePanel;
+            panels->setTabVisible(i, !zen || practice);
+            if (zen && practice) {
+                panels->setCurrentIndex(i);
+            }
+        }
+    }
     for (QAction* action : m_sectionActions) {
         action->setEnabled(!zen);
     }

@@ -290,13 +290,13 @@ void Practice::answer(core::Move move) {
     }
     if (answer.correct) {
         setStatus(tr("Correct"), 1);
+        setWhy({}); // the explanation of a mistake goes once the right move is played
         showNode(m_drill->current(), true);
         step();
     } else {
         const NodeId expected = d->game.mainChild(m_drill->current());
         setStatus(tr("Not quite. The repertoire plays %1").arg(moveLabel(d->game, expected)), -1);
-        // Why: the comments on the repertoire's move. They stay until the next mistake or
-        // line, so there is time to read them.
+        // Why: the comments on the repertoire's move, until it is played.
         setWhy(explanation(d->game, expected));
         showNode(m_drill->current(), false,
                  {{answer.expected.from, answer.expected.to, core::MarkColor::Green}});

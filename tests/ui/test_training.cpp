@@ -24,6 +24,7 @@
 #include <QSettings>
 #include <QSignalSpy>
 #include <QStatusBar>
+#include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QToolButton>
@@ -100,21 +101,21 @@ TEST_F(TrainingTest, ThePlanIsKeptAsYouSetIt) {
     // The default: every part on, an hour in all.
     const auto* total = window->findChild<QLabel*>(QStringLiteral("trainingTotal"));
     EXPECT_EQ(total->text(), QStringLiteral("1 h in all"));
-    // Middlegame off, Tactics up to 30 minutes.
-    row(Part::Middlegame)->findChild<app::Toggle*>()->click();
+    // Endgames off, Tactics up to 30 minutes.
+    row(Part::Endgames)->findChild<app::Toggle*>()->click();
     auto* tactics = row(Part::Tactics)->findChild<app::Stepper*>();
     tactics->setValue(30);
     emit tactics->valueChanged(30);
-    EXPECT_EQ(total->text(), QStringLiteral("1 h 5 min in all"));
+    EXPECT_EQ(total->text(), QStringLiteral("55 min in all"));
     const auto plan = TrainingSession::plan();
-    EXPECT_FALSE(plan[1].on);
-    EXPECT_EQ(plan[2].minutes, 30);
-    EXPECT_EQ(training::Session(plan).count(), 4U); // the middlegame left out
+    EXPECT_FALSE(plan[2].on);
+    EXPECT_EQ(plan[1].minutes, 30);
+    EXPECT_EQ(training::Session(plan).count(), 3U); // the endgames left out
 }
 
 TEST_F(TrainingTest, ASessionGoesThroughThePartsAndKeepsTheTime) {
     // Openings and Tactics only.
-    for (const Part part : {Part::Middlegame, Part::Endgames, Part::SelfStudy}) {
+    for (const Part part : {Part::Endgames, Part::SelfStudy}) {
         row(part)->findChild<app::Toggle*>()->click();
     }
     EXPECT_FALSE(bar->isVisible()); // nothing running
@@ -183,13 +184,12 @@ TEST_F(TrainingTest, ASessionGoesThroughThePartsAndKeepsTheTime) {
 TEST_F(TrainingTest, EachPartOpensItsPage) {
     click("trainingStart"); // the default plan: every part
     // Openings first: the Library, with your repertoire files to pick one from; then
-    // middlegame, tactics and endgame puzzles, then self-study on the Training page.
+    // tactics and endgame puzzles, then self-study on the Training page.
     EXPECT_EQ(window->section(), MainWindow::Section::Library);
     EXPECT_EQ(window->findChild<QComboBox*>(QStringLiteral("libraryTypeFilter"))->currentText(),
               QStringLiteral("Openings"));
     for (const auto& [part, section] :
-         {std::pair{Part::Middlegame, MainWindow::Section::Puzzles},
-          std::pair{Part::Tactics, MainWindow::Section::Puzzles},
+         {std::pair{Part::Tactics, MainWindow::Section::Puzzles},
           std::pair{Part::Endgames, MainWindow::Section::Puzzles},
           std::pair{Part::SelfStudy, MainWindow::Section::Training}}) {
         click("trainingBarNext");
@@ -247,7 +247,7 @@ TEST_F(TrainingTest, OpeningsShowsOneSidesRepertoireFilesInTheirFolders) {
     window->library().setFolder(folder.path());
     ASSERT_TRUE(scanned.wait(5000));
     // White's repertoire files: the Italian only, in its folders.
-    for (const Part part : {Part::Middlegame, Part::Tactics, Part::Endgames, Part::SelfStudy}) {
+    for (const Part part : {Part::Tactics, Part::Endgames, Part::SelfStudy}) {
         row(part)->findChild<app::Toggle*>()->click();
     }
     auto* side = window->findChild<QComboBox*>(QStringLiteral("trainingSide"));
@@ -278,7 +278,7 @@ TEST_F(TrainingTest, OpeningsShowsOneSidesRepertoireFilesInTheirFolders) {
 }
 
 TEST_F(TrainingTest, TheOpeningsFilterGoesWithTheNextPart) {
-    for (const Part part : {Part::Middlegame, Part::Endgames, Part::SelfStudy}) {
+    for (const Part part : {Part::Endgames, Part::SelfStudy}) {
         row(part)->findChild<app::Toggle*>()->click();
     }
     click("trainingStart");
@@ -339,7 +339,7 @@ TEST(TrainingClock, ReadsLikeAClock) {
 
 TEST_F(TrainingTest, ZenModeShowsOnlyTheTrainingUntilEsc) {
     auto* sidebar = window->findChild<QWidget*>(QStringLiteral("sidebar"));
-    const auto* tabs = window->findChild<QWidget*>(QStringLiteral("tabRow"));
+    const auto* tabRow = window->findChild<QWidget*>(QStringLiteral("tabRow"));
     auto* panels = window->findChild<QWidget*>(QStringLiteral("panels"));
     const auto* zenBar = window->findChild<QWidget*>(QStringLiteral("trainingBarZen"));
     ASSERT_NE(sidebar, nullptr);
@@ -350,8 +350,14 @@ TEST_F(TrainingTest, ZenModeShowsOnlyTheTrainingUntilEsc) {
     EXPECT_TRUE(window->zen());
     EXPECT_TRUE(window->isFullScreen());
     EXPECT_FALSE(sidebar->isVisible());
-    EXPECT_FALSE(tabs->isVisibleTo(window.get()));
-    EXPECT_FALSE(panels->isVisibleTo(window.get()));
+    EXPECT_FALSE(tabRow->isVisibleTo(window.get()));
+    // The board's panels keep practice (the Repertoire tab) and nothing else.
+    const auto* tabs = qobject_cast<const QTabWidget*>(panels);
+    ASSERT_NE(tabs, nullptr);
+    for (int i = 0; i < tabs->count(); ++i) {
+        EXPECT_EQ(tabs->isTabVisible(i), tabs->tabText(i) == u"Repertoire")
+            << tabs->tabText(i).toStdString();
+    }
     EXPECT_FALSE(zenBar->isVisibleTo(window.get()));
     EXPECT_EQ(window->section(), MainWindow::Section::Library);
     EXPECT_TRUE(bar->isVisible()); // the time, over the page
@@ -360,7 +366,7 @@ TEST_F(TrainingTest, ZenModeShowsOnlyTheTrainingUntilEsc) {
     EXPECT_EQ(window->section(), MainWindow::Section::Library);
 
     // Self-study: nothing but its clock.
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
         click("trainingBarNext");
     }
     ASSERT_EQ(session->session()->part(), Part::SelfStudy);
@@ -397,7 +403,7 @@ TEST_F(TrainingTest, ZenModeShowsOnlyTheTrainingUntilEsc) {
 
 TEST_F(TrainingTest, ZenGoesToThePartYoureOnAndTheTimeIsAlwaysInSight) {
     click("trainingStart");
-    click("trainingBarNext"); // middlegame: the puzzles
+    click("trainingBarNext"); // tactics: the puzzles
     ASSERT_EQ(window->section(), MainWindow::Section::Puzzles);
     // The time over every page, in large figures.
     const auto* time = bar->findChild<QLabel*>(QStringLiteral("trainingBarTime"));

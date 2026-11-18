@@ -2,19 +2,23 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <vector>
 
 namespace kiebitz::training {
 
-/// The parts of a training plan, in the order a session runs them.
-enum class Part : std::uint8_t { Openings, Middlegame, Tactics, Endgames, SelfStudy };
-inline constexpr std::size_t kParts = 5;
-inline constexpr std::array kAllParts{Part::Openings, Part::Middlegame, Part::Tactics,
-                                      Part::Endgames, Part::SelfStudy};
+/// The parts of a training plan, in the order a session runs them. (There was a middlegame
+/// part, puzzles of that theme: it's in tactics now, and its time in the log counts as tactics.)
+enum class Part : std::uint8_t { Openings, Tactics, Endgames, SelfStudy };
+inline constexpr std::size_t kParts = 4;
+inline constexpr std::array kAllParts{Part::Openings, Part::Tactics, Part::Endgames,
+                                      Part::SelfStudy};
 
-/// A key for a part that stays the same (settings, the log): "openings", "middlegame", ...
+/// A key for a part that stays the same (settings, the log): "openings", "tactics", ...
 [[nodiscard]] std::string_view key(Part part) noexcept;
+/// The part a key names; "middlegame" (the old part) is tactics. Nothing for anything else.
+[[nodiscard]] std::optional<Part> partOf(std::string_view key) noexcept;
 
 /// One part of the plan: how long, and whether it's in it at all.
 struct Step {

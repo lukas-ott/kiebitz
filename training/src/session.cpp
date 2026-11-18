@@ -8,8 +8,6 @@ std::string_view key(Part part) noexcept {
     switch (part) {
     case Part::Openings:
         return "openings";
-    case Part::Middlegame:
-        return "middlegame";
     case Part::Tactics:
         return "tactics";
     case Part::Endgames:
@@ -20,10 +18,21 @@ std::string_view key(Part part) noexcept {
     return "selfstudy";
 }
 
+std::optional<Part> partOf(std::string_view key) noexcept {
+    if (key == "middlegame") {
+        return Part::Tactics; // the old part: puzzles too
+    }
+    for (const Part part : kAllParts) {
+        if (training::key(part) == key) {
+            return part;
+        }
+    }
+    return std::nullopt;
+}
+
 std::vector<Step> defaultPlan() {
     return {{Part::Openings, 15, true},
-            {Part::Middlegame, 10, true},
-            {Part::Tactics, 15, true},
+            {Part::Tactics, 25, true},
             {Part::Endgames, 10, true},
             {Part::SelfStudy, 10, true}};
 }

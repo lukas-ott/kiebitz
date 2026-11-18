@@ -36,8 +36,6 @@ QString description(Part part) {
     switch (part) {
     case Part::Openings:
         return TrainingView::tr("Pick a file to practise");
-    case Part::Middlegame:
-        return TrainingView::tr("Middlegame puzzles");
     case Part::Tactics:
         return TrainingView::tr("Puzzles around your rating");
     case Part::Endgames:

@@ -594,7 +594,7 @@ void MainWindow::buildPages() {
                 if (const GameDocument* d = doc();
                     d != nullptr && d->file && d->file->path == m_practiceOnOpen) {
                     m_practiceOnOpen.clear(); // it was open already
-                    startPractice(false, m_repertoirePanel->practiceDepth());
+                    startPractice(false, 0);  // the whole file: every line, to its end
                 }
             });
     // The gap check: where to look, and a gap clicked.
@@ -623,7 +623,7 @@ void MainWindow::buildPages() {
             goToPosition(position);
         } else if (!m_practiceOnOpen.isEmpty() && path == m_practiceOnOpen) {
             m_practiceOnOpen.clear();
-            startPractice(false, m_repertoirePanel->practiceDepth());
+            startPractice(false, 0); // the whole file: every line, to its end
         } else {
             goToFileStart(); // a repertoire file opens where it starts (after 1. e4 c6)
         }

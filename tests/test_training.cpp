@@ -10,11 +10,10 @@ namespace {
 using namespace kiebitz::training;
 
 TEST(TrainingSession, RunsThePartsThatAreOnInTheirOrder) {
-    // Listed out of order, one off, one at 0 minutes: Openings, then Tactics, then Self-study.
+    // Listed out of order, one at 0 minutes: Openings, then Tactics, then Self-study.
     Session session({{Part::SelfStudy, 5, true},
                      {Part::Tactics, 2, true},
                      {Part::Openings, 1, true},
-                     {Part::Middlegame, 10, false},
                      {Part::Endgames, 0, true}});
     ASSERT_EQ(session.count(), 3U);
     EXPECT_EQ(session.part(), Part::Openings);
@@ -72,9 +71,9 @@ TEST(TrainingLog, AddsUpTimePerDayAndPart) {
     ASSERT_TRUE(log.ok());
     const auto days = (*log)->days(100);
     ASSERT_EQ(days.size(), 2U);
-    EXPECT_EQ(days.at(100)[2], 900); // Tactics, third in kAllParts
+    EXPECT_EQ(days.at(100)[1], 900); // Tactics, second in kAllParts
     EXPECT_EQ(days.at(100)[0], 120);
-    EXPECT_EQ(days.at(101)[4], 60);
+    EXPECT_EQ(days.at(101)[3], 60);
     EXPECT_EQ((*log)->days(101).size(), 1U);
     EXPECT_EQ((*log)->trainedDays(), (std::set<Day>{100, 101}));
     (*log).reset();
@@ -82,3 +81,16 @@ TEST(TrainingLog, AddsUpTimePerDayAndPart) {
 }
 
 } // namespace
+
+TEST(TrainingSession, TheOldMiddlegamePartCountsAsTactics) {
+    EXPECT_EQ(partOf("tactics"), Part::Tactics);
+    EXPECT_EQ(partOf("middlegame"), Part::Tactics);
+    EXPECT_EQ(partOf("selfstudy"), Part::SelfStudy);
+    EXPECT_FALSE(partOf("nonsense").has_value());
+    // The default plan: still an hour, the middlegame's minutes in tactics.
+    int minutes = 0;
+    for (const Step& step : defaultPlan()) {
+        minutes += step.minutes;
+    }
+    EXPECT_EQ(minutes, 60);
+}

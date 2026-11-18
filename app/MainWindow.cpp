@@ -960,10 +960,6 @@ void MainWindow::showTrainingPart(training::Part part) {
         showSection(Section::Library);
         break;
     }
-    case training::Part::Middlegame:
-        m_puzzlesView->train(QStringLiteral("middlegame"));
-        showSection(Section::Puzzles);
-        break;
     case training::Part::Tactics:
         m_puzzlesView->train({});
         showSection(Section::Puzzles);

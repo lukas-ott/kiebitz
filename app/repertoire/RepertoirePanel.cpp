@@ -201,7 +201,7 @@ RepertoirePanel::RepertoirePanel(RepertoireStore& store, const AppStyle& style, 
     m_practiceAll->setProperty("role", "primary");
     m_practiceAll->setFocusPolicy(Qt::NoFocus);
     connect(m_practiceAll, &QPushButton::clicked, this,
-            [this] { emit practiceRequested(false, practiceDepth()); });
+            [this] { emit practiceRequested(false, 0); }); // the whole file: every line, to its end
     m_practiceHere = new QPushButton;
     m_practiceHere->setObjectName(QStringLiteral("practiceHere"));
     m_practiceHere->setProperty("role", "secondary");
@@ -297,7 +297,7 @@ void RepertoirePanel::refreshPractice() {
         return;
     }
     // The whole file from where it starts (the flag in the moves); From Here may be earlier.
-    const repertoire::Drill all(*m_game, m_side, m_start, practiceDepth(), 0);
+    const repertoire::Drill all(*m_game, m_side, m_start, 0, 0); // whole file: no limit
     const repertoire::Drill here(*m_game, m_side, m_current, practiceDepth(), 0);
     const QLocale locale;
     m_practiceCount->setText(
