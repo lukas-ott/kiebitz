@@ -171,6 +171,9 @@ TEST(FileKind, AFileWithoutOneTakesItsTopFolders) {
     using kiebitz::library::kindOf;
     const std::vector<GameEntry> plain{{0, 1, {{"White", "Carlsen"}}}};
     const std::vector<GameEntry> marked{{0, 1, {{"FileType", "Game"}}}};
+    EXPECT_EQ(kindOf(plain, "Openings/Black/Benko/Main.pgn"), FileKind::Repertoire);
+    EXPECT_EQ(kindOf(plain, "Åpninger/Svart/Benko.pgn"), FileKind::Repertoire);
+    EXPECT_EQ(folderSide("Openings/Black/Benko/Main.pgn"), Color::Black);
     EXPECT_EQ(kindOf(plain, "Repertoires/Benko/Main.pgn"), FileKind::Repertoire);
     EXPECT_EQ(kindOf(plain, "repertoires/Main.pgn"), FileKind::Repertoire); // any case
     EXPECT_EQ(kindOf(plain, "Puzzles/Tactics.pgn"), FileKind::Puzzle);

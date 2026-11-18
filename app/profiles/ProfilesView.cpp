@@ -1619,9 +1619,8 @@ void ProfilesView::showTheory() {
         return;
     }
     if ((white == nullptr || white->tree.empty()) && (black == nullptr || black->tree.empty())) {
-        m_theorySummary->setText(
-            tr("No repertoire yet. Set a file's type to Repertoire (right-click "
-               "it in the Library) to check these games against it."));
+        m_theorySummary->setText(tr("No repertoire yet. Set a file's type to Opening (right-click "
+                                    "it in the Library) to check these games against it."));
         emit theoryChecked();
         return;
     }

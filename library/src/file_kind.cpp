@@ -22,7 +22,10 @@ bool sameText(std::string_view a, std::string_view b) noexcept {
     return true;
 }
 
-constexpr std::array<std::pair<std::string_view, FileKind>, 12> kFolders{{
+constexpr std::array<std::pair<std::string_view, FileKind>, 15> kFolders{{
+    {"Openings", FileKind::Repertoire}, // opening files, in your repertoire or not
+    {"Eröffnungen", FileKind::Repertoire},
+    {"Åpninger", FileKind::Repertoire},
     {"Repertoires", FileKind::Repertoire},
     {"Repertoire", FileKind::Repertoire},
     {"Repertoarer", FileKind::Repertoire}, // Norwegian

@@ -173,6 +173,8 @@ void MainWindow::buildMenus() {
         m_settingsView->showSection(tr("Keyboard"));
     });
     keysAction->setObjectName(QStringLiteral("helpKeyboard"));
+    helpMenu->addAction(tr("&Intro Tour"), this, &MainWindow::startTour)
+        ->setObjectName(QStringLiteral("helpTour"));
     helpMenu->addSeparator();
     helpMenu->addAction(tr("Kiebitz on &GitHub"), this, [] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/lukas-ott/kiebitz")));

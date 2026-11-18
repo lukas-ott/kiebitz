@@ -82,6 +82,12 @@ int main(int argc, char* argv[]) {
         });
     }
 
+    // The intro tour, the first time only; a moment after the window is up, never in the way
+    // of a startup measurement.
+    if (!envFlag("KIEBITZ_STARTUP_EXIT")) {
+        QTimer::singleShot(400, &window, [&window] { window.startTourOnce(); });
+    }
+
     const int result = QApplication::exec();
     if (restart) { // the language changed: the same app again, which reads it at its start
         QProcess::startDetached(QApplication::applicationFilePath(),

@@ -47,12 +47,12 @@
         <translation>Die Datei hat keine Partie %1.</translation>
     </message>
     <message>
-        <source>Repertoire for White</source>
-        <translation>Repertoire für Weiß</translation>
+        <source>Opening for White</source>
+        <translation>Eröffnung für Weiß</translation>
     </message>
     <message>
-        <source>Repertoire for Black</source>
-        <translation>Repertoire für Schwarz</translation>
+        <source>Opening for Black</source>
+        <translation>Eröffnung für Schwarz</translation>
     </message>
     <message>
         <source>Tournament</source>
@@ -1261,8 +1261,36 @@
         <translation>Umbenennen nicht möglich</translation>
     </message>
     <message>
+        <source>Openings</source>
+        <translation>Eröffnungen</translation>
+    </message>
+    <message>
+        <source>White openings</source>
+        <translation>Eröffnungen für Weiß</translation>
+    </message>
+    <message>
+        <source>Black openings</source>
+        <translation>Eröffnungen für Schwarz</translation>
+    </message>
+    <message>
         <source>Open</source>
         <translation>Öffnen</translation>
+    </message>
+    <message>
+        <source>not in your repertoire</source>
+        <translation>nicht in deinem Repertoire</translation>
+    </message>
+    <message>
+        <source>Not in your repertoire: practice, the theory check and the Explorer leave it out</source>
+        <translation>Nicht in deinem Repertoire: Üben, die Theorieprüfung und der Explorer lassen es weg</translation>
+    </message>
+    <message>
+        <source>1 opening file</source>
+        <translation>1 Eröffnungsdatei</translation>
+    </message>
+    <message>
+        <source>%1 opening files</source>
+        <translation>%1 Eröffnungsdateien</translation>
     </message>
     <message>
         <source>Rename</source>
@@ -1285,14 +1313,6 @@
         <translation>Partie</translation>
     </message>
     <message>
-        <source>Repertoire for White</source>
-        <translation>Repertoire für Weiß</translation>
-    </message>
-    <message>
-        <source>Repertoire for Black</source>
-        <translation>Repertoire für Schwarz</translation>
-    </message>
-    <message>
         <source>Tournament</source>
         <translation>Turnier</translation>
     </message>
@@ -1305,14 +1325,6 @@
         <translation>Andere</translation>
     </message>
     <message>
-        <source>Active Repertoire</source>
-        <translation>Aktives Repertoire</translation>
-    </message>
-    <message>
-        <source>Practice, the theory check and the Explorer use the repertoires you play now; the others stay in the Library</source>
-        <translation>Üben, Theorie-Check und Explorer nutzen die Repertoires, die du gerade spielst; die anderen bleiben in der Bibliothek</translation>
-    </message>
-    <message>
         <source>Search files and games</source>
         <translation>Dateien und Partien suchen</translation>
     </message>
@@ -1323,18 +1335,6 @@
     <message>
         <source>Games</source>
         <translation>Partien</translation>
-    </message>
-    <message>
-        <source>Repertoires</source>
-        <translation>Repertoires</translation>
-    </message>
-    <message>
-        <source>White repertoires</source>
-        <translation>Weiß-Repertoires</translation>
-    </message>
-    <message>
-        <source>Black repertoires</source>
-        <translation>Schwarz-Repertoires</translation>
     </message>
     <message>
         <source>Tournaments</source>
@@ -1449,28 +1449,12 @@
         <translation>wird gelesen …</translation>
     </message>
     <message>
-        <source>not active</source>
-        <translation>nicht aktiv</translation>
-    </message>
-    <message>
-        <source>Not an active repertoire: practice, the theory check and the Explorer leave it out</source>
-        <translation>Kein aktives Repertoire: Üben, Theorie-Check und Explorer lassen es aus</translation>
-    </message>
-    <message>
         <source>1 folder</source>
         <translation>1 Ordner</translation>
     </message>
     <message>
         <source>%1 folders</source>
         <translation>%1 Ordner</translation>
-    </message>
-    <message>
-        <source>1 repertoire</source>
-        <translation>1 Repertoire</translation>
-    </message>
-    <message>
-        <source>%1 repertoires</source>
-        <translation>%1 Repertoires</translation>
     </message>
     <message>
         <source>1 game file</source>
@@ -1575,6 +1559,22 @@
     <message>
         <source>New Folder</source>
         <translation>Neuer Ordner</translation>
+    </message>
+    <message>
+        <source>Opening for White</source>
+        <translation>Eröffnung für Weiß</translation>
+    </message>
+    <message>
+        <source>Opening for Black</source>
+        <translation>Eröffnung für Schwarz</translation>
+    </message>
+    <message>
+        <source>In Repertoire</source>
+        <translation>Im Repertoire</translation>
+    </message>
+    <message>
+        <source>Your repertoire: the openings you play now. Practice, the theory check and the Explorer use them; the others stay in the Library</source>
+        <translation>Dein Repertoire: die Eröffnungen, die du gerade spielst. Üben, die Theorieprüfung und der Explorer nutzen sie; die anderen bleiben in der Bibliothek</translation>
     </message>
     <message>
         <source>A folder name can&apos;t contain “/” or start with a dot.</source>
@@ -1855,6 +1855,10 @@
     <message>
         <source>&amp;Keyboard Shortcuts</source>
         <translation>&amp;Tastaturkurzbefehle</translation>
+    </message>
+    <message>
+        <source>&amp;Intro Tour</source>
+        <translation>&amp;Einführung</translation>
     </message>
     <message>
         <source>Kiebitz on &amp;GitHub</source>
@@ -2183,6 +2187,66 @@
     <message>
         <source>Restart Now</source>
         <translation>Jetzt neu starten</translation>
+    </message>
+    <message>
+        <source>Welcome to Kiebitz</source>
+        <translation>Willkommen bei Kiebitz</translation>
+    </message>
+    <message>
+        <source>Kiebitz is for opening preparation: build your &lt;b&gt;repertoire&lt;/b&gt; in PGN files, see &lt;b&gt;where your games left it&lt;/b&gt;, &lt;b&gt;prepare for your next opponent&lt;/b&gt; from their games, and &lt;b&gt;train&lt;/b&gt; the lines and positions you missed.&lt;br&gt;&lt;br&gt;This tour shows where each part lives. It is how Kiebitz was meant to be used: a suggestion, not a rule.</source>
+        <translation>Kiebitz ist für die Eröffnungsvorbereitung: Baue dein &lt;b&gt;Repertoire&lt;/b&gt; in PGN-Dateien auf, sieh, &lt;b&gt;wo deine Partien es verlassen haben&lt;/b&gt;, &lt;b&gt;bereite dich auf deinen nächsten Gegner vor&lt;/b&gt; anhand seiner Partien und &lt;b&gt;übe&lt;/b&gt; die Varianten und Stellungen, die dir gefehlt haben.&lt;br&gt;&lt;br&gt;Diese Tour zeigt, wo was zu finden ist. So war Kiebitz gedacht: ein Vorschlag, keine Regel.</translation>
+    </message>
+    <message>
+        <source>Your Library</source>
+        <translation>Deine Bibliothek</translation>
+    </message>
+    <message>
+        <source>Create These Folders</source>
+        <translation>Diese Ordner anlegen</translation>
+    </message>
+    <message>
+        <source>Folders created</source>
+        <translation>Ordner angelegt</translation>
+    </message>
+    <message>
+        <source>Every PGN file in your Library folder, %1. A layout that works well:&lt;br&gt;• &lt;b&gt;Openings/White&lt;/b&gt;, &lt;b&gt;Openings/Black&lt;/b&gt;: your opening files, a folder per repertoire if you like&lt;br&gt;• &lt;b&gt;Games&lt;/b&gt;: your own games and model games&lt;br&gt;• &lt;b&gt;Puzzles&lt;/b&gt;: puzzle files&lt;br&gt;&lt;br&gt;Files there take their type and side from the folder.</source>
+        <translation>Jede PGN-Datei in deinem Bibliotheksordner, %1. Eine Aufteilung, die sich bewährt:&lt;br&gt;• &lt;b&gt;Openings/White&lt;/b&gt;, &lt;b&gt;Openings/Black&lt;/b&gt;: deine Eröffnungsdateien, wenn du magst ein Ordner pro Repertoire&lt;br&gt;• &lt;b&gt;Games&lt;/b&gt;: deine eigenen Partien und Musterpartien&lt;br&gt;• &lt;b&gt;Puzzles&lt;/b&gt;: Aufgabendateien&lt;br&gt;&lt;br&gt;Dateien dort bekommen Typ und Seite von ihrem Ordner.</translation>
+    </message>
+    <message>
+        <source>&lt;i&gt;Shown here: a sample Library, only during the tour.&lt;/i&gt;</source>
+        <translation>&lt;i&gt;Hier zu sehen: eine Beispiel-Bibliothek, nur während der Tour.&lt;/i&gt;</translation>
+    </message>
+    <message>
+        <source>Openings and your repertoire</source>
+        <translation>Eröffnungen und dein Repertoire</translation>
+    </message>
+    <message>
+        <source>Every opening file is an &lt;b&gt;Opening&lt;/b&gt;. Your &lt;b&gt;repertoire&lt;/b&gt; is the openings you play now: right-click a folder or a file and turn &lt;b&gt;In Repertoire&lt;/b&gt; on or off. The others stay in the Library, dimmed; practice, the theory check and the Explorer leave them out.&lt;br&gt;&lt;br&gt;Right-click a file to set its type by hand.</source>
+        <translation>Jede Eröffnungsdatei ist eine &lt;b&gt;Eröffnung&lt;/b&gt;. Dein &lt;b&gt;Repertoire&lt;/b&gt; sind die Eröffnungen, die du gerade spielst: Klicke mit rechts auf einen Ordner oder eine Datei und schalte &lt;b&gt;Im Repertoire&lt;/b&gt; an oder aus. Die anderen bleiben abgedunkelt in der Bibliothek; Üben, die Theorieprüfung und der Explorer lassen sie weg.&lt;br&gt;&lt;br&gt;Klicke mit rechts auf eine Datei, um ihren Typ selbst festzulegen.</translation>
+    </message>
+    <message>
+        <source>Studying a line</source>
+        <translation>Eine Variante studieren</translation>
+    </message>
+    <message>
+        <source>A file you open shows on the Board. Play moves to add them; the Explorer shows what is played from here.&lt;br&gt;&lt;br&gt;A &lt;b&gt;⇄&lt;/b&gt; after a move means its position also comes up by another move order: click it, or press T, to go there.</source>
+        <translation>Eine Datei, die du öffnest, erscheint auf dem Brett. Spiele Züge, um sie hinzuzufügen; der Explorer zeigt, was von hier aus gespielt wird.&lt;br&gt;&lt;br&gt;Ein &lt;b&gt;⇄&lt;/b&gt; nach einem Zug heißt, dass seine Stellung auch über eine andere Zugfolge vorkommt: klicke darauf oder drücke T, um dorthin zu gehen.</translation>
+    </message>
+    <message>
+        <source>You and your opponents</source>
+        <translation>Du und deine Gegner</translation>
+    </message>
+    <message>
+        <source>Your profile gets your games from Lichess and chess.com when you sync it; your over-the-board games you add yourself (Add PGN…, Paste Games). Its &lt;b&gt;Repertoire&lt;/b&gt; tab shows where each game left your book and, after a sync, which games are new.&lt;br&gt;&lt;br&gt;Add a profile for an opponent: its &lt;b&gt;Prepare&lt;/b&gt; tab shows their lines next to yours, and where your repertoire has gaps.</source>
+        <translation>Dein Profil holt deine Partien von Lichess und chess.com, wenn du es abgleichst; deine Turnierpartien am Brett fügst du selbst hinzu (PGN hinzufügen …, Partien einfügen). Sein Reiter &lt;b&gt;Repertoire&lt;/b&gt; zeigt, wo jede Partie dein Repertoire verlassen hat, und nach einem Abgleich, welche Partien neu sind.&lt;br&gt;&lt;br&gt;Lege ein Profil für einen Gegner an: Sein Reiter &lt;b&gt;Vorbereiten&lt;/b&gt; zeigt seine Varianten neben deinen und wo dein Repertoire Lücken hat.</translation>
+    </message>
+    <message>
+        <source>A little every day</source>
+        <translation>Jeden Tag ein bisschen</translation>
+    </message>
+    <message>
+        <source>Training runs one plan in order: your repertoire lines, then puzzles by theme. It keeps your minutes and your streak.&lt;br&gt;&lt;br&gt;Take this tour again any time from Help → Intro Tour.</source>
+        <translation>Das Training geht einen Plan der Reihe nach durch: deine Repertoirevarianten, dann Aufgaben nach Thema. Es zählt deine Minuten und deine Serie.&lt;br&gt;&lt;br&gt;Diese Tour findest du jederzeit wieder unter Hilfe → Einführung.</translation>
     </message>
 </context>
 <context>
@@ -3158,6 +3222,10 @@
         <translation>Dein Ergebnis: %1</translation>
     </message>
     <message>
+        <source>No repertoire yet. Set a file&apos;s type to Opening (right-click it in the Library) to check these games against it.</source>
+        <translation>Noch kein Repertoire. Setze den Typ einer Datei auf Eröffnung (Rechtsklick in der Bibliothek), um diese Partien damit zu vergleichen.</translation>
+    </message>
+    <message>
         <source>Repertoire · %1 new</source>
         <translation>Repertoire · %1 neu</translation>
     </message>
@@ -3220,10 +3288,6 @@
     <message>
         <source>No games here yet.</source>
         <translation>Hier sind noch keine Partien.</translation>
-    </message>
-    <message>
-        <source>No repertoire yet. Set a file&apos;s type to Repertoire (right-click it in the Library) to check these games against it.</source>
-        <translation>Noch kein Repertoire. Stelle die Art einer Datei auf Repertoire (Rechtsklick in der Bibliothek), um diese Partien damit zu vergleichen.</translation>
     </message>
     <message>
         <source>Reading your repertoire…</source>
@@ -3591,8 +3655,8 @@
         <translation>Noch kein Repertoire</translation>
     </message>
     <message>
-        <source>Set a file&apos;s type to Repertoire (right-click it in the Library), and games are checked against it here.</source>
-        <translation>Stelle die Art einer Datei auf Repertoire (Rechtsklick in der Bibliothek), dann werden die Partien hier damit verglichen.</translation>
+        <source>Set a file&apos;s type to Opening (right-click it in the Library), and games are checked against it here.</source>
+        <translation>Setze den Typ einer Datei auf Eröffnung (Rechtsklick in der Bibliothek), dann werden Partien hier damit verglichen.</translation>
     </message>
     <message>
         <source>WHITE REPERTOIRE</source>
@@ -4211,6 +4275,33 @@
     <message>
         <source>Depends on the 50-move rule: the tablebase can&apos;t say for sure</source>
         <translation>Hängt von der 50-Züge-Regel ab: Die Endspieldatenbank kann es nicht sicher sagen</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::Tour</name>
+    <message>
+        <source>Skip Tour</source>
+        <translation>Tour überspringen</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation>Zurück</translation>
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation>%1 von %2</translation>
+    </message>
+    <message>
+        <source>Show Me</source>
+        <translation>Zeig mal</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Fertig</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Weiter</translation>
     </message>
 </context>
 <context>

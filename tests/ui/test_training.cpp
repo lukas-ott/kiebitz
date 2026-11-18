@@ -185,7 +185,7 @@ TEST_F(TrainingTest, EachPartOpensItsPage) {
     // middlegame, tactics and endgame puzzles, then self-study on the Training page.
     EXPECT_EQ(window->section(), MainWindow::Section::Library);
     EXPECT_EQ(window->findChild<QComboBox*>(QStringLiteral("libraryTypeFilter"))->currentText(),
-              QStringLiteral("Repertoires"));
+              QStringLiteral("Openings"));
     for (const auto& [part, section] :
          {std::pair{Part::Middlegame, MainWindow::Section::Puzzles},
           std::pair{Part::Tactics, MainWindow::Section::Puzzles},

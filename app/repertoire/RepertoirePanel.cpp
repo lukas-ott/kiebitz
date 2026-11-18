@@ -81,7 +81,7 @@ RepertoirePanel::RepertoirePanel(RepertoireStore& store, const AppStyle& style, 
     auto* noneLayout = new QVBoxLayout(none);
     noneLayout->setContentsMargins(0, 0, 0, 0);
     noneLayout->addWidget(label(tr("No repertoire yet"), "emptyTitle"));
-    noneLayout->addWidget(label(tr("Set a file's type to Repertoire (right-click it in the "
+    noneLayout->addWidget(label(tr("Set a file's type to Opening (right-click it in the "
                                    "Library), and games are checked against it here."),
                                 "emptyHint"));
     noneLayout->addStretch();

@@ -672,7 +672,7 @@ TEST_F(DocumentsTest, FileTypesShowInTheLibraryAndFilterIt) {
         icons.insert(pixels);
     }
     EXPECT_EQ(icons.size(), 3);
-    EXPECT_TRUE(items[QStringLiteral("najdorf")]->toolTip(0).endsWith(u"Repertoire for Black"));
+    EXPECT_TRUE(items[QStringLiteral("najdorf")]->toolTip(0).endsWith(u"Opening for Black"));
 
     // The type filter: only repertoires.
     auto* filter = window.findChild<QComboBox*>(QStringLiteral("libraryTypeFilter"));
@@ -744,7 +744,7 @@ TEST_F(DocumentsTest, FileTypesShowInTheLibraryAndFilterIt) {
         QMenu menu; // how menus look: a highlighted row, a tick on the chosen one
         menu.addAction(QStringLiteral("Open"));
         menu.addSeparator();
-        auto* chosen = menu.addAction(QStringLiteral("Repertoire for Black"));
+        auto* chosen = menu.addAction(QStringLiteral("Opening for Black"));
         chosen->setCheckable(true);
         chosen->setChecked(true);
         menu.addAction(QStringLiteral("Tournament"))->setCheckable(true);
@@ -967,7 +967,7 @@ TEST_F(DocumentsTest, OnlyActiveRepertoiresAreCheckedAgainst) {
     const auto added = store.addLine(core::Color::White, c4, true);
     EXPECT_TRUE(added.path.endsWith(u"Open Games.pgn")) << added.path.toStdString();
 
-    // The Library shows it: the folder dimmed, its files "not active".
+    // The Library shows it: the folder dimmed, its files "not in your repertoire".
     auto* files = window.findChild<QTreeWidget*>(QStringLiteral("libraryFiles"));
     ASSERT_NE(files, nullptr);
     const auto item = [&](const QString& text) -> QTreeWidgetItem* {
@@ -978,7 +978,8 @@ TEST_F(DocumentsTest, OnlyActiveRepertoiresAreCheckedAgainst) {
     const QColor dimmed = style.colors().dimmed;
     EXPECT_EQ(item(QStringLiteral("Before"))->foreground(0).color(), dimmed);
     EXPECT_NE(item(QStringLiteral("Now"))->foreground(0).color(), dimmed);
-    EXPECT_TRUE(item(QStringLiteral("Queens Gambit"))->toolTip(0).endsWith(u"not active"));
+    EXPECT_TRUE(
+        item(QStringLiteral("Queens Gambit"))->toolTip(0).endsWith(u"not in your repertoire"));
 
     // A folder inside can be played again; the setting is kept, and follows a rename.
     store.setActive(QStringLiteral("Repertoires/Before/Sub"), true);

@@ -105,8 +105,8 @@ IconKind iconOf(FileKind kind) {
 QString typeName(FileKind kind, core::Color side) {
     switch (kind) {
     case FileKind::Repertoire:
-        return side == core::Color::White ? QObject::tr("Repertoire for White")
-                                          : QObject::tr("Repertoire for Black");
+        return side == core::Color::White ? QObject::tr("Opening for White")
+                                          : QObject::tr("Opening for Black");
     case FileKind::Tournament:
         return QObject::tr("Tournament");
     case FileKind::Puzzle:
@@ -536,9 +536,9 @@ LibraryView::LibraryView(Library& library, RepertoireStore& store, const AppStyl
     m_typeFilter->setFocusPolicy(Qt::NoFocus);
     m_typeFilter->addItem(tr("All types"), -1);
     m_typeFilter->addItem(tr("Games"), static_cast<int>(FileKind::Game));
-    m_typeFilter->addItem(tr("Repertoires"), static_cast<int>(FileKind::Repertoire));
-    m_typeFilter->addItem(tr("White repertoires"), kWhiteRepertoires);
-    m_typeFilter->addItem(tr("Black repertoires"), kBlackRepertoires);
+    m_typeFilter->addItem(tr("Openings"), static_cast<int>(FileKind::Repertoire));
+    m_typeFilter->addItem(tr("White openings"), kWhiteRepertoires);
+    m_typeFilter->addItem(tr("Black openings"), kBlackRepertoires);
     m_typeFilter->addItem(tr("Tournaments"), static_cast<int>(FileKind::Tournament));
     m_typeFilter->addItem(tr("Puzzles"), static_cast<int>(FileKind::Puzzle));
     m_typeFilter->addItem(tr("Other"), static_cast<int>(FileKind::Other));
@@ -922,6 +922,7 @@ LibraryView::LibraryView(Library& library, RepertoireStore& store, const AppStyl
     auto* empty = new QWidget;
     auto* emptyOuter = new QVBoxLayout(empty);
     auto* emptyCard = card();
+    emptyCard->setObjectName(QStringLiteral("libraryEmpty"));
     emptyCard->setFixedWidth(460); // a fixed width lets the wrapped text work out its height
     auto* emptyBox = new QVBoxLayout(emptyCard);
     emptyBox->setContentsMargins(28, 26, 28, 26);
@@ -1126,11 +1127,11 @@ void LibraryView::showActive() {
             QString tip = item->data(0, kNameRole).toString() + QStringLiteral("  ·  ") +
                           typeName(FileKind::Repertoire, side);
             if (inactive) {
-                tip += QStringLiteral("  ·  ") + tr("not active");
+                tip += QStringLiteral("  ·  ") + tr("not in your repertoire");
             }
             item->setToolTip(0, tip);
         } else if (!file) {
-            item->setToolTip(0, inactive ? tr("Not an active repertoire: practice, the theory "
+            item->setToolTip(0, inactive ? tr("Not in your repertoire: practice, the theory "
                                               "check and the Explorer leave it out")
                                          : QString());
         }
@@ -1397,7 +1398,8 @@ void LibraryView::showFolder(const QTreeWidgetItem& item) {
     count(item);
     QStringList inside;
     if (repertoires > 0) {
-        inside << (repertoires == 1 ? tr("1 repertoire") : tr("%1 repertoires").arg(repertoires));
+        inside << (repertoires == 1 ? tr("1 opening file")
+                                    : tr("%1 opening files").arg(repertoires));
     }
     if (gameFiles > 0) {
         inside << (gameFiles == 1 ? tr("1 game file") : tr("%1 game files").arg(gameFiles));
@@ -1832,33 +1834,32 @@ void LibraryView::fillContextMenu(QMenu& menu, QTreeWidgetItem* item) {
         action->setChecked(current == static_cast<int>(kind) && (side < 0 || side == currentSide));
     };
     add(tr("Game"), FileKind::Game, -1);
-    add(tr("Repertoire for White"), FileKind::Repertoire, 0);
-    add(tr("Repertoire for Black"), FileKind::Repertoire, 1);
+    add(tr("Opening for White"), FileKind::Repertoire, 0);
+    add(tr("Opening for Black"), FileKind::Repertoire, 1);
     add(tr("Tournament"), FileKind::Tournament, -1);
     add(tr("Puzzles"), FileKind::Puzzle, -1);
     add(tr("Other"), FileKind::Other, -1);
-    // A folder with repertoire files: a repertoire, played now or not.
-    bool repertoires = false;
+    // An opening file, or a folder of them: in your repertoire (played now) or not.
+    bool openings = false;
     const std::function<void(QTreeWidgetItem*)> look = [&](QTreeWidgetItem* node) {
-        repertoires = repertoires || (node->data(0, kKindRole).toInt() == kFile &&
-                                      node->data(0, kFileKindRole).toInt() ==
-                                          static_cast<int>(FileKind::Repertoire));
-        for (int i = 0; i < node->childCount() && !repertoires; ++i) {
+        openings = openings ||
+                   (node->data(0, kKindRole).toInt() == kFile &&
+                    node->data(0, kFileKindRole).toInt() == static_cast<int>(FileKind::Repertoire));
+        for (int i = 0; i < node->childCount() && !openings; ++i) {
             look(node->child(i));
         }
     };
-    if (!isFile) {
-        look(item);
-    }
-    if (repertoires) {
-        const QString folder = item->data(0, kKeyRole).toString();
-        auto* active = menu.addAction(tr("Active Repertoire"), this,
-                                      [this, folder](bool on) { m_store.setActive(folder, on); });
+    look(item);
+    if (openings) {
+        const QString key = isFile ? QDir(m_library.folder()).relativeFilePath(itemPath)
+                                   : item->data(0, kKeyRole).toString();
+        auto* active = menu.addAction(tr("In Repertoire"), this,
+                                      [this, key](bool on) { m_store.setActive(key, on); });
         active->setObjectName(QStringLiteral("activeRepertoire"));
         active->setCheckable(true);
-        active->setChecked(m_store.isActive(folder));
-        active->setToolTip(tr("Practice, the theory check and the Explorer use the "
-                              "repertoires you play now; the others stay in the Library"));
+        active->setChecked(m_store.isActive(key));
+        active->setToolTip(tr("Your repertoire: the openings you play now. Practice, the theory "
+                              "check and the Explorer use them; the others stay in the Library"));
     }
 }
 
@@ -1899,8 +1900,8 @@ QString LibraryView::moveToFolder(const QStringList& paths, const QString& folde
             return tr("“%1” couldn't be moved.").arg(info.fileName());
         }
         emit pathMoved(from, to);
+        m_store.folderMoved(root.relativeFilePath(from), root.relativeFilePath(to));
         if (info.isDir()) {
-            m_store.folderMoved(root.relativeFilePath(from), root.relativeFilePath(to));
             m_selectAfterScan = root.relativeFilePath(to); // keep the folder in view
         }
     }
@@ -1923,10 +1924,8 @@ QString LibraryView::rename(const QString& path, const QString& name) {
         return tr("“%1” couldn't be renamed.").arg(info.fileName());
     }
     emit pathMoved(path, to);
-    if (info.isDir()) {
-        const QDir root(m_library.folder());
-        m_store.folderMoved(root.relativeFilePath(path), root.relativeFilePath(to));
-    }
+    const QDir root(m_library.folder());
+    m_store.folderMoved(root.relativeFilePath(path), root.relativeFilePath(to));
     m_selectAfterScan = info.isDir() ? QDir(m_library.folder()).relativeFilePath(to) : to;
     m_library.rescan();
     return {};

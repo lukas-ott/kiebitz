@@ -113,7 +113,10 @@ std::optional<bool> RepertoireStore::activeSetting(const QString& folder) const 
 }
 
 void RepertoireStore::setActive(const QString& folder, bool active) {
-    m_active.erase(folder);
+    // What's inside follows: its own settings go.
+    std::erase_if(m_active, [&folder](const auto& entry) {
+        return entry.first == folder || entry.first.startsWith(folder + u'/');
+    });
     // The same as the folder around it says: no setting of its own needed.
     const qsizetype slash = folder.lastIndexOf(u'/');
     if (isActive(slash < 0 ? QString() : folder.left(slash)) != active) {

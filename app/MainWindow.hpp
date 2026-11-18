@@ -92,6 +92,10 @@ public:
     [[nodiscard]] EngineRegistry& engines() { return *m_engineRegistry; }
     void showSection(Section section);
     [[nodiscard]] Section section() const noexcept { return m_section; }
+    /// The intro tour: where everything is, and how Kiebitz is meant to be used. Help → Intro
+    /// Tour starts it; startTourOnce() only the first time (main() calls it after showing).
+    void startTour();
+    void startTourOnce();
     /// The game of the tab shown, or null (tests).
     [[nodiscard]] const GameDocument* document() const { return doc(); }
 

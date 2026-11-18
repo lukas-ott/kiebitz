@@ -1,0 +1,11 @@
+[Event "Italian Game"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+
+{A sample opening file: the Italian Game for White.} 1. e4 e5 2. Nf3 (2. Bc4 Nf6
+3. d3 Nc6 4. Nf3 {The same position as after 4. d3 below, by another move order.})
+2... Nc6 3. Bc4 Bc5 (3... Nf6 4. d3) 4. c3 Nf6 5. d3 d6 6. O-O O-O *

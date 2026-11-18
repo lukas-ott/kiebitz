@@ -10,6 +10,7 @@ qt_add_library(kiebitz_ui STATIC
     MainWindow.hpp
     MainWindowKeys.hpp
     MainWindowSetup.cpp
+    MainWindowTour.cpp
     Migration.cpp
     Migration.hpp
     board/BoardGeometry.cpp
@@ -160,6 +161,8 @@ qt_add_library(kiebitz_ui STATIC
     widgets/SortCycle.hpp
     widgets/SortableItem.hpp
     widgets/Stepper.cpp
+    widgets/Tour.cpp
+    widgets/Tour.hpp
     widgets/Toggle.cpp
     widgets/Toggle.hpp
     notify/Notifications.hpp
@@ -197,6 +200,14 @@ qt_add_resources(kiebitz_ui "openings"
     PREFIX "/openings"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources/openings"
     FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/openings/openings.tsv")
+
+# The intro tour's sample Library (shown while the tour runs on an empty Library; never copied
+# into yours).
+file(GLOB_RECURSE tour_files CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/tour/*.pgn")
+qt_add_resources(kiebitz_ui "tour"
+    PREFIX "/tour"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources/tour"
+    FILES ${tour_files})
 
 # The board's sounds: Lichess's sound sets by Enigmahack (AGPLv3+, see resources/sounds/LICENSE.md),
 # as WAV files.

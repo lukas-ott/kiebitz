@@ -1,7 +1,11 @@
 #include "MainWindow.hpp"
 #include "board/BoardView.hpp"
+#include "document/GameDocument.hpp"
+#include "library/Library.hpp"
 #include "notation/NotationView.hpp"
+#include "repertoire/RepertoireStore.hpp"
 #include "style/AppStyle.hpp"
+#include "widgets/Tour.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -10,6 +14,7 @@
 #include <QMenuBar>
 #include <QPushButton>
 #include <QSettings>
+#include <QSignalSpy>
 #include <QTabBar>
 #include <QTest>
 #include <QToolButton>
@@ -263,6 +268,134 @@ TEST_F(MainWindowTest, TJumpsToTheNextTransposition) {
         QTest::qWait(100);
         list->grab().save(QDir(dir).filePath(QStringLiteral("notation-transpositions.png")));
     }
+}
+
+TEST_F(MainWindowTest, TheIntroTourShowsEachPartAndCanBeSkipped) {
+    window.resize(1200, 760);
+    play("e4");
+    const std::string afterE4 = fen();
+    window.startTourOnce(); // the first time: it shows
+    auto* tour = window.findChild<kiebitz::app::Tour*>();
+    ASSERT_NE(tour, nullptr);
+    ASSERT_TRUE(tour->isVisible());
+    const auto click = [&](const char* name) {
+        auto* button = tour->findChild<QPushButton*>(QString::fromLatin1(name));
+        ASSERT_NE(button, nullptr) << name;
+        ASSERT_TRUE(button->isVisible()) << name;
+        QTest::mouseClick(button, Qt::LeftButton);
+    };
+    const auto snapshot = [&](int step) {
+        if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+            QTest::qWait(150);
+            window.grab().save(QDir(dir).filePath(QStringLiteral("tour-%1.png").arg(step)));
+        }
+    };
+    // The welcome: in the middle, nothing singled out; no Back yet.
+    EXPECT_EQ(tour->step(), 0);
+    EXPECT_TRUE(tour->spotlight().isEmpty());
+    EXPECT_FALSE(tour->findChild<QPushButton*>(QStringLiteral("tourBack"))->isVisible());
+    // The window's keys wait while it is up: ← doesn't take the move back.
+    QTest::keyClick(tour, Qt::Key_Left);
+    EXPECT_EQ(fen(), afterE4);
+    snapshot(0);
+
+    // The Library, its files singled out, the card beside them.
+    const QString yours = window.library().folder();
+    click("tourNext");
+    EXPECT_EQ(tour->step(), 1);
+    EXPECT_EQ(window.section(), MainWindow::Section::Library);
+    // A new Library is empty: the tour shows a sample one meanwhile, its files singled out.
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            const auto* files = window.findChild<QWidget*>(QStringLiteral("libraryFiles"));
+            const auto& all = window.library().files();
+            return files->isVisible() && all.size() == 4 &&
+                   std::all_of(all.begin(), all.end(), [](const auto& file) {
+                       return file.pgn != nullptr;
+                   }); // read, not only found
+        },
+        5000));
+    EXPECT_NE(window.library().folder(), yours);
+    const auto* files = window.findChild<QWidget*>(QStringLiteral("libraryFiles"));
+    const QRect filesRect(files->mapTo(&window, QPoint(0, 0)), files->size());
+    EXPECT_TRUE(
+        QTest::qWaitFor([&] { return tour->spotlight().contains(filesRect.center()); }, 5000));
+    EXPECT_FALSE(tour->cardRect().intersects(filesRect));
+    // Every sample reads, each the kind its folder says.
+    for (const auto& file : window.library().files()) {
+        ASSERT_TRUE(file.pgn) << file.name.toStdString();
+        EXPECT_FALSE(file.pgn->games.empty()) << file.name.toStdString();
+    }
+    EXPECT_TRUE(QTest::qWaitFor(
+        [&] {
+            return window.repertoires().files(kiebitz::core::Color::White).size() == 1 &&
+                   window.repertoires().files(kiebitz::core::Color::Black).size() == 1;
+        },
+        5000)); // Openings/White and Openings/Black: one opening file each
+    // The card is tall enough for all its text.
+    const auto* text = tour->findChild<QLabel*>(QStringLiteral("tourText"));
+    EXPECT_GE(text->height(), text->heightForWidth(text->width()));
+    snapshot(1);
+    // Yours has none of the suggested folders: the tour makes them, in yours.
+    const QDir library(yours);
+    ASSERT_FALSE(library.exists(QStringLiteral("Openings")));
+    click("tourAction");
+    EXPECT_TRUE(library.exists(QStringLiteral("Openings/White")));
+    EXPECT_TRUE(library.exists(QStringLiteral("Openings/Black")));
+    EXPECT_TRUE(library.exists(QStringLiteral("Games")));
+    EXPECT_TRUE(library.exists(QStringLiteral("Puzzles")));
+    EXPECT_FALSE(tour->findChild<QPushButton*>(QStringLiteral("tourAction"))->isEnabled());
+
+    // Every other step, by key and back and forth, each on its own page.
+    QTest::keyClick(tour, Qt::Key_Right);
+    snapshot(2);
+    QTest::keyClick(tour, Qt::Key_Left);
+    EXPECT_EQ(tour->step(), 1);
+    QTest::keyClick(tour, Qt::Key_Right);
+    click("tourNext");
+    EXPECT_EQ(window.section(), MainWindow::Section::Board);
+    EXPECT_FALSE(tour->spotlight().isEmpty());
+    // A sample game on the board, with a transposition in it.
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] {
+            return window.document() != nullptr && window.document()->file &&
+                   window.document()->file->path.endsWith(u"Italian Game.pgn");
+        },
+        5000));
+    EXPECT_FALSE(window.document()->game.transposedNodes().empty());
+    snapshot(3);
+    click("tourNext");
+    EXPECT_EQ(window.section(), MainWindow::Section::Profiles);
+    snapshot(4);
+    click("tourNext");
+    EXPECT_EQ(window.section(), MainWindow::Section::Training);
+    EXPECT_EQ(tour->step(), tour->stepCount() - 1);
+    EXPECT_FALSE(tour->findChild<QPushButton*>(QStringLiteral("tourSkip"))->isVisible());
+    snapshot(5);
+
+    // Esc ends it; the window is back where it was, and it never comes back by itself.
+    QSignalSpy finished(tour, &kiebitz::app::Tour::finished);
+    QTest::keyClick(tour, Qt::Key_Escape);
+    ASSERT_EQ(finished.size(), 1);
+    EXPECT_TRUE(finished.front().at(0).toBool()); // it got to the end
+    EXPECT_EQ(window.section(), MainWindow::Section::Board);
+    // The samples are gone: your Library is back, the sample game's tab closed.
+    EXPECT_EQ(window.library().folder(), yours);
+    EXPECT_TRUE(window.document() == nullptr || !window.document()->file ||
+                !window.document()->file->path.endsWith(u"Italian Game.pgn"));
+    QTest::qWait(50);
+    EXPECT_EQ(window.findChild<kiebitz::app::Tour*>(), nullptr);
+    window.startTourOnce();
+    EXPECT_EQ(window.findChild<kiebitz::app::Tour*>(), nullptr);
+
+    // From the Help menu: always. Skip ends it at once.
+    action(window, QStringLiteral("Intro Tour"))->trigger();
+    tour = window.findChild<kiebitz::app::Tour*>();
+    ASSERT_NE(tour, nullptr);
+    QSignalSpy skipped(tour, &kiebitz::app::Tour::finished);
+    click("tourSkip");
+    ASSERT_EQ(skipped.size(), 1);
+    EXPECT_FALSE(skipped.front().at(0).toBool());
 }
 
 TEST_F(MainWindowTest, FKeyFlipsTheBoard) {

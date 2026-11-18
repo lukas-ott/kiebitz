@@ -47,12 +47,12 @@
         <translation>Filen har ikke noe parti %1.</translation>
     </message>
     <message>
-        <source>Repertoire for White</source>
-        <translation>Repertoar for hvit</translation>
+        <source>Opening for White</source>
+        <translation>Åpning for hvit</translation>
     </message>
     <message>
-        <source>Repertoire for Black</source>
-        <translation>Repertoar for svart</translation>
+        <source>Opening for Black</source>
+        <translation>Åpning for svart</translation>
     </message>
     <message>
         <source>Tournament</source>
@@ -1261,8 +1261,36 @@
         <translation>Kunne ikke gi nytt navn</translation>
     </message>
     <message>
+        <source>Openings</source>
+        <translation>Åpninger</translation>
+    </message>
+    <message>
+        <source>White openings</source>
+        <translation>Åpninger for hvit</translation>
+    </message>
+    <message>
+        <source>Black openings</source>
+        <translation>Åpninger for svart</translation>
+    </message>
+    <message>
         <source>Open</source>
         <translation>Åpne</translation>
+    </message>
+    <message>
+        <source>not in your repertoire</source>
+        <translation>ikke i repertoaret ditt</translation>
+    </message>
+    <message>
+        <source>Not in your repertoire: practice, the theory check and the Explorer leave it out</source>
+        <translation>Ikke i repertoaret ditt: øving, teorisjekken og utforskeren utelater det</translation>
+    </message>
+    <message>
+        <source>1 opening file</source>
+        <translation>1 åpningsfil</translation>
+    </message>
+    <message>
+        <source>%1 opening files</source>
+        <translation>%1 åpningsfiler</translation>
     </message>
     <message>
         <source>Rename</source>
@@ -1285,14 +1313,6 @@
         <translation>Parti</translation>
     </message>
     <message>
-        <source>Repertoire for White</source>
-        <translation>Repertoar for hvit</translation>
-    </message>
-    <message>
-        <source>Repertoire for Black</source>
-        <translation>Repertoar for svart</translation>
-    </message>
-    <message>
         <source>Tournament</source>
         <translation>Turnering</translation>
     </message>
@@ -1305,14 +1325,6 @@
         <translation>Annet</translation>
     </message>
     <message>
-        <source>Active Repertoire</source>
-        <translation>Aktivt repertoar</translation>
-    </message>
-    <message>
-        <source>Practice, the theory check and the Explorer use the repertoires you play now; the others stay in the Library</source>
-        <translation>Øving, teorisjekken og Utforsker bruker repertoarene du spiller nå; de andre blir liggende i biblioteket</translation>
-    </message>
-    <message>
         <source>Search files and games</source>
         <translation>Søk i filer og partier</translation>
     </message>
@@ -1323,18 +1335,6 @@
     <message>
         <source>Games</source>
         <translation>Partier</translation>
-    </message>
-    <message>
-        <source>Repertoires</source>
-        <translation>Repertoarer</translation>
-    </message>
-    <message>
-        <source>White repertoires</source>
-        <translation>Hvitrepertoarer</translation>
-    </message>
-    <message>
-        <source>Black repertoires</source>
-        <translation>Svartrepertoarer</translation>
     </message>
     <message>
         <source>Tournaments</source>
@@ -1449,28 +1449,12 @@
         <translation>leser …</translation>
     </message>
     <message>
-        <source>not active</source>
-        <translation>ikke aktivt</translation>
-    </message>
-    <message>
-        <source>Not an active repertoire: practice, the theory check and the Explorer leave it out</source>
-        <translation>Ikke et aktivt repertoar: øving, teorisjekken og Utforsker hopper over det</translation>
-    </message>
-    <message>
         <source>1 folder</source>
         <translation>1 mappe</translation>
     </message>
     <message>
         <source>%1 folders</source>
         <translation>%1 mapper</translation>
-    </message>
-    <message>
-        <source>1 repertoire</source>
-        <translation>1 repertoar</translation>
-    </message>
-    <message>
-        <source>%1 repertoires</source>
-        <translation>%1 repertoarer</translation>
     </message>
     <message>
         <source>1 game file</source>
@@ -1575,6 +1559,22 @@
     <message>
         <source>New Folder</source>
         <translation>Ny mappe</translation>
+    </message>
+    <message>
+        <source>Opening for White</source>
+        <translation>Åpning for hvit</translation>
+    </message>
+    <message>
+        <source>Opening for Black</source>
+        <translation>Åpning for svart</translation>
+    </message>
+    <message>
+        <source>In Repertoire</source>
+        <translation>I repertoaret</translation>
+    </message>
+    <message>
+        <source>Your repertoire: the openings you play now. Practice, the theory check and the Explorer use them; the others stay in the Library</source>
+        <translation>Repertoaret ditt: åpningene du spiller nå. Øving, teorisjekken og utforskeren bruker dem; de andre blir i biblioteket</translation>
     </message>
     <message>
         <source>A folder name can&apos;t contain “/” or start with a dot.</source>
@@ -1855,6 +1855,10 @@
     <message>
         <source>&amp;Keyboard Shortcuts</source>
         <translation>&amp;Hurtigtaster</translation>
+    </message>
+    <message>
+        <source>&amp;Intro Tour</source>
+        <translation>&amp;Introduksjon</translation>
     </message>
     <message>
         <source>Kiebitz on &amp;GitHub</source>
@@ -2183,6 +2187,66 @@
     <message>
         <source>Restart Now</source>
         <translation>Start på nytt nå</translation>
+    </message>
+    <message>
+        <source>Welcome to Kiebitz</source>
+        <translation>Velkommen til Kiebitz</translation>
+    </message>
+    <message>
+        <source>Kiebitz is for opening preparation: build your &lt;b&gt;repertoire&lt;/b&gt; in PGN files, see &lt;b&gt;where your games left it&lt;/b&gt;, &lt;b&gt;prepare for your next opponent&lt;/b&gt; from their games, and &lt;b&gt;train&lt;/b&gt; the lines and positions you missed.&lt;br&gt;&lt;br&gt;This tour shows where each part lives. It is how Kiebitz was meant to be used: a suggestion, not a rule.</source>
+        <translation>Kiebitz er for åpningsforberedelse: bygg &lt;b&gt;repertoaret&lt;/b&gt; ditt i PGN-filer, se &lt;b&gt;hvor partiene dine forlot det&lt;/b&gt;, &lt;b&gt;forbered deg på neste motstander&lt;/b&gt; ut fra partiene deres, og &lt;b&gt;tren&lt;/b&gt; på linjene og stillingene du gikk glipp av.&lt;br&gt;&lt;br&gt;Denne omvisningen viser hvor hver del finnes. Slik var Kiebitz ment å brukes: et forslag, ikke en regel.</translation>
+    </message>
+    <message>
+        <source>Your Library</source>
+        <translation>Biblioteket ditt</translation>
+    </message>
+    <message>
+        <source>Create These Folders</source>
+        <translation>Opprett disse mappene</translation>
+    </message>
+    <message>
+        <source>Folders created</source>
+        <translation>Mappene er opprettet</translation>
+    </message>
+    <message>
+        <source>Every PGN file in your Library folder, %1. A layout that works well:&lt;br&gt;• &lt;b&gt;Openings/White&lt;/b&gt;, &lt;b&gt;Openings/Black&lt;/b&gt;: your opening files, a folder per repertoire if you like&lt;br&gt;• &lt;b&gt;Games&lt;/b&gt;: your own games and model games&lt;br&gt;• &lt;b&gt;Puzzles&lt;/b&gt;: puzzle files&lt;br&gt;&lt;br&gt;Files there take their type and side from the folder.</source>
+        <translation>Hver PGN-fil i bibliotekmappen din, %1. En inndeling som fungerer godt:&lt;br&gt;• &lt;b&gt;Openings/White&lt;/b&gt;, &lt;b&gt;Openings/Black&lt;/b&gt;: åpningsfilene dine, en mappe per repertoar om du vil&lt;br&gt;• &lt;b&gt;Games&lt;/b&gt;: dine egne partier og mønsterpartier&lt;br&gt;• &lt;b&gt;Puzzles&lt;/b&gt;: oppgavefiler&lt;br&gt;&lt;br&gt;Filer der får type og side fra mappen.</translation>
+    </message>
+    <message>
+        <source>&lt;i&gt;Shown here: a sample Library, only during the tour.&lt;/i&gt;</source>
+        <translation>&lt;i&gt;Vist her: et eksempelbibliotek, bare under omvisningen.&lt;/i&gt;</translation>
+    </message>
+    <message>
+        <source>Openings and your repertoire</source>
+        <translation>Åpninger og repertoaret ditt</translation>
+    </message>
+    <message>
+        <source>Every opening file is an &lt;b&gt;Opening&lt;/b&gt;. Your &lt;b&gt;repertoire&lt;/b&gt; is the openings you play now: right-click a folder or a file and turn &lt;b&gt;In Repertoire&lt;/b&gt; on or off. The others stay in the Library, dimmed; practice, the theory check and the Explorer leave them out.&lt;br&gt;&lt;br&gt;Right-click a file to set its type by hand.</source>
+        <translation>Hver åpningsfil er en &lt;b&gt;åpning&lt;/b&gt;. &lt;b&gt;Repertoaret&lt;/b&gt; ditt er åpningene du spiller nå: høyreklikk en mappe eller en fil og slå &lt;b&gt;I repertoaret&lt;/b&gt; av eller på. De andre blir i biblioteket, nedtonet; øving, teorisjekken og utforskeren utelater dem.&lt;br&gt;&lt;br&gt;Høyreklikk en fil for å velge typen selv.</translation>
+    </message>
+    <message>
+        <source>Studying a line</source>
+        <translation>Studere en linje</translation>
+    </message>
+    <message>
+        <source>A file you open shows on the Board. Play moves to add them; the Explorer shows what is played from here.&lt;br&gt;&lt;br&gt;A &lt;b&gt;⇄&lt;/b&gt; after a move means its position also comes up by another move order: click it, or press T, to go there.</source>
+        <translation>En fil du åpner vises på brettet. Spill trekk for å legge dem til; utforskeren viser hva som spilles herfra.&lt;br&gt;&lt;br&gt;En &lt;b&gt;⇄&lt;/b&gt; etter et trekk betyr at stillingen også kommer opp med en annen trekkrekkefølge: klikk på den, eller trykk T, for å gå dit.</translation>
+    </message>
+    <message>
+        <source>You and your opponents</source>
+        <translation>Du og motstanderne dine</translation>
+    </message>
+    <message>
+        <source>Your profile gets your games from Lichess and chess.com when you sync it; your over-the-board games you add yourself (Add PGN…, Paste Games). Its &lt;b&gt;Repertoire&lt;/b&gt; tab shows where each game left your book and, after a sync, which games are new.&lt;br&gt;&lt;br&gt;Add a profile for an opponent: its &lt;b&gt;Prepare&lt;/b&gt; tab shows their lines next to yours, and where your repertoire has gaps.</source>
+        <translation>Profilen din henter partiene dine fra Lichess og chess.com når du synkroniserer den; partiene over brettet legger du til selv (Legg til PGN …, Lim inn partier). Fanen &lt;b&gt;Repertoar&lt;/b&gt; viser hvor hvert parti forlot repertoaret ditt, og etter en synkronisering, hvilke partier som er nye.&lt;br&gt;&lt;br&gt;Legg til en profil for en motstander: fanen &lt;b&gt;Forbered&lt;/b&gt; viser linjene deres ved siden av dine, og hvor repertoaret ditt har hull.</translation>
+    </message>
+    <message>
+        <source>A little every day</source>
+        <translation>Litt hver dag</translation>
+    </message>
+    <message>
+        <source>Training runs one plan in order: your repertoire lines, then puzzles by theme. It keeps your minutes and your streak.&lt;br&gt;&lt;br&gt;Take this tour again any time from Help → Intro Tour.</source>
+        <translation>Treningen går gjennom én plan i rekkefølge: repertoarlinjene dine, så oppgaver etter tema. Den holder styr på minuttene og rekken din.&lt;br&gt;&lt;br&gt;Ta denne omvisningen igjen når som helst fra Hjelp → Introduksjon.</translation>
     </message>
 </context>
 <context>
@@ -3158,6 +3222,10 @@
         <translation>Din score: %1</translation>
     </message>
     <message>
+        <source>No repertoire yet. Set a file&apos;s type to Opening (right-click it in the Library) to check these games against it.</source>
+        <translation>Ingen repertoar ennå. Sett typen til en fil til Åpning (høyreklikk den i biblioteket) for å sjekke disse partiene mot den.</translation>
+    </message>
+    <message>
         <source>Repertoire · %1 new</source>
         <translation>Repertoar · %1 nye</translation>
     </message>
@@ -3220,10 +3288,6 @@
     <message>
         <source>No games here yet.</source>
         <translation>Ingen partier her ennå.</translation>
-    </message>
-    <message>
-        <source>No repertoire yet. Set a file&apos;s type to Repertoire (right-click it in the Library) to check these games against it.</source>
-        <translation>Ikke noe repertoar ennå. Sett en fils type til Repertoar (høyreklikk på den i Biblioteket) for å sjekke disse partiene mot det.</translation>
     </message>
     <message>
         <source>Reading your repertoire…</source>
@@ -3591,8 +3655,8 @@
         <translation>Ikke noe repertoar ennå</translation>
     </message>
     <message>
-        <source>Set a file&apos;s type to Repertoire (right-click it in the Library), and games are checked against it here.</source>
-        <translation>Sett en fils type til Repertoar (høyreklikk på den i Biblioteket), så sjekkes partiene mot det her.</translation>
+        <source>Set a file&apos;s type to Opening (right-click it in the Library), and games are checked against it here.</source>
+        <translation>Sett typen til en fil til Åpning (høyreklikk den i biblioteket), så sjekkes partier mot den her.</translation>
     </message>
     <message>
         <source>WHITE REPERTOIRE</source>
@@ -4211,6 +4275,33 @@
     <message>
         <source>Depends on the 50-move rule: the tablebase can&apos;t say for sure</source>
         <translation>Avhenger av 50-trekksregelen: sluttspilltabellen kan ikke si det sikkert</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::Tour</name>
+    <message>
+        <source>Skip Tour</source>
+        <translation>Hopp over</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation>Tilbake</translation>
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation>%1 av %2</translation>
+    </message>
+    <message>
+        <source>Show Me</source>
+        <translation>Vis meg</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Ferdig</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Neste</translation>
     </message>
 </context>
 <context>
