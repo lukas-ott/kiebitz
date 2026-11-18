@@ -102,6 +102,12 @@ TrainingView::TrainingView(TrainingSession& session, TrainingHistory& stats, con
         }
     });
     m_header->addAction(m_start);
+    auto* zen = new QPushButton(tr("Zen Mode"));
+    zen->setObjectName(QStringLiteral("trainingZen"));
+    zen->setProperty("role", "secondary");
+    zen->setToolTip(tr("Only the training, full screen, until its time is up (Esc leaves)"));
+    connect(zen, &QPushButton::clicked, this, &TrainingView::zenRequested);
+    m_header->addAction(zen);
     layout->addWidget(m_header);
 
     // The plan: a row per part.
@@ -406,9 +412,27 @@ void TrainingView::showStats(const TrainingHistory::Summary& summary) {
 TrainingBar::TrainingBar(TrainingSession& session, const AppStyle& style, QWidget* parent)
     : QWidget(parent), m_session(session), m_style(style) {
     setObjectName(QStringLiteral("trainingBar"));
+    setAttribute(Qt::WA_StyledBackground);
     auto* row = new QHBoxLayout(this);
-    row->setContentsMargins(0, 0, 4, 0);
-    row->setSpacing(2);
+    row->setContentsMargins(16, 6, 12, 6);
+    row->setSpacing(10);
+    m_part = new QToolButton;
+    m_part->setObjectName(QStringLiteral("trainingBarPart"));
+    m_part->setAutoRaise(true);
+    m_part->setFocusPolicy(Qt::NoFocus);
+    m_part->setToolTip(tr("Training"));
+    connect(m_part, &QToolButton::clicked, this, &TrainingBar::showRequested);
+    row->addWidget(m_part);
+    m_time = new QLabel;
+    m_time->setObjectName(QStringLiteral("trainingBarTime"));
+    QFont font = m_time->font();
+    font.setFeature(QFont::Tag("tnum"), 1); // figures of one width: the clock doesn't jiggle
+    m_time->setFont(font);
+    row->addWidget(m_time);
+    m_detail = new QLabel;
+    m_detail->setObjectName(QStringLiteral("trainingBarDetail"));
+    row->addWidget(m_detail);
+    row->addStretch();
     const auto button = [&](const QString& text, const char* name) {
         auto* b = new QToolButton;
         b->setObjectName(QString::fromLatin1(name));
@@ -419,9 +443,6 @@ TrainingBar::TrainingBar(TrainingSession& session, const AppStyle& style, QWidge
         row->addWidget(b);
         return b;
     };
-    m_part = button(QString(), "trainingBarPart");
-    m_part->setToolTip(tr("Training"));
-    connect(m_part, &QToolButton::clicked, this, &TrainingBar::showRequested);
     m_pause = button(tr("Pause"), "trainingBarPause");
     connect(m_pause, &QToolButton::clicked, this,
             [this] { m_session.setPaused(!m_session.paused()); });
@@ -429,39 +450,123 @@ TrainingBar::TrainingBar(TrainingSession& session, const AppStyle& style, QWidge
     connect(m_next, &QToolButton::clicked, &m_session, &TrainingSession::next);
     m_stop = button(tr("Stop"), "trainingBarStop");
     connect(m_stop, &QToolButton::clicked, &m_session, &TrainingSession::stop);
+    m_zen = button(tr("Zen"), "trainingBarZen");
+    m_zen->setToolTip(tr("Only the training, full screen (Esc leaves)"));
+    connect(m_zen, &QToolButton::clicked, this, &TrainingBar::zenRequested);
     connect(&m_session, &TrainingSession::changed, this, &TrainingBar::refresh);
     refresh();
 }
 
+void TrainingBar::setZen(bool zen) {
+    m_inZen = zen;
+    m_zen->setVisible(!zen);
+}
+
+void TrainingBar::setCovered(bool covered) {
+    m_covered = covered;
+    refresh();
+}
+
 QString TrainingBar::text() const {
-    return m_part->text();
+    return m_text;
 }
 
 void TrainingBar::refresh() {
     const training::Session* session = m_session.session();
-    setVisible(session != nullptr);
+    setVisible(session != nullptr && !m_covered);
     if (session == nullptr) {
         return;
     }
-    QString text = TrainingSession::name(session->part()) + QStringLiteral("  ·  ");
+    const QString name = TrainingSession::name(session->part());
+    m_part->setText(name);
+    QStringList details;
     if (session->timeUp()) {
-        text += tr("time's up");
+        m_time->setText(tr("Time's up"));
         if (const training::Step* upcoming = session->upcoming()) {
-            text +=
-                QStringLiteral("  ·  ") + tr("next: %1").arg(TrainingSession::name(upcoming->part));
+            details << tr("next: %1").arg(TrainingSession::name(upcoming->part));
         }
+        m_text = name + QStringLiteral("  ·  ") + tr("time's up");
     } else {
-        text += tr("%1 left").arg(clockText(session->leftMs()));
+        m_time->setText(clockText(session->leftMs()));
+        details << tr("left");
+        m_text = name + QStringLiteral("  ·  ") + tr("%1 left").arg(clockText(session->leftMs()));
+    }
+    if (session->timeUp() && session->upcoming() != nullptr) {
+        m_text += QStringLiteral("  ·  ") +
+                  tr("next: %1").arg(TrainingSession::name(session->upcoming()->part));
     }
     if (m_session.paused()) {
-        text += QStringLiteral("  ·  ") + tr("paused");
+        details << tr("paused");
+        m_text += QStringLiteral("  ·  ") + tr("paused");
     }
-    m_part->setText(text);
-    if (m_part->property("up").toBool() != session->timeUp()) {
-        m_part->setProperty("up", session->timeUp());
-        repolish(m_part);
+    m_detail->setText(details.join(QStringLiteral("  ·  ")));
+    if (m_time->property("up").toBool() != session->timeUp()) {
+        m_time->setProperty("up", session->timeUp());
+        repolish(m_time);
     }
     m_pause->setText(m_session.paused() ? tr("Resume") : tr("Pause"));
+    m_pause->setVisible(!session->timeUp());
+    m_next->setText(session->upcoming() != nullptr ? tr("Next") : tr("Finish"));
+}
+
+// ---- Zen mode's clock --------------------------------------------------------------------------
+
+ZenClock::ZenClock(TrainingSession& session, QWidget* parent)
+    : QWidget(parent), m_session(session) {
+    setObjectName(QStringLiteral("zenClock"));
+    auto* layout = new QVBoxLayout(this);
+    layout->setSpacing(12);
+    layout->addStretch(3);
+    m_part = new QLabel;
+    m_part->setObjectName(QStringLiteral("zenPart"));
+    m_part->setAlignment(Qt::AlignHCenter); // its look: QLabel#zenPart in the style sheet
+    layout->addWidget(m_part);
+    m_time = new QLabel;
+    m_time->setObjectName(QStringLiteral("zenTime"));
+    m_time->setAlignment(Qt::AlignHCenter);
+    QFont font = m_time->font();
+    font.setPixelSize(140);
+    font.setWeight(QFont::Light);
+    font.setFeature(QFont::Tag("tnum"), 1); // figures of one width: the clock doesn't jiggle
+    m_time->setFont(font);
+    layout->addWidget(m_time);
+    auto* buttons = new QHBoxLayout;
+    buttons->setSpacing(12);
+    buttons->addStretch();
+    const auto button = [&](const char* name) {
+        auto* b = new QPushButton;
+        b->setObjectName(QString::fromLatin1(name));
+        b->setProperty("role", "secondary");
+        b->setFocusPolicy(Qt::NoFocus);
+        b->setMinimumWidth(110); // its texts change (Pause, Resume; Next, Finish)
+        buttons->addWidget(b);
+        return b;
+    };
+    m_pause = button("zenPause");
+    connect(m_pause, &QPushButton::clicked, this,
+            [this] { m_session.setPaused(!m_session.paused()); });
+    m_next = button("zenNext");
+    connect(m_next, &QPushButton::clicked, &m_session, &TrainingSession::next);
+    buttons->addStretch();
+    layout->addLayout(buttons);
+    layout->addStretch(4);
+    connect(&m_session, &TrainingSession::changed, this, &ZenClock::refresh);
+    refresh();
+}
+
+QString ZenClock::time() const {
+    return m_time->text();
+}
+
+void ZenClock::refresh() {
+    const training::Session* session = m_session.session();
+    if (session == nullptr) {
+        return;
+    }
+    m_part->setText(TrainingSession::name(session->part()));
+    m_time->setText(session->timeUp() ? tr("Time's up") : clockText(session->leftMs()));
+    m_pause->setText(m_session.paused() ? tr("Resume") : tr("Pause"));
+    m_pause->setVisible(!session->timeUp());
     m_next->setText(session->upcoming() != nullptr ? tr("Next") : tr("Finish"));
 }
 

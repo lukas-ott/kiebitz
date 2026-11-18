@@ -63,6 +63,7 @@
 #include <QProcess>
 #include <QScrollArea>
 #include <QSettings>
+#include <QShortcut>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTabBar>
@@ -147,11 +148,21 @@ MainWindow::MainWindow(AppStyle& style, QWidget* parent)
     statusBar()->setSizeGripEnabled(false);
     // Always this tall, whatever it shows: the pages above never move.
     statusBar()->setFixedHeight(24);
-    // A training session runs on every page: its part, time, Pause, Next and Stop.
+    // A training session runs on every page: its part, the time left, Pause, Next and Stop.
     m_trainingBar = new TrainingBar(*m_training, m_style);
     connect(m_trainingBar, &TrainingBar::showRequested, this,
             [this] { showSection(Section::Training); });
-    statusBar()->addPermanentWidget(m_trainingBar);
+    m_mainColumn->insertWidget(0, m_trainingBar); // over every page: always in sight
+    connect(m_trainingBar, &TrainingBar::zenRequested, this, [this] { setZen(true); });
+    connect(m_trainingView, &TrainingView::zenRequested, this, [this] {
+        if (!m_training->running() && !m_training->start()) {
+            return; // nothing in the plan
+        }
+        setZen(true);
+    });
+    m_zenEscape = new QShortcut(QKeySequence(Qt::Key_Escape), this);
+    m_zenEscape->setEnabled(false);
+    connect(m_zenEscape, &QShortcut::activated, this, [this] { setZen(false); });
 
     // The library loads in the background; the window is up before it's done.
     m_library->setCacheFile(Library::defaultCacheFile());
@@ -210,20 +221,22 @@ void MainWindow::buildFileMenu() {
             openFile(path);
         }
     });
-    menu->addAction(tr("&Library"), QKeySequence(Qt::CTRL | Qt::Key_L), this,
-                    [this] { showSection(Section::Library); });
-    menu->addAction(tr("&Board"), QKeySequence(Qt::CTRL | Qt::Key_1), this,
-                    [this] { showSection(Section::Board); });
-    menu->addAction(tr("&Training"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T), this,
-                    [this] { showSection(Section::Training); });
-    menu->addAction(tr("P&uzzles"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_U), this,
-                    [this] { showSection(Section::Puzzles); });
-    menu->addAction(tr("&Databases"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D), this,
-                    [this] { showSection(Section::Databases); });
-    menu->addAction(tr("&Profiles"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P), this,
-                    [this] { showSection(Section::Profiles); });
-    menu->addAction(tr("&Engines"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E), this,
-                    [this] { showSection(Section::Engines); });
+    // The pages (Zen mode switches these off: nothing but the training).
+    m_sectionActions = {
+        menu->addAction(tr("&Library"), QKeySequence(Qt::CTRL | Qt::Key_L), this,
+                        [this] { showSection(Section::Library); }),
+        menu->addAction(tr("&Board"), QKeySequence(Qt::CTRL | Qt::Key_1), this,
+                        [this] { showSection(Section::Board); }),
+        menu->addAction(tr("&Training"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T), this,
+                        [this] { showSection(Section::Training); }),
+        menu->addAction(tr("P&uzzles"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_U), this,
+                        [this] { showSection(Section::Puzzles); }),
+        menu->addAction(tr("&Databases"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D), this,
+                        [this] { showSection(Section::Databases); }),
+        menu->addAction(tr("&Profiles"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P), this,
+                        [this] { showSection(Section::Profiles); }),
+        menu->addAction(tr("&Engines"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E), this,
+                        [this] { showSection(Section::Engines); })};
     menu->addSeparator();
     auto* saveAction = menu->addAction(tr("&Save"), QKeySequence::Save, this, [this] {
         if (GameDocument* d = doc()) {
@@ -301,6 +314,9 @@ void MainWindow::buildGameMenu() {
         });
     auto* mainLineAction =
         menu->addAction(tr("Make &Main Line"), this, [this] { makeMainLine(doc()->current); });
+    auto* swapAction = menu->addAction(tr("S&wap With Transposition"), this,
+                                       [this] { swapTransposition(doc()->current); });
+    swapAction->setObjectName(QStringLiteral("swapTransposition"));
     auto* deleteFromAction = menu->addAction(
         tr("&Delete From Here"), QKeySequence(Qt::CTRL | Qt::Key_Backspace), this, [this] {
             if (!forwardToTextField(Qt::Key_Backspace, Qt::ControlModifier)) {
@@ -309,6 +325,9 @@ void MainWindow::buildGameMenu() {
         });
     auto* deleteVariationAction =
         menu->addAction(tr("Delete &Variation"), this, [this] { deleteVariation(doc()->current); });
+    auto* deletePreviousAction = menu->addAction(tr("Delete Previous Mo&ves…"), this,
+                                                 [this] { deletePreviousMoves(doc()->current); });
+    deletePreviousAction->setObjectName(QStringLiteral("deletePrevious"));
     menu->addSeparator();
     auto* commentAction = menu->addAction(tr("Edit &Comment"), QKeySequence(Qt::CTRL | Qt::Key_E),
                                           this, [this] { editComment(doc()->current); });
@@ -320,8 +339,9 @@ void MainWindow::buildGameMenu() {
     engineAction->setShortcut(Qt::Key_Space);
     m_gameActions.insert(m_gameActions.end(),
                          {m_backAction, m_forwardAction, m_startAction, m_endAction,
-                          transpositionAction, promoteAction, mainLineAction, deleteFromAction,
-                          deleteVariationAction, commentAction, engineAction});
+                          transpositionAction, promoteAction, mainLineAction, swapAction,
+                          deleteFromAction, deleteVariationAction, deletePreviousAction,
+                          commentAction, engineAction});
 }
 
 void MainWindow::buildViewMenu(QMenu* menu) {
@@ -492,6 +512,7 @@ void MainWindow::buildLayout() {
     connect(newTab, &QToolButton::clicked, this,
             [this] { m_documents->add(std::make_unique<GameDocument>()); });
     auto* tabRow = new QWidget;
+    m_tabRow = tabRow;
     tabRow->setObjectName(QStringLiteral("tabRow"));
     auto* tabLayout = new QHBoxLayout(tabRow);
     tabLayout->setContentsMargins(0, 0, 8, 0);
@@ -540,8 +561,19 @@ void MainWindow::buildLayout() {
     auto* layout = new QHBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-    layout->addWidget(buildSidebar());
-    layout->addWidget(m_pages, 1);
+    m_sidebarFrame = buildSidebar();
+    layout->addWidget(m_sidebarFrame);
+    // Over the pages: the training bar while a session runs (added once it's made), then the
+    // page.
+    auto* column = new QVBoxLayout;
+    column->setContentsMargins(0, 0, 0, 0);
+    column->setSpacing(0);
+    m_mainColumn = column;
+    column->addWidget(m_pages, 1);
+    layout->addLayout(column, 1);
+    // Zen mode's self-study: only the clock (after the pages of the sections).
+    m_zenClock = new ZenClock(*m_training);
+    m_pages->addWidget(m_zenClock);
     setCentralWidget(central);
 
     connect(&m_style, &AppStyle::changed, this, [this] {
@@ -731,6 +763,7 @@ void MainWindow::buildPages() {
                                 : tr("That was the last part of today's plan."));
     });
     connect(m_training, &TrainingSession::ended, this, [this] {
+        setZen(false);          // the training is over: the app is back
         if (m_trainingFilter) { // the openings part's filter on the Library goes too
             m_trainingFilter = false;
             m_libraryView->showAllTypes();
@@ -864,6 +897,9 @@ QWidget* MainWindow::buildBoardPage() {
     connect(m_notation, &NotationView::deleteFromRequested, this, &MainWindow::deleteFrom);
     connect(m_notation, &NotationView::deleteVariationRequested, this,
             &MainWindow::deleteVariation);
+    connect(m_notation, &NotationView::swapTranspositionRequested, this,
+            &MainWindow::swapTransposition);
+    connect(m_notation, &NotationView::startHereRequested, this, &MainWindow::deletePreviousMoves);
     connect(m_notation, &NotationView::nagToggled, this, &MainWindow::toggleNag);
     connect(m_notation, &NotationView::nagsCleared, this, &MainWindow::clearNags);
     connect(m_notation, &NotationView::commentEditRequested, this, &MainWindow::editComment);
@@ -904,6 +940,7 @@ QWidget* MainWindow::buildBoardPage() {
 
 QWidget* MainWindow::buildPanelsCard() {
     auto* frame = ui::card();
+    m_panelsCard = frame;
     auto* layout = new QVBoxLayout(frame);
     layout->setContentsMargins(6, 2, 6, 6);
 

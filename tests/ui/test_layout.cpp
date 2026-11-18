@@ -448,22 +448,25 @@ TEST_F(LayoutTest, ATrainingSessionMovesNothing) {
     }
     auto* session = window->findChild<app::TrainingSession*>();
     ASSERT_NE(session, nullptr);
-    const Layout boardBefore = now();
     window->showSection(MainWindow::Section::Training);
     const Layout idle = now();
-    // Its row says the time left, the button says Stop, the status bar shows the session.
+    // Starting it puts the training bar over the pages (they move down once: the time is in
+    // sight on every page). After that, nothing moves while it runs.
     ASSERT_TRUE(session->start());
     const Layout running = now();
-    EXPECT_TRUE(moved(idle, running).isEmpty()) << text(moved(idle, running));
     session->advance(qint64{20} * 60'000);
     const Layout up = now();
-    // The session's text and today's minutes grow: that is the change.
+    // The session's text and today's minutes change: that is all.
     const QStringList texts{QStringLiteral("trainingBar"), QStringLiteral("pageSubtitle")};
     EXPECT_TRUE(moved(running, up, texts).isEmpty()) << text(moved(running, up, texts));
-    // The board page with the session in the status bar is as it was without.
+    // The board page, as time passes.
     window->showSection(MainWindow::Section::Board);
-    const Layout boardDuring = now();
-    EXPECT_TRUE(moved(boardBefore, boardDuring).isEmpty()) << text(moved(boardBefore, boardDuring));
+    const Layout boardRunning = now();
+    session->advance(60'000);
+    const Layout boardLater = now();
+    EXPECT_TRUE(moved(boardRunning, boardLater, texts).isEmpty())
+        << text(moved(boardRunning, boardLater, texts));
+    // Stopped: everything is back where it was.
     window->showSection(MainWindow::Section::Training);
     session->stop();
     const Layout stopped = now();

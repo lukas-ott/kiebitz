@@ -33,6 +33,12 @@ public:
 
     /// The page is shown: the numbers read again.
     void activate();
+
+signals:
+    /// "Zen Mode": the plan (started if it isn't running) with nothing else of the app around.
+    void zenRequested();
+
+public:
     // For tests
     [[nodiscard]] ActivityGrid* grid() const { return m_grid; }
 
@@ -67,8 +73,8 @@ private:
     TrainingHistory::Summary m_summary;
 };
 
-/// The running session in the status bar, on every page: the part, its time, and Pause, Next
-/// and Stop.
+/// The running session over every page: the part, its time left in large figures, and Pause,
+/// Next, Stop and Zen.
 class TrainingBar : public QWidget {
     Q_OBJECT
 
@@ -79,6 +85,14 @@ public:
 signals:
     /// The part's name was clicked: show the Training page.
     void showRequested();
+    /// "Zen" clicked: only the training, nothing else of the app.
+    void zenRequested();
+
+public:
+    /// In Zen mode already: its button goes.
+    void setZen(bool zen);
+    /// Zen mode's self-study clock shows the time instead: the bar goes meanwhile.
+    void setCovered(bool covered);
 
 private:
     void refresh();
@@ -86,9 +100,34 @@ private:
     TrainingSession& m_session;
     const AppStyle& m_style;
     QToolButton* m_part = nullptr;
+    QLabel* m_time = nullptr;   ///< "12:34", large
+    QLabel* m_detail = nullptr; ///< "left", "next: Tactics", "paused"
+    QString m_text;             ///< all of it in one line (tests)
+    bool m_covered = false;
     QToolButton* m_pause = nullptr;
     QToolButton* m_next = nullptr;
     QToolButton* m_stop = nullptr;
+    QToolButton* m_zen = nullptr;
+    bool m_inZen = false;
+};
+
+/// Zen mode's self-study: nothing but the time left, large, the part's name over it, and Pause
+/// and Next under it.
+class ZenClock : public QWidget {
+    Q_OBJECT
+
+public:
+    explicit ZenClock(TrainingSession& session, QWidget* parent = nullptr);
+    [[nodiscard]] QString time() const; ///< tests
+
+private:
+    void refresh();
+
+    TrainingSession& m_session;
+    QLabel* m_part = nullptr;
+    QLabel* m_time = nullptr;
+    QPushButton* m_pause = nullptr;
+    QPushButton* m_next = nullptr;
 };
 
 /// "12:34", "1:02:03".

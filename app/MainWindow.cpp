@@ -183,6 +183,10 @@ void MainWindow::updatePage() {
     // file tree and the game list.
     m_shortcuts->setGameKeysEnabled(d != nullptr);
     m_pages->setCurrentIndex(static_cast<int>(m_section));
+    if (m_zen && m_training->session() != nullptr &&
+        m_training->session()->part() == training::Part::SelfStudy) {
+        m_pages->setCurrentWidget(m_zenClock); // Zen mode's self-study: only the clock
+    }
     if (d == nullptr) {
         m_enginePanel->setPosition(std::nullopt); // nothing to analyse off the board
         if (m_moves != nullptr) {                 // null while the window is being built
@@ -932,6 +936,10 @@ void MainWindow::onTrainingPart(training::Part part) {
                        8000);
         });
     }
+    showTrainingPart(part);
+}
+
+void MainWindow::showTrainingPart(training::Part part) {
     // The openings part's filter on the Library goes with it.
     if (m_trainingFilter && part != training::Part::Openings) {
         m_trainingFilter = false;
@@ -967,6 +975,9 @@ void MainWindow::onTrainingPart(training::Part part) {
     case training::Part::SelfStudy:
         showSection(Section::Training); // the timer runs; the board's practice, if any, ends
         break;
+    }
+    if (m_zen) {
+        showZenPage(); // self-study: the clock alone; the others: their page
     }
 }
 
@@ -1024,6 +1035,44 @@ void MainWindow::deleteFrom(NodeId id) {
         d->current = parent; // the current move is being deleted: step back out of it
     }
     d->game.remove(id);
+    setModified();
+    refreshNotation();
+    showNode(d->current, false);
+}
+
+void MainWindow::swapTransposition(NodeId id) {
+    GameDocument* d = doc();
+    if (d == nullptr || id == Game::root()) {
+        return;
+    }
+    const NodeId other = d->game.nextTransposition(id);
+    if (other == core::kNoNode) {
+        showStatus(tr("No other move order in this game reaches this position"), keys::kStatusMs);
+        return;
+    }
+    if (!d->game.swapContinuations(id, other)) {
+        showStatus(tr("That move order comes later in this line: nothing to swap"),
+                   keys::kStatusMs);
+        return;
+    }
+    setModified();
+    refreshNotation();
+    showNode(id, false);
+}
+
+void MainWindow::deletePreviousMoves(NodeId id) {
+    GameDocument* d = doc();
+    if (d == nullptr || id == Game::root()) {
+        return;
+    }
+    if (!confirm(this, tr("Delete the previous moves?"),
+                 tr("The game then starts from this position. The moves before it and every "
+                    "variation that doesn't go through it are deleted."),
+                 tr("Delete"), MessageDialog::Action::Destructive)) {
+        return;
+    }
+    d->game = d->game.startingAt(id);
+    d->current = Game::root();
     setModified();
     refreshNotation();
     showNode(d->current, false);

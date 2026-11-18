@@ -23,6 +23,7 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QSignalSpy>
+#include <QStatusBar>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QToolButton>
@@ -335,3 +336,90 @@ TEST(TrainingClock, ReadsLikeAClock) {
 }
 
 } // namespace
+
+TEST_F(TrainingTest, ZenModeShowsOnlyTheTrainingUntilEsc) {
+    auto* sidebar = window->findChild<QWidget*>(QStringLiteral("sidebar"));
+    const auto* tabs = window->findChild<QWidget*>(QStringLiteral("tabRow"));
+    auto* panels = window->findChild<QWidget*>(QStringLiteral("panels"));
+    const auto* zenBar = window->findChild<QWidget*>(QStringLiteral("trainingBarZen"));
+    ASSERT_NE(sidebar, nullptr);
+    ASSERT_NE(panels, nullptr);
+    // "Zen Mode" starts the plan (the default one: openings first, in the Library).
+    click("trainingZen");
+    ASSERT_TRUE(session->running());
+    EXPECT_TRUE(window->zen());
+    EXPECT_TRUE(window->isFullScreen());
+    EXPECT_FALSE(sidebar->isVisible());
+    EXPECT_FALSE(tabs->isVisibleTo(window.get()));
+    EXPECT_FALSE(panels->isVisibleTo(window.get()));
+    EXPECT_FALSE(zenBar->isVisibleTo(window.get()));
+    EXPECT_EQ(window->section(), MainWindow::Section::Library);
+    EXPECT_TRUE(bar->isVisible()); // the time, over the page
+    // The pages can't be switched to meanwhile.
+    QTest::keyClick(window.get(), Qt::Key_E, Qt::ControlModifier | Qt::ShiftModifier);
+    EXPECT_EQ(window->section(), MainWindow::Section::Library);
+
+    // Self-study: nothing but its clock.
+    for (int i = 0; i < 4; ++i) {
+        click("trainingBarNext");
+    }
+    ASSERT_EQ(session->session()->part(), Part::SelfStudy);
+    auto* clock = window->findChild<app::ZenClock*>(QStringLiteral("zenClock"));
+    ASSERT_NE(clock, nullptr);
+    EXPECT_TRUE(clock->isVisible());
+    EXPECT_FALSE(window->statusBar()->isVisible());
+    EXPECT_TRUE(clock->time().contains(u':'));
+    EXPECT_FALSE(bar->isVisible()); // the clock says it all
+    const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR");
+    if (!dir.isEmpty()) {
+        window->grab().save(QDir(dir).filePath(QStringLiteral("zen-self-study.png")));
+    }
+
+    // Esc: the app is back, the training goes on.
+    QTest::keyClick(window.get(), Qt::Key_Escape);
+    EXPECT_FALSE(window->zen());
+    EXPECT_FALSE(window->isFullScreen());
+    EXPECT_TRUE(sidebar->isVisible());
+    EXPECT_FALSE(clock->isVisible());
+    EXPECT_TRUE(window->statusBar()->isVisible());
+    EXPECT_TRUE(session->running());
+    EXPECT_TRUE(zenBar->isVisible());
+    EXPECT_TRUE(bar->isVisible());
+
+    // From the bar again, and the end of the session ends it too.
+    click("trainingBarZen");
+    EXPECT_TRUE(window->zen());
+    click("zenNext"); // Finish: self-study was the last part
+    EXPECT_FALSE(session->running());
+    EXPECT_FALSE(window->zen());
+    EXPECT_TRUE(sidebar->isVisible());
+}
+
+TEST_F(TrainingTest, ZenGoesToThePartYoureOnAndTheTimeIsAlwaysInSight) {
+    click("trainingStart");
+    click("trainingBarNext"); // middlegame: the puzzles
+    ASSERT_EQ(window->section(), MainWindow::Section::Puzzles);
+    // The time over every page, in large figures.
+    const auto* time = bar->findChild<QLabel*>(QStringLiteral("trainingBarTime"));
+    ASSERT_NE(time, nullptr);
+    EXPECT_TRUE(bar->isVisible());
+    EXPECT_TRUE(time->text().contains(u':'));
+    EXPECT_GT(
+        time->font().pixelSize() > 0 ? time->font().pixelSize() : time->fontInfo().pixelSize(), 20);
+    EXPECT_LT(bar->mapTo(window.get(), QPoint(0, 0)).y(), 40); // at the top
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        window->resize(1280, 800);
+        QApplication::processEvents();
+        window->grab().save(QDir(dir).filePath(QStringLiteral("training-bar.png")));
+    }
+    window->showSection(MainWindow::Section::Training);
+    EXPECT_TRUE(bar->isVisible());
+    // Zen from the Training page: to the puzzles, where the training is.
+    click("trainingBarZen");
+    EXPECT_TRUE(window->zen());
+    EXPECT_EQ(window->section(), MainWindow::Section::Puzzles);
+    EXPECT_TRUE(bar->isVisible());
+    QTest::keyClick(window.get(), Qt::Key_Escape);
+    EXPECT_FALSE(window->zen());
+    EXPECT_EQ(window->section(), MainWindow::Section::Puzzles); // where you were
+}

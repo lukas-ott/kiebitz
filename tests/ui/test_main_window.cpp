@@ -570,3 +570,62 @@ TEST_F(MainWindowTest, TheBoardEditorSetsUpAPositionToStartFrom) {
     // A new game from there.
     EXPECT_EQ(fen(), "4k3/8/3Q4/8/8/8/8/6K1 b - - 0 1");
 }
+
+namespace {
+
+/// Answers the app's next question with its action (Delete, ...) or Cancel.
+void answerNext(bool act) {
+    QTimer::singleShot(0, [act] {
+        for (const QWidget* widget : QApplication::topLevelWidgets()) {
+            if (widget->objectName() == u"messageDialog" && widget->isVisible()) {
+                widget
+                    ->findChild<QPushButton*>(act ? QStringLiteral("messageAction")
+                                                  : QStringLiteral("messageCancel"))
+                    ->click();
+                return;
+            }
+        }
+    });
+}
+
+} // namespace
+
+TEST_F(MainWindowTest, SwapsATranspositionAndDeletesPreviousMoves) {
+    // The analysis follows 1. e4 e5 2. Nf3 Nc6; 1. Nf3 Nc6 2. e4 e5 gets there and stops.
+    for (const char* san : {"e4", "e5", "Nf3", "Nc6", "Bc4"}) {
+        play(san);
+    }
+    const std::string afterBc4 = fen();
+    QTest::keyClick(&window, Qt::Key_Home);
+    for (const char* san : {"Nf3", "Nc6", "e4", "e5"}) {
+        play(san);
+    }
+    const std::string here = fen();
+    auto* swap = window.findChild<QAction*>(QStringLiteral("swapTransposition"));
+    ASSERT_NE(swap, nullptr);
+    swap->trigger();
+    EXPECT_EQ(fen(), here); // it stays on the move
+    QTest::keyClick(&window, Qt::Key_Right);
+    // 3. Bc4 now follows this move order (the move counters aside: the same position).
+    EXPECT_EQ(fen().substr(0, fen().find(' ')), afterBc4.substr(0, afterBc4.find(' ')));
+    QTest::keyClick(&window, Qt::Key_Left);
+
+    // Delete the previous moves: asked first; Cancel keeps them.
+    auto* deletePrevious = window.findChild<QAction*>(QStringLiteral("deletePrevious"));
+    ASSERT_NE(deletePrevious, nullptr);
+    const auto ask = [&](bool act) {
+        answerNext(act);
+        deletePrevious->trigger();
+        window.activateWindow(); // the keys go to the window again after the dialog
+        ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    };
+    ask(false);
+    EXPECT_EQ(board->position().fen(), here);
+    // Deleted: the game starts here, with 3. Bc4 its first move.
+    ask(true);
+    EXPECT_EQ(fen().substr(0, fen().find(' ')), here.substr(0, here.find(' ')));
+    QTest::keyClick(&window, Qt::Key_Home);
+    EXPECT_EQ(fen().substr(0, fen().find(' ')), here.substr(0, here.find(' '))); // the start
+    QTest::keyClick(&window, Qt::Key_Right);
+    EXPECT_EQ(fen().substr(0, fen().find(' ')), afterBc4.substr(0, afterBc4.find(' ')));
+}

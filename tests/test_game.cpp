@@ -245,3 +245,74 @@ TEST(Game, CopyIsIndependent) {
 }
 
 } // namespace
+
+namespace {
+
+using namespace kiebitz::core;
+
+NodeId play(Game& game, NodeId from, std::initializer_list<std::string_view> sans) {
+    NodeId node = from;
+    for (const auto san : sans) {
+        node = game.addSan(node, san).value();
+    }
+    return node;
+}
+
+TEST(Game, SwapsWhatFollowsATransposition) {
+    // The main line's analysis goes on after 1. e4 e5 2. Nf3 Nc6; 1. Nf3 Nc6 2. e4 e5 stops
+    // there. Swapped, the analysis follows 1. Nf3 and 1. e4 stops.
+    Game game;
+    const NodeId italian = play(game, Game::root(), {"e4", "e5", "Nf3", "Nc6"});
+    const NodeId bc4 = play(game, italian, {"Bc4"});
+    play(game, bc4, {"Bc5"});
+    play(game, italian, {"Bb5"});
+    game.setComment(bc4, "the Italian");
+    const NodeId viaNf3 = play(game, Game::root(), {"Nf3", "Nc6", "e4", "e5"});
+    ASSERT_TRUE(game.children(viaNf3).empty());
+
+    EXPECT_TRUE(game.swapContinuations(italian, viaNf3));
+    EXPECT_TRUE(game.children(italian).empty());
+    const auto moved = game.children(viaNf3);
+    ASSERT_EQ(moved.size(), 2U);
+    EXPECT_EQ(game.node(moved[0]).san, "Bc4");
+    EXPECT_EQ(game.node(moved[1]).san, "Bb5");
+    EXPECT_EQ(game.parent(moved[0]), viaNf3);
+    EXPECT_EQ(game.node(moved[0]).comment, "the Italian");
+    EXPECT_EQ(game.positionAt(game.mainChild(moved[0])).fen(),
+              "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 4");
+
+    // Not the same position, or one after the other: refused.
+    EXPECT_FALSE(game.swapContinuations(italian, game.parent(viaNf3)));
+    EXPECT_FALSE(game.swapContinuations(viaNf3, moved[0]));
+    EXPECT_FALSE(game.swapContinuations(italian, italian));
+}
+
+TEST(Game, StartsAtAPositionKeepingWhatFollows) {
+    Game game;
+    game.setHeader("White", "Me");
+    const NodeId nc6 = play(game, Game::root(), {"e4", "e5", "Nf3", "Nc6"});
+    game.setComment(nc6, "the main position");
+    const NodeId bb5 = play(game, nc6, {"Bb5"});
+    play(game, bb5, {"a6"});
+    play(game, nc6, {"Bc4"});
+    play(game, Game::root(), {"d4"}); // outside: left out
+    game.setNags(bb5, {1});
+
+    const Game from = game.startingAt(nc6);
+    EXPECT_EQ(from.startPosition().fen(),
+              "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+    EXPECT_EQ(from.header("White"), "Me");
+    EXPECT_EQ(from.header("SetUp"), "1");
+    EXPECT_EQ(from.header("FEN"), from.startPosition().fen());
+    EXPECT_EQ(from.node(Game::root()).comment, "the main position");
+    const auto first = from.children(Game::root());
+    ASSERT_EQ(first.size(), 2U);
+    EXPECT_EQ(from.node(first[0]).san, "Bb5");
+    EXPECT_EQ(from.node(first[0]).nags, std::vector<std::uint8_t>{1});
+    EXPECT_EQ(from.node(from.mainChild(first[0])).san, "a6");
+    EXPECT_EQ(from.node(first[1]).san, "Bc4");
+    EXPECT_EQ(from.nodeCount(), 4U); // the start, Bb5, a6, Bc4
+    EXPECT_EQ(from.moveNumber(first[0]), 3);
+}
+
+} // namespace

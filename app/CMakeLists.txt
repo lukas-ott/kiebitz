@@ -11,6 +11,7 @@ qt_add_library(kiebitz_ui STATIC
     MainWindowKeys.hpp
     MainWindowSetup.cpp
     MainWindowTour.cpp
+    MainWindowZen.cpp
     Migration.cpp
     Migration.hpp
     board/BoardGeometry.cpp

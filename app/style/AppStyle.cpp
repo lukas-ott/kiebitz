@@ -500,6 +500,7 @@ QPushButton[role="segment"] {
 }
 QPushButton[role="segment"]:hover { color: @text; background: @raised; }
 QPushButton[role="segment"]:checked { color: @text; background: @border; }
+QLabel#zenPart { color: @muted; font-size: 22px; }
 QWidget[role="palette"] {
     background: @window;
     border: 1px solid @border;
@@ -835,8 +836,11 @@ QToolButton[role="statusAction"] {
     font-size: 12px;
 }
 QToolButton[role="statusAction"]:hover { background: @raised; color: @text; }
-QToolButton#trainingBarPart { color: @text; font-weight: 600; }
-QToolButton#trainingBarPart[up="true"] { color: @accent; }
+QWidget#trainingBar { background: @surface; border-bottom: 1px solid @border; }
+QToolButton#trainingBarPart { color: @text; font-size: 15px; font-weight: 600; }
+QLabel#trainingBarTime { color: @text; font-size: 24px; font-weight: 600; }
+QLabel#trainingBarTime[up="true"] { color: @accent; }
+QLabel#trainingBarDetail { color: @muted; font-size: 13px; }
 QLabel[role="statCaption"] { color: @muted; font-size: 11px; }
 QLabel[role="statValue"] { color: @text; font-size: 20px; font-weight: 600; }
 QTreeWidget#repertoireOpenings, QTreeWidget#repertoireGaps {

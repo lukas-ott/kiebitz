@@ -59,6 +59,10 @@ signals:
     void makeMainLineRequested(kiebitz::core::NodeId id);
     void deleteFromRequested(kiebitz::core::NodeId id);
     void deleteVariationRequested(kiebitz::core::NodeId id);
+    /// Swap what follows this move with what follows the next move order into its position.
+    void swapTranspositionRequested(kiebitz::core::NodeId id);
+    /// Delete everything before this move: the game starts from its position.
+    void startHereRequested(kiebitz::core::NodeId id);
     void nagToggled(kiebitz::core::NodeId id, std::uint8_t nag);
     void nagsCleared(kiebitz::core::NodeId id);
     void commentEditRequested(kiebitz::core::NodeId id);

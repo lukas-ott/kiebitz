@@ -1817,6 +1817,22 @@
         <translation>Varsler for Kiebitz er slått av: Systeminnstillinger › Varsler</translation>
     </message>
     <message>
+        <source>That move order comes later in this line: nothing to swap</source>
+        <translation>Den trekkfølgen kommer senere i samme linje: ingenting å bytte</translation>
+    </message>
+    <message>
+        <source>Delete the previous moves?</source>
+        <translation>Slette de forrige trekkene?</translation>
+    </message>
+    <message>
+        <source>The game then starts from this position. The moves before it and every variation that doesn&apos;t go through it are deleted.</source>
+        <translation>Partiet starter da i denne stillingen. Trekkene før den og alle varianter som ikke går gjennom den, slettes.</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Slett</translation>
+    </message>
+    <message>
         <source>Repertoire</source>
         <translation>Repertoar</translation>
     </message>
@@ -2001,12 +2017,20 @@
         <translation>Gjør til &amp;hovedvariant</translation>
     </message>
     <message>
+        <source>S&amp;wap With Transposition</source>
+        <translation>&amp;Bytt med omstilling</translation>
+    </message>
+    <message>
         <source>&amp;Delete From Here</source>
         <translation>&amp;Slett herfra</translation>
     </message>
     <message>
         <source>Delete &amp;Variation</source>
         <translation>Slett &amp;variant</translation>
+    </message>
+    <message>
+        <source>Delete Previous Mo&amp;ves…</source>
+        <translation>Slett &amp;forrige trekk…</translation>
     </message>
     <message>
         <source>Edit &amp;Comment</source>
@@ -2574,12 +2598,20 @@
         <translation>Gjør til hovedvariant</translation>
     </message>
     <message>
+        <source>Swap With Transposition</source>
+        <translation>Bytt med omstilling</translation>
+    </message>
+    <message>
         <source>Delete From Here</source>
         <translation>Slett herfra</translation>
     </message>
     <message>
         <source>Delete Variation</source>
         <translation>Slett variant</translation>
+    </message>
+    <message>
+        <source>Delete Previous Moves…</source>
+        <translation>Slett forrige trekk…</translation>
     </message>
     <message>
         <source>Move</source>
@@ -4490,12 +4522,28 @@
         <translation>Stopp</translation>
     </message>
     <message>
+        <source>Zen</source>
+        <translation>Zen</translation>
+    </message>
+    <message>
+        <source>Only the training, full screen (Esc leaves)</source>
+        <translation>Bare treningen, i fullskjerm (Esc avslutter)</translation>
+    </message>
+    <message>
+        <source>Time&apos;s up</source>
+        <translation>Tiden er ute</translation>
+    </message>
+    <message>
         <source>time&apos;s up</source>
         <translation>tiden er ute</translation>
     </message>
     <message>
         <source>next: %1</source>
         <translation>neste: %1</translation>
+    </message>
+    <message>
+        <source>left</source>
+        <translation>igjen</translation>
     </message>
     <message>
         <source>%1 left</source>
@@ -4592,6 +4640,14 @@
         <translation>Avslutt trening</translation>
     </message>
     <message>
+        <source>Zen Mode</source>
+        <translation>Zen-modus</translation>
+    </message>
+    <message>
+        <source>Only the training, full screen, until its time is up (Esc leaves)</source>
+        <translation>Bare treningen, i fullskjerm, til tiden er ute (Esc avslutter)</translation>
+    </message>
+    <message>
         <source>PLAN</source>
         <translation>PLAN</translation>
     </message>
@@ -4677,6 +4733,29 @@
     <message>
         <source>%1 stopped unexpectedly.</source>
         <translation>%1 stoppet uventet.</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::ZenClock</name>
+    <message>
+        <source>Time&apos;s up</source>
+        <translation>Tiden er ute</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>Fortsett</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>Pause</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Neste</translation>
+    </message>
+    <message>
+        <source>Finish</source>
+        <translation>Ferdig</translation>
     </message>
 </context>
 </TS>

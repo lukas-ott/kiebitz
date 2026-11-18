@@ -18,7 +18,9 @@ class QActionGroup;
 class QButtonGroup;
 class QMenu;
 class QStackedWidget;
+class QShortcut;
 class QToolButton;
+class QVBoxLayout;
 
 namespace kiebitz::app {
 
@@ -39,6 +41,7 @@ class ProfileStore;
 class ProfilesView;
 class SettingsView;
 class UpdateCheck;
+class ZenClock;
 class Shortcuts;
 class Sounds;
 class TrainingBar;
@@ -103,6 +106,9 @@ public:
     void offerCrashReport();
     /// Asks GitHub for a newer version if it is due (main() calls it after the start).
     void checkForUpdatesIfDue();
+    /// Zen mode: only the training, full screen; Esc or the end of the session leaves it.
+    void setZen(bool zen);
+    [[nodiscard]] bool zen() const noexcept { return m_zen; }
     /// The game of the tab shown, or null (tests).
     [[nodiscard]] const GameDocument* document() const { return doc(); }
 
@@ -240,6 +246,10 @@ private:
     void makeMainLine(core::NodeId id);
     void deleteFrom(core::NodeId id);
     void deleteVariation(core::NodeId id);
+    /// Swaps what follows `id` with what follows the next move order into its position.
+    void swapTransposition(core::NodeId id);
+    /// Deletes the moves before `id` (asks first): the game starts from its position.
+    void deletePreviousMoves(core::NodeId id);
     void toggleNag(core::NodeId id, std::uint8_t nag);
     void clearNags(core::NodeId id);
     void editComment(core::NodeId id);
@@ -255,6 +265,20 @@ private:
     QStackedWidget* m_pages = nullptr;     ///< one per section, in Section order
     QButtonGroup* m_sidebar = nullptr;     ///< one button per section, ids = Section
     QToolButton* m_updateButton = nullptr; ///< in the sidebar while a newer version is out
+    // Zen mode: what it hides, and how the window was before it.
+    bool m_zen = false;
+    Qt::WindowStates m_beforeZen;
+    QWidget* m_sidebarFrame = nullptr;
+    QWidget* m_tabRow = nullptr;
+    QVBoxLayout* m_mainColumn = nullptr; ///< the training bar over the pages
+    QWidget* m_panelsCard = nullptr;
+    std::vector<QAction*> m_sectionActions;
+    QShortcut* m_zenEscape = nullptr;
+    ZenClock* m_zenClock = nullptr;
+    /// Zen mode's page: the clock for self-study, else the part's own page.
+    void showZenPage();
+    /// The page of a training part: the Library's repertoire files, the puzzles, ...
+    void showTrainingPart(training::Part part);
     UpdateCheck* m_updates = nullptr;
     QUrl m_updatePage;          ///< the newer version's release page
     bool m_updateAsked = false; ///< Help → Check for Updates… is waiting for its answer

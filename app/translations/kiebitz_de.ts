@@ -1817,6 +1817,22 @@
         <translation>Mitteilungen für Kiebitz sind aus: Systemeinstellungen › Mitteilungen</translation>
     </message>
     <message>
+        <source>That move order comes later in this line: nothing to swap</source>
+        <translation>Diese Zugfolge kommt später in derselben Linie: nichts zu tauschen</translation>
+    </message>
+    <message>
+        <source>Delete the previous moves?</source>
+        <translation>Die vorherigen Züge löschen?</translation>
+    </message>
+    <message>
+        <source>The game then starts from this position. The moves before it and every variation that doesn&apos;t go through it are deleted.</source>
+        <translation>Die Partie beginnt dann in dieser Stellung. Die Züge davor und jede Variante, die nicht durch sie führt, werden gelöscht.</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Löschen</translation>
+    </message>
+    <message>
         <source>Repertoire</source>
         <translation>Repertoire</translation>
     </message>
@@ -2001,12 +2017,20 @@
         <translation>Zur &amp;Hauptvariante machen</translation>
     </message>
     <message>
+        <source>S&amp;wap With Transposition</source>
+        <translation>Mit Zugumstellung &amp;tauschen</translation>
+    </message>
+    <message>
         <source>&amp;Delete From Here</source>
         <translation>Ab hier &amp;löschen</translation>
     </message>
     <message>
         <source>Delete &amp;Variation</source>
         <translation>&amp;Variante löschen</translation>
+    </message>
+    <message>
+        <source>Delete Previous Mo&amp;ves…</source>
+        <translation>&amp;Vorherige Züge löschen…</translation>
     </message>
     <message>
         <source>Edit &amp;Comment</source>
@@ -2574,12 +2598,20 @@
         <translation>Zur Hauptvariante machen</translation>
     </message>
     <message>
+        <source>Swap With Transposition</source>
+        <translation>Mit Zugumstellung tauschen</translation>
+    </message>
+    <message>
         <source>Delete From Here</source>
         <translation>Ab hier löschen</translation>
     </message>
     <message>
         <source>Delete Variation</source>
         <translation>Variante löschen</translation>
+    </message>
+    <message>
+        <source>Delete Previous Moves…</source>
+        <translation>Vorherige Züge löschen…</translation>
     </message>
     <message>
         <source>Move</source>
@@ -4490,12 +4522,28 @@
         <translation>Stopp</translation>
     </message>
     <message>
+        <source>Zen</source>
+        <translation>Zen</translation>
+    </message>
+    <message>
+        <source>Only the training, full screen (Esc leaves)</source>
+        <translation>Nur das Training, im Vollbild (Esc beendet)</translation>
+    </message>
+    <message>
+        <source>Time&apos;s up</source>
+        <translation>Zeit ist um</translation>
+    </message>
+    <message>
         <source>time&apos;s up</source>
         <translation>Zeit ist um</translation>
     </message>
     <message>
         <source>next: %1</source>
         <translation>als Nächstes: %1</translation>
+    </message>
+    <message>
+        <source>left</source>
+        <translation>übrig</translation>
     </message>
     <message>
         <source>%1 left</source>
@@ -4592,6 +4640,14 @@
         <translation>Training beenden</translation>
     </message>
     <message>
+        <source>Zen Mode</source>
+        <translation>Zen-Modus</translation>
+    </message>
+    <message>
+        <source>Only the training, full screen, until its time is up (Esc leaves)</source>
+        <translation>Nur das Training, im Vollbild, bis die Zeit um ist (Esc beendet)</translation>
+    </message>
+    <message>
         <source>PLAN</source>
         <translation>PLAN</translation>
     </message>
@@ -4677,6 +4733,29 @@
     <message>
         <source>%1 stopped unexpectedly.</source>
         <translation>%1 wurde unerwartet beendet.</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::ZenClock</name>
+    <message>
+        <source>Time&apos;s up</source>
+        <translation>Zeit ist um</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>Fortsetzen</translation>
+    </message>
+    <message>
+        <source>Pause</source>
+        <translation>Pause</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Weiter</translation>
+    </message>
+    <message>
+        <source>Finish</source>
+        <translation>Fertig</translation>
     </message>
 </context>
 </TS>

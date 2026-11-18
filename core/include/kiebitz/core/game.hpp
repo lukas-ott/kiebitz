@@ -122,6 +122,15 @@ public:
     void promote(NodeId id);
     /// Makes the node's line the main line all the way back to the root.
     void makeMainLine(NodeId id);
+    /// Swaps what follows two nodes that reach the same position by different moves (a
+    /// transposition): the moves after `a` then come after `b` and the other way round, so the
+    /// analysis sits under the move order wanted. False, and nothing changes, if they don't
+    /// reach the same position or one comes after the other.
+    bool swapContinuations(NodeId a, NodeId b);
+    /// The game from `id`'s position on: everything after `id` (variations and annotations
+    /// too), its comment as the game's first, and the same headers (with the new start's FEN).
+    /// The moves before `id`, and everything else outside it, are left out.
+    [[nodiscard]] Game startingAt(NodeId id) const;
 
     /// Annotations can be edited freely; the move and the links can't.
     void setComment(NodeId id, std::string text);

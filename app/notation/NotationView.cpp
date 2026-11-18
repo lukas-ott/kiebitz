@@ -741,12 +741,19 @@ void NotationView::contextMenuEvent(QContextMenuEvent* event) {
     promote->setEnabled(!first);
     menu.addAction(tr("Make Main Line"), this, [this, id] { emit makeMainLineRequested(id); })
         ->setEnabled(!mainLine);
+    const bool transposed = std::any_of(m_words.begin(), m_words.end(), [id](const Word& word) {
+        return word.node == id && word.transposed;
+    });
+    menu.addAction(tr("Swap With Transposition"), this,
+                   [this, id] { emit swapTranspositionRequested(id); })
+        ->setEnabled(transposed);
     menu.addSeparator();
     auto* deleteFrom =
         menu.addAction(tr("Delete From Here"), this, [this, id] { emit deleteFromRequested(id); });
     deleteFrom->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Backspace));
     menu.addAction(tr("Delete Variation"), this, [this, id] { emit deleteVariationRequested(id); })
         ->setEnabled(!mainLine);
+    menu.addAction(tr("Delete Previous Moves…"), this, [this, id] { emit startHereRequested(id); });
     menu.addSeparator();
 
     const auto addNags = [&](QMenu* sub, const auto& choices) {

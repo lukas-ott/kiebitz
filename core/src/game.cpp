@@ -376,6 +376,80 @@ std::vector<NodeId> Game::transposedNodes() const {
     return nodes;
 }
 
+bool Game::swapContinuations(NodeId a, NodeId b) {
+    if (a == b || a >= m_nodes.size() || b >= m_nodes.size() || !at(a).m_alive || !at(b).m_alive) {
+        return false;
+    }
+    // One after the other: its moves would end up inside themselves.
+    const auto above = [this](NodeId upper, NodeId lower) {
+        for (NodeId node = lower; node != kNoNode; node = at(node).m_parent) {
+            if (node == upper) {
+                return true;
+            }
+        }
+        return false;
+    };
+    if (above(a, b) || above(b, a) || positionAt(a).hash() != positionAt(b).hash()) {
+        return false;
+    }
+    std::swap(at(a).m_firstChild, at(b).m_firstChild);
+    for (const NodeId parent : {a, b}) {
+        for (NodeId child = at(parent).m_firstChild; child != kNoNode;
+             child = at(child).m_nextSibling) {
+            at(child).m_parent = parent;
+        }
+    }
+    return true;
+}
+
+Game Game::startingAt(NodeId id) const {
+    Game game(positionAt(id));
+    // The headers, but where the game starts is the new position's.
+    for (const auto& [name, value] : m_headers) {
+        if (name != "SetUp" && name != "FEN") {
+            game.setHeader(name, value);
+        }
+    }
+    game.removeHeader("SetUp");
+    game.removeHeader("FEN");
+    if (game.m_start.fen() != kStartFen) {
+        game.setHeader("SetUp", "1");
+        game.setHeader("FEN", game.m_start.fen());
+    }
+    game.at(root()).comment = at(id).comment;
+    game.at(root()).arrows = at(id).arrows;
+    game.at(root()).squareMarks = at(id).squareMarks;
+    // Everything after it, node by node, keeping the order of the variations.
+    std::vector<std::pair<NodeId, NodeId>> pending{{id, root()}}; // here, there
+    while (!pending.empty()) {
+        const auto [from, to] = pending.back();
+        pending.pop_back();
+        NodeId previous = kNoNode;
+        for (NodeId child = at(from).m_firstChild; child != kNoNode;
+             child = at(child).m_nextSibling) {
+            const NodeId copy = game.newNode();
+            Node& made = game.at(copy);
+            const Node& original = at(child);
+            made.move = original.move;
+            made.san = original.san;
+            made.commentBefore = original.commentBefore;
+            made.comment = original.comment;
+            made.nags = original.nags;
+            made.arrows = original.arrows;
+            made.squareMarks = original.squareMarks;
+            made.m_parent = to;
+            if (previous == kNoNode) {
+                game.at(to).m_firstChild = copy;
+            } else {
+                game.at(previous).m_nextSibling = copy;
+            }
+            previous = copy;
+            pending.emplace_back(child, copy);
+        }
+    }
+    return game;
+}
+
 NodeId Game::nextTransposition(NodeId id) const {
     const std::vector<std::uint64_t> hashes = positionHashes();
     const std::vector<NodeId> order = notationOrder();
