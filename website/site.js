@@ -81,7 +81,7 @@ function drawActivity(el) {
     }
 }
 
-// Newest release (pre-releases included): version, date and the .dmg link.
+// Newest release (no drafts): version, date and the .dmg link.
 async function loadRelease() {
     try {
         const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=5`, {
