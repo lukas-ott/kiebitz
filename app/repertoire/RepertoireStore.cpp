@@ -16,6 +16,20 @@
 namespace kiebitz::app {
 namespace {
 
+/// The Library the app's store watches, for the folder a file is in (kindOf and sideOf are
+/// static: they're asked about files everywhere).
+const Library* g_library = nullptr; // NOLINT(*-avoid-non-const-global-variables)
+
+/// `path` relative to the Library's folder ("Repertoires/Benko/Main.pgn"); empty if it isn't
+/// in it.
+std::string inLibrary(const QString& path) {
+    if (g_library == nullptr || g_library->folder().isEmpty()) {
+        return {};
+    }
+    const QString root = g_library->folder() + QLatin1Char('/');
+    return path.startsWith(root) ? path.mid(root.size()).toStdString() : std::string();
+}
+
 std::size_t hashOf(const std::string& text) {
     return std::hash<std::string>{}(text);
 }
@@ -67,6 +81,7 @@ repertoire::Tree treeOf(core::Color side, const std::vector<RepertoireFile>& fil
 
 RepertoireStore::RepertoireStore(Library& library, QObject* parent)
     : QObject(parent), m_library(library) {
+    g_library = &m_library;
     connect(&m_library, &Library::scanned, this, &RepertoireStore::libraryChanged);
     connect(&m_library, &Library::progress, this, &RepertoireStore::libraryChanged);
     const QSettings settings;
@@ -136,8 +151,14 @@ void RepertoireStore::saveActive() const {
 
 // ---- What a file is ----------------------------------------------------------------------------
 
+RepertoireStore::~RepertoireStore() {
+    if (g_library == &m_library) {
+        g_library = nullptr;
+    }
+}
+
 library::FileKind RepertoireStore::kindOf(const PgnFile& file) {
-    return library::kindOf(file.games);
+    return library::kindOf(file.games, inLibrary(file.path));
 }
 
 std::optional<core::Color> RepertoireStore::orientationOf(const PgnFile& file) {
@@ -155,7 +176,10 @@ std::optional<core::Color> RepertoireStore::orientationOf(const PgnFile& file) {
 }
 
 core::Color RepertoireStore::sideOf(const PgnFile& file) {
-    return orientationOf(file).value_or(core::Color::White);
+    if (const auto side = orientationOf(file)) {
+        return *side;
+    }
+    return library::folderSide(inLibrary(file.path)).value_or(core::Color::White);
 }
 
 const RepertoireFile* RepertoireStore::builtFile(const QString& path) const {

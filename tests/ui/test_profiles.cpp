@@ -925,6 +925,21 @@ TEST_F(ProfilesTest, TheRepertoireTabShowsWhereGamesLeftTheBook) {
         QTest::qWait(100);
         view.grab().save(QDir(dir).filePath(QStringLiteral("profile-repertoire.png")));
     }
+    // The speed filter at the top counts here too: her games have no time control (classical).
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileSpeed:blitz")),
+                      Qt::LeftButton);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&] { return view.theorySummary().startsWith(u"No games at the speeds"); }, 5000))
+        << view.theorySummary().toStdString();
+    EXPECT_TRUE(view.theoryRows().isEmpty());
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileSpeed:classical")),
+                      Qt::LeftButton);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return view.theorySummary().startsWith(u"4 games checked"); }, 5000));
+    QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileSpeed:all")),
+                      Qt::LeftButton);
+    ASSERT_TRUE(
+        QTest::qWaitFor([&] { return view.theorySummary().startsWith(u"4 games checked"); }, 5000));
     // Only where they left it.
     QTest::mouseClick(view.findChild<QPushButton*>(QStringLiteral("profileTheoryKind:opponent")),
                       Qt::LeftButton);
@@ -967,6 +982,34 @@ TEST_F(ProfilesTest, TheRepertoireTabShowsWhereGamesLeftTheBook) {
     ASSERT_TRUE(QTest::qWaitFor(
         [&] { return second.theorySummary().startsWith(u"5 games checked"); }, 5000))
         << second.theorySummary().toStdString();
+
+    // It is new: the games from before were all seen when the profile was first shown.
+    auto* tab = second.findChild<QPushButton*>(QStringLiteral("profileShowRepertoire"));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return tab->text() == u"Repertoire · 1 new"; }, 5000))
+        << tab->text().toStdString();
+    QTest::mouseClick(second.findChild<QPushButton*>(QStringLiteral("profileTheoryKind:new")),
+                      Qt::LeftButton);
+    EXPECT_TRUE(second.theorySummary().startsWith(u"1 new game since"))
+        << second.theorySummary().toStdString();
+    const auto* newTree = second.findChild<QTreeWidget*>(QStringLiteral("profileTheory"));
+    ASSERT_EQ(newTree->topLevelItemCount(), 1);
+    EXPECT_EQ(newTree->topLevelItem(0)->text(0), QStringLiteral("Bishop's Opening"));
+    EXPECT_EQ(newTree->topLevelItem(0)->text(2), QStringLiteral("1"));
+    ASSERT_EQ(newTree->topLevelItem(0)->child(0)->childCount(), 1);
+    EXPECT_TRUE(newTree->topLevelItem(0)->child(0)->child(0)->text(0).contains(u"Gina"));
+    // Looked at: seen, also for the next view (as after a restart).
+    auto* markSeen = second.findChild<QPushButton*>(QStringLiteral("profileMarkSeen"));
+    ASSERT_TRUE(markSeen->isVisible());
+    QTest::mouseClick(markSeen, Qt::LeftButton);
+    ASSERT_TRUE(QTest::qWaitFor([&] { return tab->text() == u"Repertoire"; }, 5000));
+    EXPECT_FALSE(markSeen->isVisible());
+    EXPECT_EQ(newTree->topLevelItemCount(), 0);
+    EXPECT_TRUE(second.theorySummary().startsWith(u"No new games"));
+    kiebitz::app::ProfilesView third(store, lichess, repertoires, style);
+    third.select(id);
+    const auto* thirdTab = third.findChild<QPushButton*>(QStringLiteral("profileShowRepertoire"));
+    QTest::qWait(300);
+    EXPECT_EQ(thirdTab->text(), QStringLiteral("Repertoire"));
 }
 
 TEST_F(ProfilesTest, OverTheBoardGamesAreAddedOnceAndCanBeDeleted) {

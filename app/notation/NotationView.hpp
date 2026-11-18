@@ -64,6 +64,8 @@ signals:
     void commentEditRequested(kiebitz::core::NodeId id);
     /// "Starting Position": the file starts after this move (the root: at the very start).
     void startRequested(kiebitz::core::NodeId id);
+    /// The ⇄ after a move was clicked: go to where its position comes up again.
+    void transpositionRequested(kiebitz::core::NodeId id);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -100,9 +102,10 @@ private:
         core::NodeId node = core::kNoNode; ///< the move it belongs to, for moves
         Kind kind = Kind::Comment;
         Join join = Join::Space;
-        bool small = false; ///< in a variation paragraph (smaller font)
-        bool flag = false;  ///< where the file starts: a flag before the move
-        qreal x = 0;        ///< laid out: left edge, relative to the view's content
+        bool small = false;      ///< in a variation paragraph (smaller font)
+        bool flag = false;       ///< where the file starts: a flag before the move
+        bool transposed = false; ///< its position comes up elsewhere too: a ⇄ after it
+        qreal x = 0;             ///< laid out: left edge, relative to the view's content
         qreal width = 0;
         int line = 0; ///< laid out: index into m_lines
     };
@@ -138,6 +141,8 @@ private:
     }
     [[nodiscard]] qreal widthOf(const Word& word);
     [[nodiscard]] int wordAt(QPoint viewportPoint) const;
+    /// Whether the point is on the ⇄ of that word.
+    [[nodiscard]] bool onMark(int word, QPoint viewportPoint) const;
     [[nodiscard]] core::NodeId nodeAt(QPoint viewportPoint) const;
     [[nodiscard]] QRectF wordRect(int index) const; ///< in viewport coordinates
 
@@ -160,7 +165,9 @@ private:
     std::array<qreal, 2> m_ascent{};
 
     core::NodeId m_pressed = core::kNoNode; ///< a click goes to the move it started on
+    bool m_pressedMark = false;             ///< ... or, started on its ⇄, to the transposition
     int m_hovered = -1;                     ///< the move word under the mouse
+    bool m_hoveredMark = false;             ///< ... and the mouse is on its ⇄
     core::NodeId m_start = core::kNoNode;   ///< the move the file starts after (flagged)
     bool m_startOffered = false;            ///< "Start Here" in the menu (repertoire files)
     bool m_rows = false;                    ///< the rows view

@@ -6,6 +6,7 @@
 #include "kiebitz/gamedb/facts.hpp"
 #include "kiebitz/repertoire/theory.hpp"
 
+#include <QSet>
 #include <QWidget>
 
 #include <cstdint>
@@ -185,6 +186,21 @@ private:
     };
     std::map<QString, SavedTheory> m_theorySaved;
     [[nodiscard]] QString theoryFingerprint(const Profile& profile) const;
+    // New games: your games since you last marked them seen (after a sync, to look at).
+    static constexpr int kNewGames = 3; ///< m_theoryKind: only the new games
+    /// A game, the same in every rebuild of the database: where, who, when and how long.
+    [[nodiscard]] static QString gameKey(const gamedb::GameInfo& game);
+    [[nodiscard]] bool isNew(const gamedb::GameInfo& game) const;
+    /// Reads the games seen (the first time: all games are) and counts the new ones.
+    void countNewGames();
+    /// Every game of the profile is seen now.
+    void markGamesSeen();
+    QPushButton* m_markSeen = nullptr;
+    QPushButton* m_newChip = nullptr;
+    QString m_seenProfile; ///< whose m_seen is
+    QSet<QString> m_seen;  ///< gameKey()s
+    int m_newCount = 0;    ///< of the profile shown
+    int m_newRequest = 0;
     QLineEdit* m_search = nullptr;
     DateRange* m_dates = nullptr;
     ElidedLabel* m_gamesStatus = nullptr;

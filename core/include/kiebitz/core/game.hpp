@@ -91,6 +91,14 @@ public:
     [[nodiscard]] std::vector<NodeId> mainLine() const;
     /// The position after this node's move. Replays the moves from the start.
     [[nodiscard]] Position positionAt(NodeId id) const;
+    /// Every node in the order the notation shows them: a move, then the variations that branch
+    /// off before it, then the move after it. The root comes first.
+    [[nodiscard]] std::vector<NodeId> notationOrder() const;
+    /// The next node after `id` (in notation order, starting over at the top) that reaches the
+    /// same position by other moves; kNoNode if no other node does.
+    [[nodiscard]] NodeId nextTransposition(NodeId id) const;
+    /// The nodes whose position another node reaches too (by other moves), in no order.
+    [[nodiscard]] std::vector<NodeId> transposedNodes() const;
     /// Number of nodes in the tree, root included.
     [[nodiscard]] std::size_t nodeCount() const noexcept { return m_nodes.size() - m_free.size(); }
 
@@ -126,6 +134,8 @@ private:
     [[nodiscard]] Node& at(NodeId id);
     [[nodiscard]] const Node& at(NodeId id) const;
     NodeId newNode();
+    /// Every live node's position hash, by id (removed nodes: 0).
+    [[nodiscard]] std::vector<std::uint64_t> positionHashes() const;
     void unlink(NodeId id);
     void moveToFront(NodeId id);
 

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <string_view>
 
@@ -168,6 +169,41 @@ TEST(Game, FromFenWithBlackToMove) {
     EXPECT_EQ(game.mover(kd7), Color::Black);
     EXPECT_EQ(game.moveNumber(e4), 31);
     EXPECT_EQ(game.mover(e4), Color::White);
+}
+
+TEST(Game, NotationOrderPutsVariationsBeforeTheNextMove) {
+    Game game;
+    const NodeId e4 = line(game, Game::root(), {"e4"});
+    const NodeId e5 = line(game, e4, {"e5"});
+    const NodeId nf3 = line(game, e5, {"Nf3"});
+    const NodeId c5 = line(game, e4, {"c5"});
+    const NodeId c5nf3 = line(game, c5, {"Nf3"});
+    const NodeId d4 = line(game, Game::root(), {"d4"});
+    // 1. e4 (1. d4) 1... e5 (1... c5 2. Nf3) 2. Nf3
+    EXPECT_EQ(game.notationOrder(),
+              (std::vector<NodeId>{Game::root(), e4, d4, e5, c5, c5nf3, nf3}));
+}
+
+TEST(Game, NextTranspositionGoesRoundTheTree) {
+    Game game;
+    const NodeId italian = line(game, Game::root(), {"e4", "e5", "Nf3", "Nc6"});
+    const NodeId viaNf3 = line(game, Game::root(), {"Nf3", "Nc6", "e4", "e5"});
+    const NodeId e4 = game.mainChild(Game::root());
+    const NodeId viaNc6 = line(game, e4, {"Nc6", "Nf3", "e5"});
+    // Three ways into one position, in notation order viaNf3, viaNc6, italian: each jump goes
+    // to the next one, then round to the top.
+    EXPECT_EQ(game.nextTransposition(viaNf3), viaNc6);
+    EXPECT_EQ(game.nextTransposition(viaNc6), italian);
+    EXPECT_EQ(game.nextTransposition(italian), viaNf3);
+    // A position reached only once has none.
+    EXPECT_EQ(game.nextTransposition(game.parent(italian)), kNoNode);
+    std::vector<NodeId> transposed = game.transposedNodes();
+    std::sort(transposed.begin(), transposed.end());
+    // Also a move earlier: 1. Nf3 Nc6 2. e4 and 1. e4 Nc6 2. Nf3.
+    std::vector<NodeId> expected{italian, viaNf3, viaNc6, game.parent(viaNf3), game.parent(viaNc6)};
+    std::sort(expected.begin(), expected.end());
+    EXPECT_EQ(transposed, expected);
+    EXPECT_EQ(game.nextTransposition(Game::root()), kNoNode);
 }
 
 TEST(Game, Annotations) {

@@ -214,6 +214,57 @@ TEST_F(MainWindowTest, ArrowKeysNavigate) {
     EXPECT_NE(fen(), afterNf3);
 }
 
+TEST_F(MainWindowTest, TJumpsToTheNextTransposition) {
+    play("e4");
+    play("e5");
+    play("Nf3");
+    const std::string position = fen();
+    QTest::keyClick(&window, Qt::Key_Home);
+    play("Nf3"); // 1. Nf3 e5 2. e4: the same position by another move order
+    play("e5");
+    play("e4");
+    // The same but for the move counters (a pawn moved last here).
+    const auto placement = [](const std::string& text) {
+        return text.substr(0, text.size() - 4);
+    };
+    ASSERT_EQ(placement(fen()), placement(position));
+    const std::string afterNf3e5 = "rnbqkbnr/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2";
+
+    QTest::keyClick(&window, Qt::Key_T); // to 2. Nf3 in the main line
+    EXPECT_EQ(fen(), position);
+    QTest::keyClick(&window, Qt::Key_Left);
+    EXPECT_EQ(fen(), "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2");
+    QTest::keyClick(&window, Qt::Key_Right);
+    QTest::keyClick(&window, Qt::Key_T); // and back to 2. e4 in the variation
+    QTest::keyClick(&window, Qt::Key_Left);
+    EXPECT_EQ(fen(), afterNf3e5);
+
+    // A position reached once: T stays.
+    QTest::keyClick(&window, Qt::Key_T);
+    EXPECT_EQ(fen(), afterNf3e5);
+
+    // The list marks both 2. Nf3 (node 3) and 2. e4 (node 6) with a ⇄; a click on it goes to
+    // the other one, a click on the move itself to the move.
+    auto* list = window.findChild<NotationView*>(QStringLiteral("moveList"));
+    ASSERT_NE(list, nullptr);
+    const QRect nf3 = list->moveRect(3);
+    const QRect e4 = list->moveRect(6);
+    ASSERT_FALSE(nf3.isEmpty());
+    ASSERT_FALSE(e4.isEmpty());
+    QTest::mouseClick(list->viewport(), Qt::LeftButton, {},
+                      QPoint(e4.right() - 5, e4.center().y()));
+    QTest::keyClick(&window, Qt::Key_Left);
+    EXPECT_EQ(fen(), "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"); // main line
+    QTest::mouseClick(list->viewport(), Qt::LeftButton, {}, QPoint(e4.left() + 4, e4.center().y()));
+    QTest::keyClick(&window, Qt::Key_Left);
+    EXPECT_EQ(fen(), afterNf3e5); // the move itself: still the variation
+    if (const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR"); !dir.isEmpty()) {
+        window.resize(1200, 760);
+        QTest::qWait(100);
+        list->grab().save(QDir(dir).filePath(QStringLiteral("notation-transpositions.png")));
+    }
+}
+
 TEST_F(MainWindowTest, FKeyFlipsTheBoard) {
     const bool before = board->isFlipped();
     QTest::keyClick(&window, Qt::Key_F);

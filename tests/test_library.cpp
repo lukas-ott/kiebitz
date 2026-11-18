@@ -164,6 +164,31 @@ TEST(FileKind, ReadFromTheHeaders) {
     EXPECT_EQ(kiebitz::library::nameOf(FileKind::Tournament), "Tournament");
 }
 
+TEST(FileKind, AFileWithoutOneTakesItsTopFolders) {
+    using kiebitz::core::Color;
+    using kiebitz::library::FileKind;
+    using kiebitz::library::folderSide;
+    using kiebitz::library::kindOf;
+    const std::vector<GameEntry> plain{{0, 1, {{"White", "Carlsen"}}}};
+    const std::vector<GameEntry> marked{{0, 1, {{"FileType", "Game"}}}};
+    EXPECT_EQ(kindOf(plain, "Repertoires/Benko/Main.pgn"), FileKind::Repertoire);
+    EXPECT_EQ(kindOf(plain, "repertoires/Main.pgn"), FileKind::Repertoire); // any case
+    EXPECT_EQ(kindOf(plain, "Puzzles/Tactics.pgn"), FileKind::Puzzle);
+    EXPECT_EQ(kindOf(plain, "Turniere/Open.pgn"), FileKind::Tournament);
+    EXPECT_EQ(kindOf(plain, "Games/Model Games/Rubinstein.pgn"), FileKind::Game);
+    EXPECT_EQ(kindOf(plain, "Repertoires.pgn"), FileKind::Game);       // a file, not a folder
+    EXPECT_EQ(kindOf(plain, "Old/Repertoires/x.pgn"), FileKind::Game); // only the top folder
+    EXPECT_EQ(kindOf(marked, "Repertoires/Main.pgn"), FileKind::Game); // its header wins
+
+    EXPECT_EQ(folderSide("Repertoires/White Repertoire (Nc3)/Main.pgn"), Color::White);
+    EXPECT_EQ(folderSide("Repertoires/Black/Sharp/Najdorf.pgn"), Color::Black);
+    EXPECT_EQ(folderSide("Repertoires/Schwarz/Benko.pgn"), Color::Black);
+    EXPECT_EQ(folderSide("Repertoires/White/Against Black's Dutch/a.pgn"), Color::White);
+    EXPECT_EQ(folderSide("Repertoires/Blackmar-Diemer/a.pgn"), std::nullopt); // not a word
+    EXPECT_EQ(folderSide("Repertoires/Benko Gambit/a.pgn"), std::nullopt);
+    EXPECT_EQ(folderSide("Main.pgn"), std::nullopt);
+}
+
 TEST(TrainingStats, CountsAndForgetsMistakesOnceSettled) {
     using kiebitz::core::Color;
     using kiebitz::library::TrainingStats;

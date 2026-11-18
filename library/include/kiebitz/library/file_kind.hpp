@@ -24,5 +24,17 @@ inline constexpr std::string_view kFileTypeHeader = "FileType";
 /// A file's kind from its games' headers: the first game with [FileType] decides; files
 /// marked by an earlier Kiebitz ([Repertoire "..."]) are repertoires; everything else is games.
 [[nodiscard]] FileKind kindOf(std::span<const pgn::GameEntry> games);
+/// The same, for a file at `path` in the Library (relative: "Repertoires/Najdorf.pgn"): one
+/// without a kind in its headers takes its top folder's (see folderKind), else is games.
+[[nodiscard]] FileKind kindOf(std::span<const pgn::GameEntry> games, std::string_view path);
+
+/// The kind the Library's top folder of `path` (relative) stands for, in the suggested layout:
+/// "Repertoires", "Puzzles", "Tournaments" and "Games" (any case, also in German and
+/// Norwegian). None for a file at the top or in any other folder.
+[[nodiscard]] std::optional<FileKind> folderKind(std::string_view path);
+/// The side a folder of `path` (relative) names: "White" or "Black" as a word in it ("White
+/// Repertoire (Nc3)", also Weiß/Schwarz and Hvit/Svart), the outermost folder that says one.
+/// None if none does.
+[[nodiscard]] std::optional<core::Color> folderSide(std::string_view path);
 
 } // namespace kiebitz::library

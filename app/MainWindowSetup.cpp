@@ -261,6 +261,10 @@ void MainWindow::buildGameMenu() {
     m_startAction->setShortcut(Qt::Key_Home);
     m_endAction = menu->addAction(tr("Go to &End"), this, &MainWindow::goToEnd);
     m_endAction->setShortcut(Qt::Key_End);
+    auto* transpositionAction =
+        menu->addAction(tr("Next &Transposition"), this, [this] { goToNextTransposition(); });
+    transpositionAction->setObjectName(QStringLiteral("nextTransposition"));
+    transpositionAction->setShortcut(Qt::Key_T);
 
     // ↑ ↓: choose between continuations at a branch point; elsewhere go to the start / end.
     // Not in the menu (Back and Forward say enough there), but their keys can be changed.
@@ -301,9 +305,9 @@ void MainWindow::buildGameMenu() {
         menu->addAction(tr("Start / Stop &Engine"), this, [this] { m_enginePanel->toggle(); });
     engineAction->setShortcut(Qt::Key_Space);
     m_gameActions.insert(m_gameActions.end(),
-                         {m_backAction, m_forwardAction, m_startAction, m_endAction, promoteAction,
-                          mainLineAction, deleteFromAction, deleteVariationAction, commentAction,
-                          engineAction});
+                         {m_backAction, m_forwardAction, m_startAction, m_endAction,
+                          transpositionAction, promoteAction, mainLineAction, deleteFromAction,
+                          deleteVariationAction, commentAction, engineAction});
 }
 
 void MainWindow::buildViewMenu(QMenu* menu) {
@@ -783,6 +787,8 @@ QWidget* MainWindow::buildBoardPage() {
     connect(m_notation, &NotationView::nodeActivated, this,
             [this](NodeId id) { showNode(id, false); });
     connect(m_notation, &NotationView::promoteRequested, this, &MainWindow::promote);
+    connect(m_notation, &NotationView::transpositionRequested, this,
+            qOverload<NodeId>(&MainWindow::goToNextTransposition));
     connect(m_notation, &NotationView::makeMainLineRequested, this, &MainWindow::makeMainLine);
     connect(m_notation, &NotationView::deleteFromRequested, this, &MainWindow::deleteFrom);
     connect(m_notation, &NotationView::deleteVariationRequested, this,

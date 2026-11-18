@@ -1797,6 +1797,10 @@
         <translation>TREKK</translation>
     </message>
     <message>
+        <source>No other move order in this game reaches this position</source>
+        <translation>Ingen annen trekkrekkefølge i dette partiet når denne stillingen</translation>
+    </message>
+    <message>
         <source>A second answer?</source>
         <translation>Et svar til?</translation>
     </message>
@@ -1979,6 +1983,10 @@
     <message>
         <source>Go to &amp;End</source>
         <translation>Gå til &amp;slutten</translation>
+    </message>
+    <message>
+        <source>Next &amp;Transposition</source>
+        <translation>Neste &amp;trekkomstilling</translation>
     </message>
     <message>
         <source>Previous Continuation</source>
@@ -2440,6 +2448,10 @@
     <message>
         <source>Play a move on the board to start.</source>
         <translation>Spill et trekk på brettet for å begynne.</translation>
+    </message>
+    <message>
+        <source>This position also comes up by another move order in this game: click to go there (T)</source>
+        <translation>Denne stillingen kommer også opp med en annen trekkrekkefølge i dette partiet: klikk for å gå dit (T)</translation>
     </message>
     <message>
         <source>Promote Variation</source>
@@ -2970,6 +2982,18 @@
         <translation>Boken sluttet</translation>
     </message>
     <message>
+        <source>New</source>
+        <translation>Nye</translation>
+    </message>
+    <message>
+        <source>Your games since you last marked them seen: the ones from the last sync, to look at</source>
+        <translation>Partiene dine siden du sist merket dem som sett: de fra siste synkronisering, til å se på</translation>
+    </message>
+    <message>
+        <source>Mark as Seen</source>
+        <translation>Merk som sett</translation>
+    </message>
+    <message>
         <source>OPENING · MOVE</source>
         <translation>ÅPNING · TREKK</translation>
     </message>
@@ -3132,6 +3156,26 @@
     <message>
         <source>Your score: %1</source>
         <translation>Din score: %1</translation>
+    </message>
+    <message>
+        <source>Repertoire · %1 new</source>
+        <translation>Repertoar · %1 nye</translation>
+    </message>
+    <message>
+        <source>No new games since you last marked them seen.</source>
+        <translation>Ingen nye partier siden du sist merket dem som sett.</translation>
+    </message>
+    <message>
+        <source>1 new game since you last marked them seen; %1 checked against your repertoire.</source>
+        <translation>1 nytt parti siden du sist merket dem som sett; %1 sjekket mot repertoaret ditt.</translation>
+    </message>
+    <message>
+        <source>%1 new games since you last marked them seen; %2 checked against your repertoire.</source>
+        <translation>%1 nye partier siden du sist merket dem som sett; %2 sjekket mot repertoaret ditt.</translation>
+    </message>
+    <message>
+        <source>No games at the speeds chosen at the top.</source>
+        <translation>Ingen partier med tenketidene valgt øverst.</translation>
     </message>
     <message>
         <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase&apos;s online database.</source>

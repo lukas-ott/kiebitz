@@ -41,9 +41,10 @@ struct BuiltRepertoire {
 /// The user's repertoires, by side.
 ///
 /// A file is a repertoire when its type says so ([FileType "Repertoire"], chosen in the
-/// Library); which side it is for comes from its [Orientation] header. All repertoire files of
-/// a side are merged into one tree, so a game can be checked against every one of them at once,
-/// and the tree knows which file each position comes from ("in book in Philidor Defense").
+/// Library) or, without a type, when it is in the Library's Repertoires folder; which side it
+/// is for comes from its [Orientation] header, else from a folder named for a side. All repertoire
+/// files of a side are merged into one tree, so a game can be checked against every one of them at
+/// once, and the tree knows which file each position comes from ("in book in Philidor Defense").
 ///
 /// A folder of them is a repertoire, active or not: files in an inactive folder (one you used
 /// to play, one you're still learning) open and read as repertoires but stay out of the tree.
@@ -58,11 +59,19 @@ class RepertoireStore : public QObject {
 
 public:
     explicit RepertoireStore(Library& library, QObject* parent = nullptr);
+    ~RepertoireStore() override;
+    RepertoireStore(const RepertoireStore&) = delete;
+    RepertoireStore& operator=(const RepertoireStore&) = delete;
+    RepertoireStore(RepertoireStore&&) = delete;
+    RepertoireStore& operator=(RepertoireStore&&) = delete;
 
+    /// Its [FileType]; without one, what its top folder in the Library stands for
+    /// (Repertoires/, Puzzles/, ...; library::folderKind), else games.
     [[nodiscard]] static library::FileKind kindOf(const PgnFile& file);
     /// The side its [Orientation] headers say, if they say one.
     [[nodiscard]] static std::optional<core::Color> orientationOf(const PgnFile& file);
-    /// A repertoire file's side: its [Orientation], else White.
+    /// A repertoire file's side: its [Orientation], else the side a folder of it names ("White
+    /// Repertoire"), else White.
     [[nodiscard]] static core::Color sideOf(const PgnFile& file);
 
     /// The built repertoire of a side, or null (no repertoire files, or still being read).

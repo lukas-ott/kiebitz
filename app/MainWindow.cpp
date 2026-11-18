@@ -651,6 +651,25 @@ void MainWindow::goToEnd() {
     showNode(last, false);
 }
 
+void MainWindow::goToNextTransposition() {
+    if (const GameDocument* d = doc()) {
+        goToNextTransposition(d->current);
+    }
+}
+
+void MainWindow::goToNextTransposition(NodeId from) {
+    const GameDocument* d = doc();
+    if (d == nullptr) {
+        return;
+    }
+    const NodeId other = d->game.nextTransposition(from);
+    if (other == core::kNoNode) {
+        showStatus(tr("No other move order in this game reaches this position"), keys::kStatusMs);
+        return;
+    }
+    showNode(other, false);
+}
+
 void MainWindow::stepChoiceOrJump(int step) {
     const GameDocument* d = doc();
     if (d == nullptr) {

@@ -15,6 +15,7 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <unordered_set>
 
 namespace kiebitz::app {
 namespace {
@@ -130,6 +131,7 @@ void NotationView::updateFonts() {
 namespace {
 
 constexpr qreal kFlagWidth = 13; ///< room for the start flag before a move
+constexpr qreal kMarkWidth = 17; ///< room for the ⇄ after a move that transposes
 
 } // namespace
 
@@ -165,6 +167,10 @@ void NotationView::rebuild() {
         return;
     }
     const core::Game& game = *m_game;
+    std::unordered_set<NodeId> transposed;
+    for (const NodeId id : game.transposedNodes()) {
+        transposed.insert(id);
+    }
     m_words.reserve(game.nodeCount() * 3);
     m_moveWord.reserve(game.nodeCount());
 
@@ -195,6 +201,11 @@ void NotationView::rebuild() {
         if (id == m_start) {
             m_words.back().flag = true;
             m_words.back().width += kFlagWidth;
+        }
+        // Its position comes up elsewhere in the game too: a ⇄ after it, in the room made here.
+        if (transposed.contains(id)) {
+            m_words.back().transposed = true;
+            m_words.back().width += kMarkWidth;
         }
     };
     // A new paragraph, unless the current one is still empty (then it just changes style).
@@ -559,7 +570,8 @@ void NotationView::paintEvent(QPaintEvent* event) {
             if (i == currentWord) { // accent text on a soft accent tint
                 const QFontMetricsF metrics(
                     m_fonts[static_cast<std::size_t>(fontIndex(word.kind, word.small))]);
-                const QRectF box(word.x - 3, baseline - metrics.ascent() - 2, word.width + 6,
+                const qreal shown = word.width - (word.transposed ? kMarkWidth : 0);
+                const QRectF box(word.x - 3, baseline - metrics.ascent() - 2, shown + 6,
                                  metrics.height() + 4);
                 QPainterPath path;
                 path.addRoundedRect(box, 5, 5);
@@ -585,6 +597,26 @@ void NotationView::paintEvent(QPaintEvent* event) {
             }
             painter.setPen(color);
             painter.drawText(QPointF(x, baseline), word.text);
+            if (word.transposed) { // ⇄: two small arrows, one each way, in the accent colour
+                const qreal markSize = word.small ? 8.5 : 10;
+                const qreal left = word.x + word.width - kMarkWidth + 4;
+                const qreal markTop = baseline - markSize - 0.5;
+                QColor mark = c.accent;
+                mark.setAlphaF(i == m_hovered && m_hoveredMark ? 1.0F : 0.75F);
+                painter.setPen(QPen(mark, 1.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                const qreal upper = markTop + (markSize * 0.3);
+                const qreal lower = markTop + (markSize * 0.75);
+                const qreal right = left + markSize;
+                const qreal head = markSize * 0.28;
+                painter.drawLine(QPointF(left, upper), QPointF(right, upper));
+                painter.drawPolyline(QPolygonF{QPointF(right - head, upper - head),
+                                               QPointF(right, upper),
+                                               QPointF(right - head, upper + head)});
+                painter.drawLine(QPointF(left, lower), QPointF(right, lower));
+                painter.drawPolyline(QPolygonF{QPointF(left + head, lower - head),
+                                               QPointF(left, lower),
+                                               QPointF(left + head, lower + head)});
+            }
         }
     }
 }
@@ -604,7 +636,8 @@ void NotationView::changeEvent(QEvent* event) {
     if (event->type() == QEvent::FontChange) {
         updateFonts();
         for (Word& word : m_words) {
-            word.width = widthOf(word) + (word.flag ? kFlagWidth : 0);
+            word.width =
+                widthOf(word) + (word.flag ? kFlagWidth : 0) + (word.transposed ? kMarkWidth : 0);
         }
         layoutWords();
         viewport()->update();
@@ -613,30 +646,52 @@ void NotationView::changeEvent(QEvent* event) {
 
 // ---- Mouse -------------------------------------------------------------------------------------
 
+bool NotationView::onMark(int word, QPoint viewportPoint) const {
+    if (word < 0) {
+        return false;
+    }
+    const Word& w = m_words[static_cast<std::size_t>(word)];
+    const QRectF rect = wordRect(word);
+    return w.transposed && viewportPoint.x() >= rect.right() - kMarkWidth;
+}
+
 void NotationView::mousePressEvent(QMouseEvent* event) {
-    m_pressed =
-        event->button() == Qt::LeftButton ? nodeAt(event->position().toPoint()) : core::kNoNode;
+    const QPoint at = event->position().toPoint();
+    m_pressed = event->button() == Qt::LeftButton ? nodeAt(at) : core::kNoNode;
+    m_pressedMark = m_pressed != core::kNoNode && onMark(wordAt(at), at);
     QAbstractScrollArea::mousePressEvent(event);
 }
 
 void NotationView::mouseReleaseEvent(QMouseEvent* event) {
-    // A click selects the move it started and ended on.
+    // A click selects the move it started and ended on; on its ⇄, goes to the transposition.
+    const QPoint at = event->position().toPoint();
     if (event->button() == Qt::LeftButton && m_pressed != core::kNoNode &&
-        nodeAt(event->position().toPoint()) == m_pressed) {
-        emit nodeActivated(m_pressed);
+        nodeAt(at) == m_pressed) {
+        if (m_pressedMark && onMark(wordAt(at), at)) {
+            emit transpositionRequested(m_pressed);
+        } else {
+            emit nodeActivated(m_pressed);
+        }
     }
     m_pressed = core::kNoNode;
+    m_pressedMark = false;
     QAbstractScrollArea::mouseReleaseEvent(event);
 }
 
 void NotationView::mouseMoveEvent(QMouseEvent* event) {
-    int hovered = wordAt(event->position().toPoint());
+    const QPoint at = event->position().toPoint();
+    int hovered = wordAt(at);
     if (hovered >= 0 && m_words[static_cast<std::size_t>(hovered)].node == core::kNoNode) {
         hovered = -1;
     }
-    if (hovered != m_hovered) {
+    const bool mark = onMark(hovered, at);
+    if (hovered != m_hovered || mark != m_hoveredMark) {
         m_hovered = hovered;
+        m_hoveredMark = mark;
         viewport()->setCursor(hovered >= 0 ? Qt::PointingHandCursor : Qt::ArrowCursor);
+        viewport()->setToolTip(mark ? tr("This position also comes up by another move order "
+                                         "in this game: click to go there (T)")
+                                    : QString());
         viewport()->update();
     }
     QAbstractScrollArea::mouseMoveEvent(event);

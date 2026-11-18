@@ -215,6 +215,9 @@ private:
     void goForward();
     void goToStart();
     void goToEnd();
+    /// Jumps to the next place in the game that reaches the same position by other moves.
+    void goToNextTransposition();
+    void goToNextTransposition(core::NodeId from);
     void stepChoiceOrJump(int step);
     void updateNavigation();
     void updateFork();

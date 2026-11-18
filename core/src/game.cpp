@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
 
 namespace kiebitz::core {
 
@@ -309,6 +310,87 @@ void Game::setArrows(NodeId id, std::vector<Arrow> arrows) {
 
 void Game::setSquareMarks(NodeId id, std::vector<SquareMark> marks) {
     at(id).squareMarks = std::move(marks);
+}
+
+std::vector<NodeId> Game::notationOrder() const {
+    // Without recursion, so a very long main line can't run out of stack. "Expand" a node puts
+    // what follows it: its main move, each variation (the move and all after it), then what
+    // follows the main move.
+    struct Step {
+        NodeId node;
+        bool expand; ///< false: the node itself
+    };
+    std::vector<NodeId> order{root()};
+    std::vector<Step> todo{{root(), true}};
+    while (!todo.empty()) {
+        const Step step = todo.back();
+        todo.pop_back();
+        if (!step.expand) {
+            order.push_back(step.node);
+            continue;
+        }
+        const std::vector<NodeId> next = children(step.node);
+        if (next.empty()) {
+            continue;
+        }
+        todo.push_back({next.front(), true});
+        for (std::size_t i = next.size() - 1; i >= 1; --i) {
+            todo.push_back({next[i], true});
+            todo.push_back({next[i], false});
+        }
+        todo.push_back({next.front(), false});
+    }
+    return order;
+}
+
+std::vector<std::uint64_t> Game::positionHashes() const {
+    std::vector<std::uint64_t> hashes(m_nodes.size(), 0);
+    std::vector<std::pair<NodeId, Position>> todo{{root(), m_start}}; // parents first
+    while (!todo.empty()) {
+        auto [node, position] = std::move(todo.back());
+        todo.pop_back();
+        hashes[node] = position.hash();
+        for (const NodeId child : children(node)) {
+            Position after = position;
+            after.play(at(child).move);
+            todo.emplace_back(child, std::move(after));
+        }
+    }
+    return hashes;
+}
+
+std::vector<NodeId> Game::transposedNodes() const {
+    const std::vector<std::uint64_t> hashes = positionHashes();
+    std::unordered_map<std::uint64_t, int> seen;
+    for (NodeId id = 0; id < m_nodes.size(); ++id) {
+        if (m_nodes[id].m_alive) {
+            ++seen[hashes[id]];
+        }
+    }
+    std::vector<NodeId> nodes;
+    for (NodeId id = 0; id < m_nodes.size(); ++id) {
+        if (m_nodes[id].m_alive && seen[hashes[id]] > 1) {
+            nodes.push_back(id);
+        }
+    }
+    return nodes;
+}
+
+NodeId Game::nextTransposition(NodeId id) const {
+    const std::vector<std::uint64_t> hashes = positionHashes();
+    const std::vector<NodeId> order = notationOrder();
+    const auto here = std::find(order.begin(), order.end(), id);
+    if (here == order.end()) {
+        return kNoNode;
+    }
+    const std::size_t start = static_cast<std::size_t>(here - order.begin());
+    for (std::size_t k = 1; k < order.size(); ++k) {
+        const NodeId other = order[(start + k) % order.size()];
+        if (hashes[other] == hashes[id]) {
+            return other;
+        }
+    }
+    return kNoNode;
 }
 
 } // namespace kiebitz::core

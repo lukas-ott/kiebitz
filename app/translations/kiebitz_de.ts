@@ -1797,6 +1797,10 @@
         <translation>ZÜGE</translation>
     </message>
     <message>
+        <source>No other move order in this game reaches this position</source>
+        <translation>Keine andere Zugfolge in dieser Partie erreicht diese Stellung</translation>
+    </message>
+    <message>
         <source>A second answer?</source>
         <translation>Eine zweite Antwort?</translation>
     </message>
@@ -1979,6 +1983,10 @@
     <message>
         <source>Go to &amp;End</source>
         <translation>Zum &amp;Ende</translation>
+    </message>
+    <message>
+        <source>Next &amp;Transposition</source>
+        <translation>Nächste &amp;Zugumstellung</translation>
     </message>
     <message>
         <source>Previous Continuation</source>
@@ -2440,6 +2448,10 @@
     <message>
         <source>Play a move on the board to start.</source>
         <translation>Spiele einen Zug auf dem Brett, um zu beginnen.</translation>
+    </message>
+    <message>
+        <source>This position also comes up by another move order in this game: click to go there (T)</source>
+        <translation>Diese Stellung kommt in dieser Partie auch über eine andere Zugfolge vor: klicke, um dorthin zu gehen (T)</translation>
     </message>
     <message>
         <source>Promote Variation</source>
@@ -2970,6 +2982,18 @@
         <translation>Buch endete</translation>
     </message>
     <message>
+        <source>New</source>
+        <translation>Neu</translation>
+    </message>
+    <message>
+        <source>Your games since you last marked them seen: the ones from the last sync, to look at</source>
+        <translation>Deine Partien, seit du sie zuletzt als gesehen markiert hast: die vom letzten Abgleich, zum Ansehen</translation>
+    </message>
+    <message>
+        <source>Mark as Seen</source>
+        <translation>Als gesehen markieren</translation>
+    </message>
+    <message>
         <source>OPENING · MOVE</source>
         <translation>ERÖFFNUNG · ZUG</translation>
     </message>
@@ -3132,6 +3156,26 @@
     <message>
         <source>Your score: %1</source>
         <translation>Dein Ergebnis: %1</translation>
+    </message>
+    <message>
+        <source>Repertoire · %1 new</source>
+        <translation>Repertoire · %1 neu</translation>
+    </message>
+    <message>
+        <source>No new games since you last marked them seen.</source>
+        <translation>Keine neuen Partien, seit du sie zuletzt als gesehen markiert hast.</translation>
+    </message>
+    <message>
+        <source>1 new game since you last marked them seen; %1 checked against your repertoire.</source>
+        <translation>1 neue Partie, seit du sie zuletzt als gesehen markiert hast; %1 mit deinem Repertoire verglichen.</translation>
+    </message>
+    <message>
+        <source>%1 new games since you last marked them seen; %2 checked against your repertoire.</source>
+        <translation>%1 neue Partien, seit du sie zuletzt als gesehen markiert hast; %2 mit deinem Repertoire verglichen.</translation>
+    </message>
+    <message>
+        <source>No games at the speeds chosen at the top.</source>
+        <translation>Keine Partien in den oben gewählten Bedenkzeiten.</translation>
     </message>
     <message>
         <source>There are no games on the clipboard. Copy games as PGN first, for example in ChessBase&apos;s online database.</source>

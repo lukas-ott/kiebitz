@@ -157,9 +157,11 @@ QJsonObject theoryToJson(const QString& fingerprint, const repertoire::TheoryRep
     }
     QJsonArray infos;
     for (const gamedb::GameInfo& game : games) {
-        infos.append(QJsonArray{static_cast<qint64>(game.id), QString::fromStdString(game.white),
-                                QString::fromStdString(game.black),
-                                QString::fromStdString(game.date), static_cast<int>(game.result)});
+        infos.append(QJsonArray{
+            static_cast<qint64>(game.id), QString::fromStdString(game.white),
+            QString::fromStdString(game.black), QString::fromStdString(game.date),
+            static_cast<int>(game.result), QString::fromStdString(game.site),
+            QString::fromStdString(game.round), QString::fromStdString(game.event), game.plies});
     }
     return {{QStringLiteral("fingerprint"), fingerprint},
             {QStringLiteral("checked"), static_cast<qint64>(report.checked)},
@@ -178,12 +180,19 @@ theoryFromJson(const QJsonObject& object) {
     std::vector<gamedb::GameInfo> games;
     for (const auto& value : object[QStringLiteral("games")].toArray()) {
         const QJsonArray info = value.toArray();
+        if (info.size() < 9) {
+            return std::nullopt; // saved by an older Kiebitz: checked again
+        }
         gamedb::GameInfo game;
         game.id = static_cast<gamedb::GameId>(info.at(0).toInteger());
         game.white = info.at(1).toString().toStdString();
         game.black = info.at(2).toString().toStdString();
         game.date = info.at(3).toString().toStdString();
         game.result = static_cast<gamedb::GameResult>(info.at(4).toInt());
+        game.site = info.at(5).toString().toStdString();
+        game.round = info.at(6).toString().toStdString();
+        game.event = info.at(7).toString().toStdString();
+        game.plies = info.at(8).toInt();
         games.push_back(std::move(game));
     }
     for (const auto& value : object[QStringLiteral("groups")].toArray()) {
@@ -653,16 +662,28 @@ ProfilesView::ProfilesView(ProfileStore& store, LichessLogin& lichess, Repertoir
           std::tuple{static_cast<int>(repertoire::Departure::You), tr("You left it"), "you"},
           std::tuple{static_cast<int>(repertoire::Departure::Opponent), tr("They left it"),
                      "opponent"},
-          std::tuple{static_cast<int>(repertoire::Departure::End), tr("Book ended"), "end"}}) {
+          std::tuple{static_cast<int>(repertoire::Departure::End), tr("Book ended"), "end"},
+          std::tuple{kNewGames, tr("New"), "new"}}) {
         auto* button = chip(text, QStringLiteral("profileTheoryKind:") + QString::fromLatin1(name));
         button->setChecked(kind == -1);
         connect(button, &QPushButton::clicked, this, [this, which = kind] {
             m_theoryKind = which;
             fillTheory();
         });
+        if (kind == kNewGames) {
+            m_newChip = button;
+            button->setToolTip(tr("Your games since you last marked them seen: the ones from "
+                                  "the last sync, to look at"));
+        }
         kinds->addWidget(button);
     }
     kinds->addStretch();
+    m_markSeen = new QPushButton(tr("Mark as Seen"));
+    m_markSeen->setObjectName(QStringLiteral("profileMarkSeen"));
+    m_markSeen->setFocusPolicy(Qt::NoFocus);
+    m_markSeen->setVisible(false);
+    connect(m_markSeen, &QPushButton::clicked, this, &ProfilesView::markGamesSeen);
+    kinds->addWidget(m_markSeen);
     theoryBox->addLayout(kinds);
     m_theorySummary = label(QString(), "emptyHint");
     m_theorySummary->setObjectName(QStringLiteral("profileTheorySummary"));
@@ -1259,6 +1280,7 @@ void ProfilesView::showGames() {
     }
     m_model->setDatabase(m_db);
     showStats();
+    countNewGames();
     if (m_pages->currentIndex() == 2) {
         showTheory();
     } else if (m_pages->currentIndex() == 3) {
@@ -1518,6 +1540,9 @@ void ProfilesView::speedsChanged() {
     m_prepare->setSpeeds(m_speeds);
     showStats();
     showRatingLine();
+    if (m_pages->currentIndex() == 2) {
+        showTheory();
+    }
 }
 
 void ProfilesView::showRatingFrom() {
@@ -1602,10 +1627,13 @@ void ProfilesView::showTheory() {
     }
     // Saved from before (in memory, else on disk): shown at once; checked again only if the
     // repertoire files, the games or the names have changed since.
-    const QString key = m_current + u'|' + m_part;
+    // One per speed filter too ("-s6": Blitz and Rapid; none for all speeds).
+    const QString speedsName =
+        m_speeds == 0 ? QString() : QStringLiteral("-s%1").arg(static_cast<int>(m_speeds));
+    const QString key = m_current + u'|' + m_part + speedsName;
     const QString file = m_store.cacheFile(
-        m_current,
-        QStringLiteral("theory-%1.json").arg(m_part.isEmpty() ? QStringLiteral("all") : m_part));
+        m_current, QStringLiteral("theory-%1%2.json")
+                       .arg(m_part.isEmpty() ? QStringLiteral("all") : m_part, speedsName));
     if (!m_theorySaved.contains(key)) {
         QFile saved(file);
         if (saved.open(QIODevice::ReadOnly)) {
@@ -1679,13 +1707,22 @@ void ProfilesView::showTheory() {
             });
     // From copies: the repertoire may be rebuilt meanwhile.
     watcher->setFuture(QtConcurrent::run(
-        [db = m_db, names,
+        [db = m_db, names, allowed = m_speeds,
          whiteTree = white != nullptr ? white->tree : repertoire::Tree(core::Color::White),
          blackTree = black != nullptr ? black->tree : repertoire::Tree(core::Color::Black)] {
             Checked result;
             std::vector<repertoire::CheckedGame> games;
             const auto all = db->games(1, static_cast<std::size_t>(db->gameCount()));
+            const std::vector<gamedb::Speed> speeds =
+                allowed != 0 ? db->speeds() : std::vector<gamedb::Speed>{};
             for (const gamedb::GameInfo& info : all) {
+                if (allowed != 0) { // only the speeds chosen at the top
+                    const std::size_t at = static_cast<std::size_t>(info.id) - 1;
+                    const auto speed = at < speeds.size() ? speeds[at] : gamedb::Speed::Unknown;
+                    if ((allowed & (1U << static_cast<unsigned>(speed))) == 0) {
+                        continue;
+                    }
+                }
                 // The profile's colour: the side with one of its names.
                 const bool asWhite = names.contains(QString::fromStdString(info.white).toLower());
                 const bool asBlack = names.contains(QString::fromStdString(info.black).toLower());
@@ -1710,6 +1747,111 @@ void ProfilesView::showTheory() {
             return result;
         }));
 } // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+QString ProfilesView::gameKey(const gamedb::GameInfo& game) {
+    // Online games have a page of their own, but a broadcast's games share their round's.
+    return QStringList{QString::fromStdString(game.site),  QString::fromStdString(game.white),
+                       QString::fromStdString(game.black), QString::fromStdString(game.date),
+                       QString::fromStdString(game.round), QString::fromStdString(game.event),
+                       QString::number(game.plies)}
+        .join(u'|');
+}
+
+bool ProfilesView::isNew(const gamedb::GameInfo& game) const {
+    return m_seenProfile == m_current && !m_seen.contains(gameKey(game));
+}
+
+void ProfilesView::countNewGames() {
+    const Profile* profile = m_store.profile(m_current);
+    const int request = ++m_newRequest;
+    const auto show = [this](int count) {
+        m_newCount = count;
+        m_showRepertoire->setText(count > 0 ? tr("Repertoire · %1 new").arg(count)
+                                            : tr("Repertoire"));
+        m_markSeen->setVisible(count > 0);
+        if (m_pages->currentIndex() == 2 && m_theoryKind == kNewGames) {
+            fillTheory();
+        }
+    };
+    // Only yours: the tab is there only for your own profile. All of your games, whatever
+    // "Games from" shows.
+    const auto all =
+        profile != nullptr && profile->main ? m_store.database(m_current, QString()) : nullptr;
+    if (!all) {
+        show(0);
+        return;
+    }
+    if (m_seenProfile != m_current) {
+        m_seen.clear();
+        m_seenProfile = QString(); // not read yet
+    }
+    const QString file = m_store.cacheFile(m_current, QStringLiteral("seen-games.txt"));
+    struct Counted {
+        QSet<QString> seen;
+        int count = 0;
+        bool first = false; ///< nothing was seen before: everything is now
+    };
+    auto* watcher =
+        new QFutureWatcher<Counted>(this); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    connect(watcher, &QFutureWatcher<Counted>::finished, this,
+            [this, watcher, request, file, show, id = m_current] {
+                watcher->deleteLater();
+                if (request != m_newRequest || id != m_current) {
+                    return;
+                }
+                Counted counted = watcher->result();
+                m_seen = std::move(counted.seen);
+                m_seenProfile = id;
+                if (counted.first) {
+                    QSaveFile out(file);
+                    if (out.open(QIODevice::WriteOnly)) {
+                        out.write(QStringList(m_seen.begin(), m_seen.end()).join(u'\n').toUtf8());
+                        out.commit();
+                    }
+                }
+                show(counted.count);
+            });
+    watcher->setFuture(QtConcurrent::run([all, file] {
+        Counted counted;
+        QFile saved(file);
+        counted.first = !saved.open(QIODevice::ReadOnly);
+        if (!counted.first) {
+            for (const QByteArray& line : saved.readAll().split('\n')) {
+                if (!line.isEmpty()) {
+                    counted.seen.insert(QString::fromUtf8(line));
+                }
+            }
+        }
+        for (const gamedb::GameInfo& game :
+             all->games(1, static_cast<std::size_t>(all->gameCount()))) {
+            const QString key = gameKey(game);
+            if (counted.first) {
+                counted.seen.insert(key);
+            } else if (!counted.seen.contains(key)) {
+                ++counted.count;
+            }
+        }
+        return counted;
+    }));
+} // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+void ProfilesView::markGamesSeen() {
+    const auto all = m_store.database(m_current, QString());
+    if (!all) {
+        return;
+    }
+    for (const gamedb::GameInfo& game : all->games(1, static_cast<std::size_t>(all->gameCount()))) {
+        m_seen.insert(gameKey(game));
+    }
+    m_seenProfile = m_current;
+    QSaveFile out(m_store.cacheFile(m_current, QStringLiteral("seen-games.txt")));
+    if (out.open(QIODevice::WriteOnly)) {
+        out.write(QStringList(m_seen.begin(), m_seen.end()).join(u'\n').toUtf8());
+        out.commit();
+    }
+    countNewGames();
+    fillTheory();
+}
 
 QString ProfilesView::theoryFingerprint(const Profile& profile) const {
     // What the check is worked out from: the games (the database as built), the repertoire's
@@ -1752,7 +1894,19 @@ void ProfilesView::fillTheory() {
         m_repertoires.loadOpenings(); // fills in again when they're there
     }
     std::map<QString, SortableItem*> openings;
-    const auto openingOf = [&](const repertoire::DepartureGroup& group) {
+    const bool onlyNew = m_theoryKind == kNewGames;
+    // The games of a group shown: all, or only the new ones.
+    const auto shownGames = [&](const repertoire::DepartureGroup& group) {
+        std::vector<std::size_t> shown;
+        for (const std::size_t index : group.games) {
+            if (!onlyNew || (index < m_theoryGames.size() && isNew(m_theoryGames[index]))) {
+                shown.push_back(index);
+            }
+        }
+        return shown;
+    };
+    std::size_t newShown = 0;
+    const auto openingOf = [&](const repertoire::DepartureGroup& group, std::size_t count) {
         auto* found = static_cast<SortableItem*>(nullptr);
         QString name = tr("Other openings");
         if (names != nullptr) {
@@ -1774,8 +1928,8 @@ void ProfilesView::fillTheory() {
             openings.emplace(name, found);
         }
         // Its games, summed up.
-        const double games = found->data(2, SortableItem::kSortRole).toDouble() +
-                             static_cast<double>(group.games.size());
+        const double games =
+            found->data(2, SortableItem::kSortRole).toDouble() + static_cast<double>(count);
         found->setSortValue(2, games);
         found->setText(2, number(static_cast<std::uint64_t>(games)));
         return found;
@@ -1783,9 +1937,14 @@ void ProfilesView::fillTheory() {
     for (std::size_t g = 0; g < report.groups.size(); ++g) {
         const repertoire::DepartureGroup& group = report.groups[g];
         counts[static_cast<std::size_t>(group.kind)] += group.games.size();
-        if (m_theoryKind >= 0 && static_cast<int>(group.kind) != m_theoryKind) {
+        if (m_theoryKind >= 0 && !onlyNew && static_cast<int>(group.kind) != m_theoryKind) {
             continue;
         }
+        const std::vector<std::size_t> games = shownGames(group);
+        if (games.empty()) {
+            continue;
+        }
+        newShown += onlyNew ? games.size() : 0;
         // "7. f3", "7… h6"; the line in the tooltip.
         const auto moveText = [](std::size_t ply, const std::string& san) {
             return QStringLiteral("%1%2 %3")
@@ -1793,7 +1952,7 @@ void ProfilesView::fillTheory() {
                 .arg(ply % 2 == 0 ? QStringLiteral(".") : QStringLiteral("…"))
                 .arg(QString::fromStdString(san));
         };
-        auto* item = new SortableItem(openingOf(group));
+        auto* item = new SortableItem(openingOf(group, games.size()));
         item->setData(0, kGroupRole, static_cast<int>(g));
         const std::size_t ply = group.line.size();
         QStringList line; // "1. e4", "e5", "2. Nf3", ...: as a score sheet writes it
@@ -1827,8 +1986,8 @@ void ProfilesView::fillTheory() {
             item->setForeground(1, c.muted);
             break;
         }
-        item->setText(2, number(group.games.size()));
-        item->setSortValue(2, static_cast<double>(group.games.size()));
+        item->setText(2, number(games.size()));
+        item->setSortValue(2, static_cast<double>(games.size()));
         QStringList expected;
         for (const std::string& san : group.expected) {
             expected << moveText(ply, san);
@@ -1838,7 +1997,7 @@ void ProfilesView::fillTheory() {
                              : expected.join(tr(" or ")));
         item->setForeground(3, c.muted);
         // Its games: the date, the opponent, the result; double-click opens one there.
-        for (const std::size_t index : group.games) {
+        for (const std::size_t index : games) {
             if (index >= m_theoryGames.size()) {
                 continue;
             }
@@ -1862,8 +2021,27 @@ void ProfilesView::fillTheory() {
         QTreeWidgetItem* opening = m_theory->topLevelItem(i);
         opening->setExpanded(opened.contains(opening->text(0)));
     }
+    m_markSeen->setVisible(m_newCount > 0);
+    if (onlyNew) {
+        if (m_newCount == 0) {
+            m_theorySummary->setText(tr("No new games since you last marked them seen."));
+        } else if (m_newCount == 1) {
+            m_theorySummary->setText(tr("1 new game since you last marked them seen; %1 checked "
+                                        "against your repertoire.")
+                                         .arg(number(newShown)));
+        } else {
+            m_theorySummary->setText(
+                tr("%1 new games since you last marked them seen; %2 "
+                   "checked against your repertoire.")
+                    .arg(number(static_cast<std::uint64_t>(m_newCount)), number(newShown)));
+        }
+        return;
+    }
     if (report.checked == 0) {
-        m_theorySummary->setText(tr("None of these games has a colour you have a repertoire for."));
+        m_theorySummary->setText(
+            m_speeds != 0 && m_theoryGames.empty()
+                ? tr("No games at the speeds chosen at the top.")
+                : tr("None of these games has a colour you have a repertoire for."));
         return;
     }
     m_theorySummary->setText(

@@ -894,6 +894,33 @@ TEST_F(DocumentsTest, GamesAreCheckedAgainstEveryRepertoireFile) {
     EXPECT_EQ(fen(), here);
 }
 
+TEST_F(DocumentsTest, AFileWithoutATypeTakesItsFolders) {
+    // Plain PGN files, no [FileType], no [Orientation]: put into the suggested folders.
+    ASSERT_TRUE(QDir(folder.path()).mkpath(QStringLiteral("Repertoires/Black Repertoire")));
+    ASSERT_TRUE(QDir(folder.path()).mkpath(QStringLiteral("Puzzles")));
+    ASSERT_TRUE(QDir(folder.path()).mkpath(QStringLiteral("Games")));
+    writeFile(path("Repertoires/Black Repertoire/Benko.pgn"), "1. d4 Nf6 2. c4 c5 3. d5 b5 *\n");
+    writeFile(path("Puzzles/Mates.pgn"), "1. e4 *\n");
+    writeFile(path("Games/Club.pgn"), "1. e4 *\n");
+    writeFile(path("Repertoires/Marked.pgn"), "[FileType \"Game\"]\n\n1. e4 *\n");
+    scanLibrary();
+    auto& store = window.repertoires();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return store.files(core::Color::Black).size() == 1; }, 5000));
+    EXPECT_TRUE(store.files(core::Color::Black)[0].endsWith(u"Benko.pgn"));
+    EXPECT_TRUE(store.files(core::Color::White).isEmpty()); // Marked.pgn says it is games
+    const auto kindOf = [&](const char* name) {
+        for (const auto& file : window.library().files()) {
+            if (file.name == QLatin1String(name) && file.pgn) {
+                return kiebitz::app::RepertoireStore::kindOf(*file.pgn);
+            }
+        }
+        return library::FileKind::Other;
+    };
+    EXPECT_EQ(kindOf("Puzzles/Mates.pgn"), library::FileKind::Puzzle);
+    EXPECT_EQ(kindOf("Games/Club.pgn"), library::FileKind::Game);
+    EXPECT_EQ(kindOf("Repertoires/Marked.pgn"), library::FileKind::Game);
+}
+
 TEST_F(DocumentsTest, OnlyActiveRepertoiresAreCheckedAgainst) {
     // One repertoire played now, one from before: both White.
     ASSERT_TRUE(QDir(folder.path()).mkpath(QStringLiteral("Repertoires/Now")));
