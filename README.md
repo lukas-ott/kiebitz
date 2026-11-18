@@ -5,7 +5,7 @@ with Qt 6 Widgets.
 It opens instantly, keeps your PGN files as the source of truth, and focuses on building
 and training opening repertoires.
 
-Latest release: **[1.0.0](https://github.com/lukas-ott/kiebitz/releases/tag/v1.0.0)** (Apple
+Latest release: **[1.0.1](https://github.com/lukas-ott/kiebitz/releases/tag/v1.0.1)** (Apple
 silicon). In English, German and Norwegian.
 Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**.
 
