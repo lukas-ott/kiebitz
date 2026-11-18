@@ -2621,6 +2621,14 @@
         <translation>Von hier starten</translation>
     </message>
     <message>
+        <source>Move</source>
+        <translation>Bewegen</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Entfernen</translation>
+    </message>
+    <message>
         <source>TO MOVE</source>
         <translation>AM ZUG</translation>
     </message>
@@ -2655,18 +2663,6 @@
     <message>
         <source>Copy FEN</source>
         <translation>FEN kopieren</translation>
-    </message>
-    <message>
-        <source>Click to put the chosen piece down · drag to move · drag off the board or right-click to remove</source>
-        <translation>Klicken, um die gewählte Figur hinzustellen · ziehen, um sie zu versetzen · vom Brett ziehen oder Rechtsklick zum Entfernen</translation>
-    </message>
-    <message>
-        <source>Move: clicks only pick pieces up, to drag them</source>
-        <translation>Bewegen: Klicks nehmen Figuren nur auf, um sie zu ziehen</translation>
-    </message>
-    <message>
-        <source>Remove: clicks take pieces off</source>
-        <translation>Entfernen: Klicks nehmen Figuren vom Brett</translation>
     </message>
     <message>
         <source>MOVE</source>

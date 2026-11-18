@@ -117,6 +117,27 @@ void SetupBoard::paintEvent(QPaintEvent* /*event*/) {
         const QPoint at = m_dragPoint - QPoint(size / 2, size / 2);
         painter.drawPixmap(at, m_pieces.pixmap(m_setup.at(*m_pressed), size, ratio));
     }
+    if (m_carried && boardRect().contains(m_carryPoint)) {
+        const QPoint at = m_carryPoint - QPoint(size / 2, size / 2);
+        painter.drawPixmap(at, m_pieces.pixmap(*m_carried, size, ratio));
+    }
+}
+
+void SetupBoard::carry(std::optional<Piece> piece, QPoint at) {
+    m_carried = piece;
+    m_carryPoint = at;
+    update();
+}
+
+bool SetupBoard::drop(Piece piece, QPoint at) {
+    const auto square = squareAt(at);
+    if (!square) {
+        return false;
+    }
+    m_setup.put(*square, piece);
+    update();
+    emit edited();
+    return true;
 }
 
 void SetupBoard::mousePressEvent(QMouseEvent* event) {
@@ -260,13 +281,6 @@ PositionEditor::PositionEditor(const AppStyle& style, const core::Position& posi
     boardColumn->addWidget(m_topPalette, 0, Qt::AlignHCenter);
     boardColumn->addWidget(m_board, 0, Qt::AlignHCenter);
     boardColumn->addWidget(m_bottomPalette, 0, Qt::AlignHCenter);
-    auto* hint = new QLabel(tr("Click to put the chosen piece down · drag to move · drag off "
-                               "the board or right-click to remove"));
-    hint->setProperty("role", "emptyHint");
-    hint->setAlignment(Qt::AlignHCenter);
-    hint->setWordWrap(true);
-    hint->setFixedWidth(8 * kSquare);
-    boardColumn->addWidget(hint);
     body->addLayout(boardColumn);
     body->addWidget(buildSettings(), 0, Qt::AlignTop);
     layout->addLayout(body);
@@ -374,14 +388,14 @@ QWidget* PositionEditor::buildPalette(const QString& pieceSet, Color color) {
         }
         button->setIcon(QIcon(tile));
         button->setIconSize(QSize(side, side));
+        button->setProperty("piece", QString(QChar(piece.fenChar())));
+        button->installEventFilter(this); // dragged onto the board
     }
     row->addStretch();
     if (color == Color::White) {
-        m_moveTool = tool(QStringLiteral("setupMove"),
-                          tr("Move: clicks only pick pieces up, to drag them"), kMoveTool);
+        m_moveTool = tool(QStringLiteral("setupMove"), tr("Move"), kMoveTool);
     } else {
-        m_removeTool =
-            tool(QStringLiteral("setupRemove"), tr("Remove: clicks take pieces off"), kRemoveTool);
+        m_removeTool = tool(QStringLiteral("setupRemove"), tr("Remove"), kRemoveTool);
     }
     return palette;
 }
@@ -511,13 +525,64 @@ QWidget* PositionEditor::buildSettings() {
 }
 
 void PositionEditor::swapPalettes() {
-    // The board's column: palette, board, palette, hint.
+    // The board's column: palette, board, palette.
     QBoxLayout* column = m_boardColumn;
     column->removeWidget(m_topPalette);
     column->removeWidget(m_bottomPalette);
     std::swap(m_topPalette, m_bottomPalette);
     column->insertWidget(0, m_topPalette, 0, Qt::AlignHCenter);
     column->insertWidget(2, m_bottomPalette, 0, Qt::AlignHCenter);
+}
+
+bool PositionEditor::eventFilter(QObject* watched, QEvent* event) {
+    auto* button = qobject_cast<QPushButton*>(watched);
+    const auto* mouse = dynamic_cast<QMouseEvent*>(event);
+    if (button == nullptr || mouse == nullptr || !button->property("piece").isValid()) {
+        return QDialog::eventFilter(watched, event);
+    }
+    const auto piece = Piece::fromFenChar(button->property("piece").toString().at(0).toLatin1());
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+        if (mouse->button() == Qt::LeftButton) {
+            m_carryFrom = button;
+            m_carryStart = mouse->globalPosition().toPoint();
+            m_carrying = false;
+        }
+        break;
+    case QEvent::MouseMove:
+        if (m_carryFrom == button && piece) {
+            const QPoint now = mouse->globalPosition().toPoint();
+            if (!m_carrying &&
+                (now - m_carryStart).manhattanLength() >= QApplication::startDragDistance()) {
+                m_carrying = true;
+                QApplication::setOverrideCursor(Qt::ClosedHandCursor);
+            }
+            if (m_carrying) {
+                m_board->carry(piece, m_board->mapFromGlobal(now));
+                return true;
+            }
+        }
+        break;
+    case QEvent::MouseButtonRelease:
+        if (m_carryFrom == button && mouse->button() == Qt::LeftButton) {
+            m_carryFrom = nullptr;
+            if (m_carrying && piece) {
+                m_carrying = false;
+                QApplication::restoreOverrideCursor();
+                m_board->carry(std::nullopt);
+                button->setDown(false);
+                m_board->drop(*piece, m_board->mapFromGlobal(mouse->globalPosition().toPoint()));
+                // That piece is chosen now: clicks put more of it down.
+                button->setChecked(true);
+                m_board->setTool(piece);
+                return true; // not a click on the palette
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    return QDialog::eventFilter(watched, event);
 }
 
 void PositionEditor::restyleTools() {

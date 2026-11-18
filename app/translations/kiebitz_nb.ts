@@ -2621,6 +2621,14 @@
         <translation>Start herfra</translation>
     </message>
     <message>
+        <source>Move</source>
+        <translation>Flytt</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Fjern</translation>
+    </message>
+    <message>
         <source>TO MOVE</source>
         <translation>I TREKKET</translation>
     </message>
@@ -2655,18 +2663,6 @@
     <message>
         <source>Copy FEN</source>
         <translation>Kopier FEN</translation>
-    </message>
-    <message>
-        <source>Click to put the chosen piece down · drag to move · drag off the board or right-click to remove</source>
-        <translation>Klikk for å sette ned valgt brikke · dra for å flytte · dra ut av brettet eller høyreklikk for å fjerne</translation>
-    </message>
-    <message>
-        <source>Move: clicks only pick pieces up, to drag them</source>
-        <translation>Flytt: klikk plukker bare opp brikker, for å dra dem</translation>
-    </message>
-    <message>
-        <source>Remove: clicks take pieces off</source>
-        <translation>Fjern: klikk tar brikker av brettet</translation>
     </message>
     <message>
         <source>MOVE</source>

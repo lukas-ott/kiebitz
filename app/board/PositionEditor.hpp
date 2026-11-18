@@ -32,12 +32,14 @@ public:
     SetupBoard(BoardTheme theme, const QString& pieceSet, QWidget* parent = nullptr);
 
     void setSetup(const core::BoardSetup& setup);
-    /// The board flipped: each side's palette goes to its side of the board.
-    void swapPalettes();
-    void restyleTools();
     [[nodiscard]] const core::BoardSetup& setup() const noexcept { return m_setup; }
     /// The piece a click puts down; nullopt: none (clicks only pick pieces up), None: removes.
     void setTool(std::optional<core::Piece> tool) { m_tool = tool; }
+    /// A piece carried from the palette, drawn under the mouse at `at` (in this widget) while
+    /// over the board; nullopt: none.
+    void carry(std::optional<core::Piece> piece, QPoint at = {});
+    /// Puts `piece` on the square under `at` (in this widget). False if `at` is off the board.
+    bool drop(core::Piece piece, QPoint at);
     void setFlipped(bool flipped);
     [[nodiscard]] bool isFlipped() const noexcept { return m_flipped; }
     /// The middle of a square, in this widget (tests click there).
@@ -70,6 +72,8 @@ private:
     QPoint m_pressPoint;
     bool m_dragging = false;
     QPoint m_dragPoint;
+    std::optional<core::Piece> m_carried; ///< from the palette
+    QPoint m_carryPoint;
 };
 
 /// Setting up a position to start a game from: the board, a palette of pieces, the side to
@@ -88,6 +92,10 @@ public:
     [[nodiscard]] std::optional<core::Position> position() const;
     [[nodiscard]] SetupBoard* board() const { return m_board; }
 
+protected:
+    /// Palette pieces dragged onto the board.
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
     /// One side's pieces (and a tool), for above or under the board.
     QWidget* buildPalette(const QString& pieceSet, core::Color color);
@@ -101,7 +109,7 @@ private:
 
     const AppStyle& m_style;
     SetupBoard* m_board = nullptr;
-    QBoxLayout* m_boardColumn = nullptr; ///< palette, board, palette, hint
+    QBoxLayout* m_boardColumn = nullptr; ///< palette, board, palette
     QWidget* m_topPalette = nullptr;
     QWidget* m_bottomPalette = nullptr;
     QPushButton* m_moveTool = nullptr;
@@ -114,7 +122,10 @@ private:
     QLineEdit* m_fen = nullptr;
     QLabel* m_problems = nullptr;
     QPushButton* m_start = nullptr;
-    bool m_showing = false; ///< showSetup() is filling the fields: their signals wait
+    bool m_showing = false;             ///< showSetup() is filling the fields: their signals wait
+    QPushButton* m_carryFrom = nullptr; ///< the palette piece pressed
+    QPoint m_carryStart;                ///< where, on the screen
+    bool m_carrying = false;            ///< it was dragged far enough to be carried
 };
 
 } // namespace kiebitz::app

@@ -534,6 +534,17 @@ TEST_F(MainWindowTest, TheBoardEditorSetsUpAPositionToStartFrom) {
         click(editor->findChild<QPushButton*>(QStringLiteral("setupRemove")));
         click(setupBoard, at("b1"));
         EXPECT_EQ(fen->text(), QStringLiteral("4k3/8/3Q4/8/8/8/8/6K1 b - - 0 1"));
+        // A palette piece dragged onto the board.
+        auto* knight = editor->findChild<QPushButton*>(QStringLiteral("setupPiece:N"));
+        const auto onKnight = [&](const char* name) {
+            return knight->mapFromGlobal(setupBoard->mapToGlobal(at(name)));
+        };
+        QTest::mousePress(knight, Qt::LeftButton, {}, knight->rect().center());
+        QTest::mouseMove(knight, onKnight("c4"));
+        QTest::mouseMove(knight, onKnight("c3"));
+        QTest::mouseRelease(knight, Qt::LeftButton, {}, onKnight("c3"));
+        EXPECT_EQ(fen->text(), QStringLiteral("4k3/8/3Q4/8/8/2N5/8/6K1 b - - 0 1"));
+        click(setupBoard, at("c3"), Qt::RightButton);
         // Flipped, each side's pieces stay next to its side of the board.
         const auto* whitePalette = editor->findChild<QWidget*>(QStringLiteral("whitePalette"));
         const auto* blackPalette = editor->findChild<QWidget*>(QStringLiteral("blackPalette"));
