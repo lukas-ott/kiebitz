@@ -772,3 +772,87 @@ TEST(GamedbFacts, RatingsAreKeptBySpeedWithUnknownSpeedsAsAsked) {
     EXPECT_TRUE(kiebitz::gamedb::ratingLine(online, Speed::Classical).empty());
     EXPECT_EQ(kiebitz::gamedb::ratingLine(online, Speed::Blitz).size(), 1U);
 }
+
+namespace {
+
+const char* const kTransposed = R"([White "A"]
+[Black "B"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 1-0
+
+[White "C"]
+[Black "D"]
+[Result "0-1"]
+
+1. Nf3 Nc6 2. e4 e5 3. Bc4 0-1
+
+[White "E"]
+[Black "F"]
+[Result "1/2-1/2"]
+
+1. Nf3 Nc6 2. e4 e5 3. Bc4 1/2-1/2
+
+[White "G"]
+[Black "H"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 1-0
+)";
+
+} // namespace
+
+TEST(GameDatabase, TranspositionsAndSetUpPositionsAreFound) {
+    const TempFolder folder;
+    {
+        auto writer = gamedb::DatabaseWriter::create(folder.path(), {"Test", "test.pgn", 0, 0});
+        ASSERT_TRUE(writer.ok()) << writer.error().message;
+        const std::string text = kTransposed;
+        std::size_t at = 0;
+        gamedb::importPgn(**writer, [&](char* buffer, std::size_t size) {
+            const auto n = std::min(size, text.size() - at);
+            std::copy_n(text.data() + at, n, buffer);
+            at += n;
+            return n;
+        });
+        EXPECT_EQ((*writer)->finish(), "");
+    }
+    {
+        auto opened = gamedb::Database::open(folder.path());
+        ASSERT_TRUE(opened.ok()) << opened.error().message;
+        const gamedb::Database& db = **opened;
+        EXPECT_TRUE(db.hasPositions()); // made with the import
+        // 1. e4 e5 2. Nf3 Nc6: its own two games and the two that got there by 1. Nf3.
+        const auto italian = db.explore(line({"e4", "e5", "Nf3", "Nc6"}));
+        EXPECT_EQ(italian.games, 4U);
+        EXPECT_EQ(italian.white, 2U);
+        EXPECT_EQ(italian.draws, 1U);
+        EXPECT_EQ(italian.black, 1U);
+        ASSERT_EQ(italian.moves.size(), 2U);
+        EXPECT_EQ(italian.moves[0].san, "Bc4");
+        EXPECT_EQ(italian.moves[0].games, 3U);
+        EXPECT_EQ(italian.moves[1].san, "Bb5");
+        EXPECT_EQ(db.gamesAt(line({"e4", "e5", "Nf3", "Nc6"}), 10).size(), 4U);
+        // The same position typed as a FEN.
+        const auto position = core::Position::fromFen(
+            "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3");
+        ASSERT_TRUE(position.ok());
+        EXPECT_EQ(db.explorePosition(*position).games, 4U);
+        EXPECT_EQ(db.gamesAtPosition(*position, 10).size(), 4U);
+        // A position no two games reach early: nothing (its line still finds its games).
+        EXPECT_EQ(db.explore(line({"e4", "e5", "Nf3", "Nc6", "Bb5"})).games, 1U);
+        EXPECT_EQ(db.explorePosition(core::Position()).games, 4U);
+    }
+    // An older database without positions.bin: only the move order asked for, until added.
+    std::filesystem::remove(std::filesystem::path(folder.path()) / "positions.bin");
+    {
+        auto opened = gamedb::Database::open(folder.path());
+        ASSERT_TRUE(opened.ok());
+        EXPECT_FALSE((*opened)->hasPositions());
+        EXPECT_EQ((*opened)->explore(line({"e4", "e5", "Nf3", "Nc6"})).games, 2U);
+    }
+    EXPECT_EQ(gamedb::addPositions(folder.path()), "");
+    auto opened = gamedb::Database::open(folder.path());
+    ASSERT_TRUE(opened.ok());
+    EXPECT_EQ((*opened)->explore(line({"e4", "e5", "Nf3", "Nc6"})).games, 4U);
+}

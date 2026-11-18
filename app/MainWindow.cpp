@@ -3,6 +3,7 @@
 #include "MainWindowKeys.hpp"
 #include "board/BoardPage.hpp"
 #include "board/BoardView.hpp"
+#include "board/PositionEditor.hpp"
 #include "document/Documents.hpp"
 #include "engine/EnginePanel.hpp"
 #include "explorer/ExplorerPanel.hpp"
@@ -47,6 +48,7 @@
 #include <QStatusBar>
 #include <QTabBar>
 #include <QTextCursor>
+#include <QToolButton>
 #include <QUrl>
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -218,6 +220,9 @@ void MainWindow::updateSidebarIcons() {
             kind = IconKind::Gear;
         }
         button->setIcon(makeIcon(kind, button->isChecked() ? c.text : c.muted, c.dimmed, 22));
+    }
+    if (m_updateButton != nullptr) {
+        m_updateButton->setIcon(makeIcon(IconKind::Download, c.accent, c.dimmed, 22));
     }
 }
 
@@ -428,15 +433,16 @@ void MainWindow::paste() {
 }
 
 void MainWindow::setUpPosition() {
-    bool ok = false;
-    const QString fen = QInputDialog::getText(this, tr("Set Up Position"), tr("FEN:"),
-                                              QLineEdit::Normal, QString(), &ok);
-    if (!ok || fen.trimmed().isEmpty()) {
+    // Starts from the position on the board: most set-ups are a change to one seen.
+    const GameDocument* d = doc();
+    const core::Position from = d != nullptr ? d->game.positionAt(d->current) : core::Position();
+    PositionEditor editor(m_style, from, m_board->theme(), m_board->pieceSetName(),
+                          m_board->isFlipped(), this);
+    if (editor.exec() != QDialog::Accepted) {
         return;
     }
-    auto position = core::Position::fromFen(fen.trimmed().toStdString());
+    auto position = editor.position();
     if (!position) {
-        notice(this, tr("Invalid FEN"), QString::fromStdString(position.error().message));
         return;
     }
     auto document = std::make_unique<GameDocument>();

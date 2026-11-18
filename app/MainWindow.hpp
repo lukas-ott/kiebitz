@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 #include <QTimer>
+#include <QUrl>
 
 #include <array>
 #include <cstdint>
@@ -17,6 +18,7 @@ class QActionGroup;
 class QButtonGroup;
 class QMenu;
 class QStackedWidget;
+class QToolButton;
 
 namespace kiebitz::app {
 
@@ -36,6 +38,7 @@ class Practice;
 class ProfileStore;
 class ProfilesView;
 class SettingsView;
+class UpdateCheck;
 class Shortcuts;
 class Sounds;
 class TrainingBar;
@@ -96,6 +99,10 @@ public:
     /// Tour starts it; startTourOnce() only the first time (main() calls it after showing).
     void startTour();
     void startTourOnce();
+    /// After a run that didn't end normally: offers to report it (main() calls it).
+    void offerCrashReport();
+    /// Asks GitHub for a newer version if it is due (main() calls it after the start).
+    void checkForUpdatesIfDue();
     /// The game of the tab shown, or null (tests).
     [[nodiscard]] const GameDocument* document() const { return doc(); }
 
@@ -245,8 +252,12 @@ private:
     Section m_section = Section::Board;
 
     // Pages
-    QStackedWidget* m_pages = nullptr; ///< one per section, in Section order
-    QButtonGroup* m_sidebar = nullptr; ///< one button per section, ids = Section
+    QStackedWidget* m_pages = nullptr;     ///< one per section, in Section order
+    QButtonGroup* m_sidebar = nullptr;     ///< one button per section, ids = Section
+    QToolButton* m_updateButton = nullptr; ///< in the sidebar while a newer version is out
+    UpdateCheck* m_updates = nullptr;
+    QUrl m_updatePage;          ///< the newer version's release page
+    bool m_updateAsked = false; ///< Help → Check for Updates… is waiting for its answer
     LibraryView* m_libraryView = nullptr;
     DatabaseManager* m_databases = nullptr;
     DatabasesView* m_databasesView = nullptr;

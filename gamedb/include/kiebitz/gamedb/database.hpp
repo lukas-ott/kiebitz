@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kiebitz/core/game.hpp"
+#include "kiebitz/core/position.hpp"
 #include "kiebitz/core/result.hpp"
 #include "kiebitz/gamedb/scan.hpp"
 
@@ -27,11 +28,14 @@
 ///   sums.bin      running totals of their results in that order;
 ///   elo.bin       each game's average rating;
 ///   ratings.bin   White's and Black's rating of each game, in the order of order.bin;
-///   attrs.bin     each game's year, speed and players, in the same order (for filters).
+///   attrs.bin     each game's year, speed and players, in the same order (for filters);
+///   positions.bin the positions of the first kPositionPlies plies that at least two games
+///                 reach, each with the range of order.bin that reaches it by one move order.
 /// Games with the same opening sit next to each other in order.bin, so a line's games are one
 /// range found by binary search, and its statistics are two lookups in sums.bin: the explorer
-/// answers in well under a millisecond for any number of games. (A position reached by another
-/// move order is counted under that move order.)
+/// answers in well under a millisecond for any number of games. positions.bin adds up the
+/// other move orders into the same position (transpositions), and finds a position set up
+/// from a FEN.
 namespace kiebitz::gamedb {
 
 using GameId = std::int64_t; ///< 1, 2, ... in the order the games were imported
@@ -195,6 +199,15 @@ std::string_view upgrade(const std::string& folder);
 /// while on millions of games: for a background thread.
 std::string_view addSortIndexes(const std::string& folder);
 
+/// How deep positions.bin goes: positions after up to this many plies (20 moves each).
+inline constexpr int kPositionPlies = 40;
+
+/// Adds positions.bin to a database made before it (and is what finish() uses). Empty on
+/// success, else the error. Goes through every game once: a minute or two for millions, for a
+/// background thread. `progress` gets 0..1.
+std::string_view addPositions(const std::string& folder,
+                              const std::function<void(double)>& progress = {});
+
 /// Reads a finished database. Safe to use from several threads at once.
 class Database {
 public:
@@ -211,6 +224,8 @@ public:
     [[nodiscard]] bool hasAttributes() const;
     /// Whether it has the indexes for sorting (older databases get them from addSortIndexes()).
     [[nodiscard]] bool hasSortIndexes() const;
+    /// Whether it has positions.bin (older databases get it from addPositions()).
+    [[nodiscard]] bool hasPositions() const;
     [[nodiscard]] std::uint64_t gameCount() const;
     /// Whether its games have their players' FIDE ids (fide.bin).
     [[nodiscard]] bool hasFideIds() const;
@@ -247,13 +262,21 @@ public:
     [[nodiscard]] PlayerStats playerStats(std::span<const std::string> names,
                                           std::uint8_t speeds = 0) const;
 
-    /// The explorer for a line of moves from the usual start position.
+    /// The explorer for a line of moves from the usual start position: its games, and with
+    /// positions.bin also those reaching the same position by another move order.
     [[nodiscard]] Explored explore(std::span<const core::Move> line,
                                    const ExploreFilter& filter = {}) const;
-    /// The games of that line, best rated first (engine games left out: see
+    /// The same for any position, by positions.bin: one set up from a FEN, or the end of a
+    /// line from one (empty without positions.bin, or if no two games reach it early enough).
+    [[nodiscard]] Explored explorePosition(const core::Position& position,
+                                           const ExploreFilter& filter = {}) const;
+    /// The games of that line (or position), best rated first (engine games left out: see
     /// highestHumanRating()).
     [[nodiscard]] std::vector<GameInfo> gamesAt(std::span<const core::Move> line, std::size_t limit,
                                                 const ExploreFilter& filter = {}) const;
+    [[nodiscard]] std::vector<GameInfo> gamesAtPosition(const core::Position& position,
+                                                        std::size_t limit,
+                                                        const ExploreFilter& filter = {}) const;
 
 private:
     struct Impl;

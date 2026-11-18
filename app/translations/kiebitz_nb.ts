@@ -921,8 +921,8 @@
         <translation>Ikke fra utgangsstillingen</translation>
     </message>
     <message>
-        <source>The explorer follows games from the usual starting position.</source>
-        <translation>Utforskeren følger partier fra den vanlige utgangsstillingen.</translation>
+        <source>Lichess&apos;s explorer follows games from the usual starting position. Choose a game database: it finds this position in its games.</source>
+        <translation>Lichess sin utforsker følger partier fra vanlig utgangsstilling. Velg en partidatabase: Den finner denne stillingen i partiene sine.</translation>
     </message>
     <message>
         <source>Lichess</source>
@@ -1781,18 +1781,6 @@
         <translation>Stillingen er kopiert som FEN</translation>
     </message>
     <message>
-        <source>Set Up Position</source>
-        <translation>Sett opp stilling</translation>
-    </message>
-    <message>
-        <source>FEN:</source>
-        <translation>FEN:</translation>
-    </message>
-    <message>
-        <source>Invalid FEN</source>
-        <translation>Ugyldig FEN</translation>
-    </message>
-    <message>
         <source>MOVES</source>
         <translation>TREKK</translation>
     </message>
@@ -1863,6 +1851,10 @@
     <message>
         <source>Kiebitz on &amp;GitHub</source>
         <translation>Kiebitz på &amp;GitHub</translation>
+    </message>
+    <message>
+        <source>Check for &amp;Updates…</source>
+        <translation>Se etter &amp;oppdateringer…</translation>
     </message>
     <message>
         <source>&amp;Report a Problem…</source>
@@ -1965,8 +1957,8 @@
         <translation>&amp;Lim inn</translation>
     </message>
     <message>
-        <source>Set Up Position from FEN…</source>
-        <translation>Sett opp stilling fra FEN …</translation>
+        <source>Set Up &amp;Position…</source>
+        <translation>Sett opp &amp;stilling…</translation>
     </message>
     <message>
         <source>&amp;Game</source>
@@ -2069,6 +2061,18 @@
         <translation>Nedlastede motorer</translation>
     </message>
     <message>
+        <source>Kiebitz quit unexpectedly</source>
+        <translation>Kiebitz avsluttet uventet</translation>
+    </message>
+    <message>
+        <source>Last time, Kiebitz ended without being quit. If it crashed, a report helps fix it: it opens a new issue on GitHub (you need a GitHub account), and Finder shows macOS&apos;s crash report to add to it.</source>
+        <translation>Forrige gang ble Kiebitz avsluttet uten at du avsluttet det. Hvis det krasjet, hjelper en rapport med å rette feilen: Den åpner en ny sak på GitHub (du trenger en GitHub-konto), og Finder viser krasjrapporten fra macOS som du kan legge ved.</translation>
+    </message>
+    <message>
+        <source>Report It…</source>
+        <translation>Rapporter…</translation>
+    </message>
+    <message>
         <source>About Kiebitz</source>
         <translation>Om Kiebitz</translation>
     </message>
@@ -2131,6 +2135,42 @@
     <message>
         <source>Engines (⇧⌘E)</source>
         <translation>Motorer (⇧⌘E)</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>Oppdater</translation>
+    </message>
+    <message>
+        <source>Kiebitz %1 is out: open its download page</source>
+        <translation>Kiebitz %1 er ute: åpne nedlastingssiden</translation>
+    </message>
+    <message>
+        <source>Kiebitz %1 is out</source>
+        <translation>Kiebitz %1 er ute</translation>
+    </message>
+    <message>
+        <source>You have %1. The download page shows what&apos;s new.</source>
+        <translation>Du har %1. Nedlastingssiden viser hva som er nytt.</translation>
+    </message>
+    <message>
+        <source>Open Download Page</source>
+        <translation>Åpne nedlastingssiden</translation>
+    </message>
+    <message>
+        <source>Kiebitz is up to date</source>
+        <translation>Kiebitz er oppdatert</translation>
+    </message>
+    <message>
+        <source>Kiebitz %1 is the newest version.</source>
+        <translation>Kiebitz %1 er den nyeste versjonen.</translation>
+    </message>
+    <message>
+        <source>Couldn&apos;t check for updates</source>
+        <translation>Kunne ikke se etter oppdateringer</translation>
+    </message>
+    <message>
+        <source>GitHub couldn&apos;t be reached. Check the connection and try again.</source>
+        <translation>Fikk ikke kontakt med GitHub. Sjekk tilkoblingen og prøv igjen.</translation>
     </message>
     <message>
         <source>Settings (⌘,)</source>
@@ -2375,6 +2415,14 @@
         <translation>Slutt (End)</translation>
     </message>
     <message>
+        <source>Set Up…</source>
+        <translation>Sett opp…</translation>
+    </message>
+    <message>
+        <source>Set up a position on a board, starting from this one</source>
+        <translation>Sett opp en stilling på et brett, med denne som utgangspunkt</translation>
+    </message>
+    <message>
         <source>Merge into %1</source>
         <translation>Legg inn i %1</translation>
     </message>
@@ -2552,6 +2600,121 @@
     <message>
         <source>Starting Position</source>
         <translation>Startstilling</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::PositionEditor</name>
+    <message>
+        <source>Set Up Position</source>
+        <translation>Sett opp stilling</translation>
+    </message>
+    <message>
+        <source>FEN</source>
+        <translation>FEN</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Avbryt</translation>
+    </message>
+    <message>
+        <source>Start From Here</source>
+        <translation>Start herfra</translation>
+    </message>
+    <message>
+        <source>TO MOVE</source>
+        <translation>I TREKKET</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Hvit</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>Svart</translation>
+    </message>
+    <message>
+        <source>CASTLING</source>
+        <translation>ROKADE</translation>
+    </message>
+    <message>
+        <source>EN PASSANT</source>
+        <translation>EN PASSANT</translation>
+    </message>
+    <message>
+        <source>Starting Position</source>
+        <translation>Utgangsstilling</translation>
+    </message>
+    <message>
+        <source>Empty Board</source>
+        <translation>Tomt brett</translation>
+    </message>
+    <message>
+        <source>Flip Board</source>
+        <translation>Snu brettet</translation>
+    </message>
+    <message>
+        <source>Copy FEN</source>
+        <translation>Kopier FEN</translation>
+    </message>
+    <message>
+        <source>Click to put the chosen piece down · drag to move · drag off the board or right-click to remove</source>
+        <translation>Klikk for å sette ned valgt brikke · dra for å flytte · dra ut av brettet eller høyreklikk for å fjerne</translation>
+    </message>
+    <message>
+        <source>Move: clicks only pick pieces up, to drag them</source>
+        <translation>Flytt: klikk plukker bare opp brikker, for å dra dem</translation>
+    </message>
+    <message>
+        <source>Remove: clicks take pieces off</source>
+        <translation>Fjern: klikk tar brikker av brettet</translation>
+    </message>
+    <message>
+        <source>MOVE</source>
+        <translation>TREKK</translation>
+    </message>
+    <message>
+        <source>BOARD</source>
+        <translation>BRETT</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>Ingen</translation>
+    </message>
+    <message>
+        <source>White needs a king.</source>
+        <translation>Hvit trenger en konge.</translation>
+    </message>
+    <message>
+        <source>Black needs a king.</source>
+        <translation>Svart trenger en konge.</translation>
+    </message>
+    <message>
+        <source>White has more than one king.</source>
+        <translation>Hvit har mer enn én konge.</translation>
+    </message>
+    <message>
+        <source>Black has more than one king.</source>
+        <translation>Svart har mer enn én konge.</translation>
+    </message>
+    <message>
+        <source>Pawns can&apos;t stand on the first or the eighth rank.</source>
+        <translation>Bønder kan ikke stå på første eller åttende rad.</translation>
+    </message>
+    <message>
+        <source>White has more than 16 pieces.</source>
+        <translation>Hvit har mer enn 16 brikker.</translation>
+    </message>
+    <message>
+        <source>Black has more than 16 pieces.</source>
+        <translation>Svart har mer enn 16 brikker.</translation>
+    </message>
+    <message>
+        <source>Black is in check, so it can&apos;t be White&apos;s move.</source>
+        <translation>Svart står i sjakk, så det kan ikke være hvit i trekket.</translation>
+    </message>
+    <message>
+        <source>White is in check, so it can&apos;t be Black&apos;s move.</source>
+        <translation>Hvit står i sjakk, så det kan ikke være svart i trekket.</translation>
     </message>
 </context>
 <context>
@@ -3983,6 +4146,14 @@
     <message>
         <source>App</source>
         <translation>App</translation>
+    </message>
+    <message>
+        <source>Check for updates</source>
+        <translation>Se etter oppdateringer</translation>
+    </message>
+    <message>
+        <source>Once a day, Kiebitz asks GitHub whether a newer version is out.</source>
+        <translation>Én gang om dagen spør Kiebitz GitHub om en nyere versjon er ute.</translation>
     </message>
     <message>
         <source>Dark themes</source>

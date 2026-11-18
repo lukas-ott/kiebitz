@@ -205,6 +205,15 @@ MovesCard::MovesCard(AppStyle& style, QWidget* parent) : QFrame(parent), m_style
     m_backButton = addButton(tr("Back (←)"), &MovesCard::backRequested);
     m_forwardButton = addButton(tr("Forward (→)"), &MovesCard::forwardRequested);
     m_endButton = addButton(tr("End (End)"), &MovesCard::endRequested);
+    // Setting up a position, starting from the one on the board (also Game → Set Up Position…).
+    buttons->addSpacing(6);
+    auto* setUp = new QPushButton(tr("Set Up…"));
+    setUp->setObjectName(QStringLiteral("setUpButton"));
+    setUp->setProperty("role", "secondary");
+    setUp->setToolTip(tr("Set up a position on a board, starting from this one"));
+    setUp->setFocusPolicy(Qt::NoFocus);
+    connect(setUp, &QPushButton::clicked, this, &MovesCard::setUpRequested);
+    buttons->addWidget(setUp);
     layout->addLayout(buttons);
     restyle();
 }

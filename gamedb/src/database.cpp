@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <sqlite3.h>
@@ -478,8 +479,14 @@ std::string DatabaseWriter::finish(const std::function<void(double)>& progress) 
         if (!exec(d.db, index)) {
             return "Couldn't index the database: " + std::string(sqlite3_errmsg(d.db));
         }
-        done += 0.4 / std::size(indexes);
+        done += 0.25 / std::size(indexes);
         report(done);
+    }
+    // The positions, for transpositions and set-up positions.
+    if (const std::string_view error =
+            addPositions(d.folder, [&](double part) { report(0.85 + (0.15 * part)); });
+        !error.empty()) {
+        return std::string(error);
     }
     return {};
 }
@@ -530,6 +537,26 @@ struct NameIndex {
 
 } // namespace
 
+namespace {
+
+/// One position of positions.bin: its hash (the low byte holds the plies to it instead, so one
+/// sort orders by position and the hash's other 56 bits find it), and the range of order.bin
+/// whose games reach it by one move order.
+struct PositionEntry {
+    std::uint64_t key = 0;
+    std::uint32_t lo = 0;
+    std::uint32_t hi = 0;
+};
+static_assert(sizeof(PositionEntry) == 16);
+
+constexpr std::uint64_t kPositionMask = ~std::uint64_t{0xFF};
+
+[[nodiscard]] std::uint64_t positionKey(std::uint64_t hash, int plies) {
+    return (hash & kPositionMask) | static_cast<std::uint64_t>(plies);
+}
+
+} // namespace
+
 struct Database::Impl {
     DatabaseInfo info;
     sqlite3* db = nullptr;
@@ -543,6 +570,7 @@ struct Database::Impl {
     MappedFile ratings;    ///< optional: databases made before it don't have it
     MappedFile attributes; ///< optional too
     MappedFile fide;       ///< optional: only databases with FIDE ids have it
+    MappedFile positions;  ///< optional: databases made before it don't have it
     mutable std::once_flag namesRead;
     mutable NameIndex names; ///< read on the first search
 
@@ -609,6 +637,52 @@ struct Database::Impl {
     Impl(Impl&&) = delete;
     Impl& operator=(Impl&&) = delete;
     ~Impl() { sqlite3_close(db); }
+
+    /// A range of order.bin whose games reach a position after `plies` plies.
+    struct Span {
+        std::size_t lo = 0;
+        std::size_t hi = 0;
+        std::size_t plies = 0;
+    };
+    /// The ranges positions.bin knows for a position (each one move order into it).
+    [[nodiscard]] std::vector<Span> spansOf(std::uint64_t hash) const {
+        std::vector<Span> spans;
+        if (hash == chess::Board().hash()) {
+            spans.push_back({0, order.count<std::uint32_t>(), 0}); // every game starts there
+        }
+        const auto* first = positions.as<PositionEntry>();
+        const auto* last = first + positions.count<PositionEntry>();
+        const std::uint64_t key = hash & kPositionMask;
+        const auto* at = std::partition_point(
+            first, last, [&](const PositionEntry& e) { return (e.key & kPositionMask) < key; });
+        for (; at != last && (at->key & kPositionMask) == key; ++at) {
+            spans.push_back({at->lo, at->hi, static_cast<std::size_t>(at->key & 0xFFU)});
+        }
+        return spans;
+    }
+    /// Without the ranges inside another (a position met twice in the same games).
+    static void dropNested(std::vector<Span>& spans) {
+        std::sort(spans.begin(), spans.end(), [](const Span& a, const Span& b) {
+            return a.lo != b.lo ? a.lo < b.lo : a.hi > b.hi;
+        });
+        std::vector<Span> kept;
+        for (const Span& span : spans) {
+            if (span.hi <= span.lo) {
+                continue;
+            }
+            if (!kept.empty() && span.lo >= kept.back().lo && span.hi <= kept.back().hi) {
+                continue;
+            }
+            kept.push_back(span);
+        }
+        spans = std::move(kept);
+    }
+    /// The explorer over ranges into the position on `board`.
+    [[nodiscard]] Explored exploreSpans(const std::vector<Span>& spans, const chess::Board& board,
+                                        const ExploreFilter& filter) const;
+    /// The best rated games of those ranges.
+    [[nodiscard]] std::vector<GameInfo> bestOf(const std::vector<Span>& spans, std::size_t limit,
+                                               const ExploreFilter& filter) const;
 
     [[nodiscard]] std::size_t games() const {
         const std::size_t count = offsets.count<std::uint64_t>();
@@ -896,9 +970,10 @@ core::Result<std::unique_ptr<Database>> Database::open(const std::string& folder
             return core::Error{std::string("The database is missing ") + name + "."};
         }
     }
-    impl->ratings.open(pathIn(folder, "ratings.bin"));  // optional
-    impl->attributes.open(pathIn(folder, "attrs.bin")); // optional
-    impl->fide.open(pathIn(folder, "fide.bin"));        // optional
+    impl->ratings.open(pathIn(folder, "ratings.bin"));     // optional
+    impl->attributes.open(pathIn(folder, "attrs.bin"));    // optional
+    impl->positions.open(pathIn(folder, "positions.bin")); // optional
+    impl->fide.open(pathIn(folder, "fide.bin"));           // optional
     return std::unique_ptr<Database>(new Database(std::move(impl)));
 }
 
@@ -962,9 +1037,100 @@ bool Database::hasSortIndexes() const {
     return m_impl->sortIndexes;
 }
 
+bool Database::hasPositions() const {
+    return m_impl->positions.count<PositionEntry>() > 0;
+}
+
 bool Database::hasAttributes() const {
     return m_impl->attributes.count<Attributes>() == m_impl->order.count<std::uint32_t>() &&
            m_impl->order.count<std::uint32_t>() > 0;
+}
+
+// ---- positions.bin -----------------------------------------------------------------------------
+
+std::string_view addPositions(const std::string& folder,
+                              const std::function<void(double)>& progress) {
+    MappedFile moves;
+    MappedFile offsets;
+    MappedFile order;
+    if (!moves.open(pathIn(folder, "moves.bin")) || !offsets.open(pathIn(folder, "offsets.bin")) ||
+        !order.open(pathIn(folder, "order.bin"))) {
+        return "The database is incomplete.";
+    }
+    const auto* at = offsets.as<std::uint64_t>();
+    const auto movesOf = [&](std::uint32_t game) {
+        return std::string_view(moves.as<char>() + at[game],
+                                static_cast<std::size_t>(at[game + 1] - at[game]));
+    };
+    const auto* games = order.as<std::uint32_t>();
+    const std::size_t count = order.count<std::uint32_t>();
+
+    // The games sorted by their moves are a tree walked depth first: a run of games sharing
+    // their first n moves is one node at depth n. The path to the current game is kept, with
+    // the board at each depth, so only the moves after the previous game's are played.
+    struct Node {
+        std::uint64_t hash = 0;
+        std::uint32_t lo = 0;
+    };
+    std::vector<PositionEntry> entries;
+    std::array<Node, kPositionPlies + 1> path{};
+    std::vector<chess::Board> boards(kPositionPlies + 1); // each the start position at first
+    int depth = 0;                                        // nodes open on the path: 1..depth
+    std::string_view previous;
+    const auto close = [&](int down_to, std::uint32_t hi) {
+        for (; depth > down_to; --depth) {
+            const Node& node = path[static_cast<std::size_t>(depth)];
+            if (hi - node.lo >= 2) { // at least two games: one alone is found by its moves
+                entries.push_back({positionKey(node.hash, depth), node.lo, hi});
+            }
+        }
+    };
+    for (std::size_t i = 0; i < count; ++i) {
+        const std::string_view line = movesOf(games[i]);
+        const int length = static_cast<int>(std::min<std::size_t>(line.size(), kPositionPlies));
+        int shared = 0;
+        while (shared < depth && shared < length &&
+               line[static_cast<std::size_t>(shared)] ==
+                   previous[static_cast<std::size_t>(shared)]) {
+            ++shared;
+        }
+        close(shared, static_cast<std::uint32_t>(i));
+        for (int d = shared + 1; d <= length; ++d) {
+            chess::Board board = boards[static_cast<std::size_t>(d - 1)];
+            const auto move = detail::decode(
+                board, static_cast<std::uint8_t>(line[static_cast<std::size_t>(d - 1)]));
+            if (!move) {
+                break; // a damaged game: its deeper positions are left out
+            }
+            board.makeMove(*move);
+            boards[static_cast<std::size_t>(d)] = board;
+            path[static_cast<std::size_t>(d)] = {board.hash(), static_cast<std::uint32_t>(i)};
+            depth = d;
+        }
+        previous = line;
+        if (progress && i % 65536 == 0) {
+            progress(0.9 * static_cast<double>(i) /
+                     static_cast<double>(std::max<std::size_t>(count, 1)));
+        }
+    }
+    close(0, static_cast<std::uint32_t>(count));
+    std::sort(entries.begin(), entries.end(), [](const PositionEntry& a, const PositionEntry& b) {
+        return a.key != b.key ? a.key < b.key : a.lo < b.lo;
+    });
+    const std::string target = pathIn(folder, "positions.bin");
+    const std::string part = target + ".part";
+    if (!writeFile(part, entries)) {
+        std::remove(part.c_str());
+        return "Couldn't write the positions (is the disk full?).";
+    }
+    if (std::rename(part.c_str(), target.c_str()) != 0) {
+        std::remove(part.c_str());
+        return "Couldn't write the positions.";
+    }
+    if (progress) {
+        progress(1.0);
+    }
+    return {};
 }
 
 std::string_view addSortIndexes(const std::string& folder) {
@@ -1444,97 +1610,112 @@ PlayerStats Database::playerStats(std::span<const std::string> names, std::uint8
     return stats;
 }
 
-Explored Database::explore(std::span<const core::Move> line, const ExploreFilter& filter) const {
+Explored Database::Impl::exploreSpans(const std::vector<Span>& spans, const chess::Board& board,
+                                      const ExploreFilter& filter) const {
     Explored explored;
-    chess::Board board;
-    const auto prefix = Impl::prefixOf(line, board);
-    if (!prefix) {
-        return explored;
-    }
-    const auto [lo, hi] = m_impl->range(*prefix);
-    // Filtered: the games are counted one by one; otherwise the running totals do it.
+    // Unfiltered: the results come from the running totals, only the ratings are added up.
     const bool filtered = filter.active();
-    const Impl::Matcher match = filtered ? m_impl->matcher(filter) : Impl::Matcher{};
-    if (filtered) {
-        const Impl::Tally t = m_impl->tally(lo, hi, match);
-        explored.games = t.games;
-        explored.white = t.results[0];
-        explored.draws = t.results[1];
-        explored.black = t.results[2];
-        std::tie(explored.whiteElo, explored.blackElo) = t.averages();
-    } else {
-        const auto total = m_impl->results(lo, hi);
-        explored.games = hi - lo;
-        explored.white = total[0];
-        explored.draws = total[1];
-        explored.black = total[2];
-        std::tie(explored.whiteElo, explored.blackElo) = m_impl->averages(lo, hi);
-    }
-    // The next moves: games that go on are sorted by their next byte, so each move is a run.
-    const auto* order = m_impl->order.as<std::uint32_t>();
-    const std::size_t at = prefix->size();
-    std::size_t i = lo;
-    while (i < hi && m_impl->movesOf(order[i]).size() <= at) {
-        ++i; // games that end here
-    }
-    while (i < hi) {
-        const char byte = m_impl->movesOf(order[i])[at];
-        const auto* end = std::partition_point(order + i, order + hi, [&](std::uint32_t game) {
-            return m_impl->movesOf(game)[at] == byte;
-        });
-        const auto next = static_cast<std::size_t>(end - order);
-        const auto move = detail::decode(board, static_cast<std::uint8_t>(byte));
-        if (move && filtered) {
-            const Impl::Tally t = m_impl->tally(i, next, match);
-            const auto [whiteElo, blackElo] = t.averages();
-            if (t.games > 0) {
-                explored.moves.push_back(
-                    {detail::toCore(*move), chess::uci::moveToSan(board, *move), t.games,
-                     t.results[0], t.results[1], t.results[2], whiteElo, blackElo});
-            }
-        } else if (move) {
-            const auto results = m_impl->results(i, next);
-            const auto [whiteElo, blackElo] = m_impl->averages(i, next);
-            explored.moves.push_back({detail::toCore(*move), chess::uci::moveToSan(board, *move),
-                                      next - i, results[0], results[1], results[2], whiteElo,
-                                      blackElo});
+    const Matcher match = filtered ? matcher(filter) : Matcher{};
+    const auto count = [&](std::size_t lo, std::size_t hi) {
+        if (filtered) {
+            return tally(lo, hi, match);
         }
-        i = next;
+        Tally t;
+        t.games = hi - lo;
+        t.results = results(lo, hi);
+        if (ratings.count<std::uint16_t>() >= 2 * hi) {
+            const auto* at = ratings.as<std::uint16_t>();
+            for (std::size_t i = lo; i < hi; ++i) {
+                for (std::size_t side = 0; side < 2; ++side) {
+                    if (const std::uint16_t value = at[(2 * i) + side]; value > 0) {
+                        t.ratings[2 * side] += value;
+                        ++t.ratings[(2 * side) + 1];
+                    }
+                }
+            }
+        }
+        return t;
+    };
+    const auto add = [](Tally& into, const Tally& t) {
+        into.games += t.games;
+        for (std::size_t k = 0; k < 3; ++k) {
+            into.results[k] += t.results[k];
+        }
+        for (std::size_t k = 0; k < 4; ++k) {
+            into.ratings[k] += t.ratings[k];
+        }
+    };
+    Tally total;
+    // The next moves, by their byte: the same position means the same bytes, whatever the
+    // move order (they count the legal moves of the position). Games that go on are sorted by
+    // their next byte, so in each range each move is a run.
+    std::map<std::uint8_t, Tally> next;
+    const auto* sorted = order.as<std::uint32_t>();
+    for (const Span& span : spans) {
+        add(total, count(span.lo, span.hi));
+        std::size_t i = span.lo;
+        while (i < span.hi && movesOf(sorted[i]).size() <= span.plies) {
+            ++i; // games that end here
+        }
+        while (i < span.hi) {
+            const char byte = movesOf(sorted[i])[span.plies];
+            const auto* end =
+                std::partition_point(sorted + i, sorted + span.hi, [&](std::uint32_t game) {
+                    return movesOf(game)[span.plies] == byte;
+                });
+            const auto runEnd = static_cast<std::size_t>(end - sorted);
+            add(next[static_cast<std::uint8_t>(byte)], count(i, runEnd));
+            i = runEnd;
+        }
+    }
+    explored.games = total.games;
+    explored.white = total.results[0];
+    explored.draws = total.results[1];
+    explored.black = total.results[2];
+    std::tie(explored.whiteElo, explored.blackElo) = total.averages();
+    for (const auto& [byte, t] : next) {
+        const auto move = detail::decode(board, byte);
+        if (!move || t.games == 0) {
+            continue;
+        }
+        const auto [whiteElo, blackElo] = t.averages();
+        explored.moves.push_back({detail::toCore(*move), chess::uci::moveToSan(board, *move),
+                                  t.games, t.results[0], t.results[1], t.results[2], whiteElo,
+                                  blackElo});
     }
     std::stable_sort(explored.moves.begin(), explored.moves.end(),
                      [](const MoveStats& a, const MoveStats& b) { return a.games > b.games; });
     return explored;
 }
 
-std::vector<GameInfo> Database::gamesAt(std::span<const core::Move> line, std::size_t limit,
-                                        const ExploreFilter& filter) const {
-    chess::Board board;
-    const auto prefix = Impl::prefixOf(line, board);
-    if (!prefix || limit == 0) {
+std::vector<GameInfo> Database::Impl::bestOf(const std::vector<Span>& spans, std::size_t limit,
+                                             const ExploreFilter& filter) const {
+    if (limit == 0) {
         return {};
     }
-    const auto [lo, hi] = m_impl->range(*prefix);
-    // The best rated: keep the `limit` highest while going through the range once.
-    const auto* order = m_impl->order.as<std::uint32_t>();
-    const auto* elo = m_impl->elo.as<std::uint16_t>();
+    // The best rated: keep the `limit` highest while going through the ranges once.
+    const auto* sorted = order.as<std::uint32_t>();
+    const auto* ratingOf = elo.as<std::uint16_t>();
     using Entry = std::pair<std::uint16_t, std::uint32_t>; // rating, game
     std::priority_queue<Entry, std::vector<Entry>, std::greater<>> best;
-    const int human = highestHumanRating(m_impl->info);
+    const int human = highestHumanRating(info);
     const bool filtered = filter.active();
-    const Impl::Matcher match = filtered ? m_impl->matcher(filter) : Impl::Matcher{};
-    for (std::size_t i = lo; i < hi; ++i) {
-        const Entry entry{elo[order[i]], order[i]};
-        if (std::cmp_greater(entry.first, human)) {
-            continue; // engine games would fill the list
-        }
-        if (filtered && !match(i)) {
-            continue;
-        }
-        if (best.size() < limit) {
-            best.push(entry);
-        } else if (entry.first > best.top().first) {
-            best.pop();
-            best.push(entry);
+    const Matcher match = filtered ? matcher(filter) : Matcher{};
+    for (const Span& span : spans) {
+        for (std::size_t i = span.lo; i < span.hi; ++i) {
+            const Entry entry{ratingOf[sorted[i]], sorted[i]};
+            if (std::cmp_greater(entry.first, human)) {
+                continue; // engine games would fill the list
+            }
+            if (filtered && !match(i)) {
+                continue;
+            }
+            if (best.size() < limit) {
+                best.push(entry);
+            } else if (entry.first > best.top().first) {
+                best.pop();
+                best.push(entry);
+            }
         }
     }
     std::vector<GameId> ids;
@@ -1543,7 +1724,59 @@ std::vector<GameInfo> Database::gamesAt(std::span<const core::Move> line, std::s
         best.pop();
     }
     std::reverse(ids.begin(), ids.end());
-    return m_impl->byIds(ids);
+    return byIds(ids);
+}
+
+namespace {
+
+/// The board of a position (chess-library's), for the explorer.
+chess::Board boardOf(const core::Position& position) {
+    return chess::Board(position.fen());
+}
+
+} // namespace
+
+Explored Database::explore(std::span<const core::Move> line, const ExploreFilter& filter) const {
+    chess::Board board;
+    const auto prefix = Impl::prefixOf(line, board);
+    if (!prefix) {
+        return {};
+    }
+    // The line's own games, and those reaching its position by other move orders.
+    const auto [lo, hi] = m_impl->range(*prefix);
+    std::vector<Impl::Span> spans = m_impl->spansOf(board.hash());
+    spans.push_back({lo, hi, prefix->size()});
+    Impl::dropNested(spans);
+    return m_impl->exploreSpans(spans, board, filter);
+}
+
+Explored Database::explorePosition(const core::Position& position,
+                                   const ExploreFilter& filter) const {
+    const chess::Board board = boardOf(position);
+    std::vector<Impl::Span> spans = m_impl->spansOf(board.hash());
+    Impl::dropNested(spans);
+    return m_impl->exploreSpans(spans, board, filter);
+}
+
+std::vector<GameInfo> Database::gamesAt(std::span<const core::Move> line, std::size_t limit,
+                                        const ExploreFilter& filter) const {
+    chess::Board board;
+    const auto prefix = Impl::prefixOf(line, board);
+    if (!prefix) {
+        return {};
+    }
+    const auto [lo, hi] = m_impl->range(*prefix);
+    std::vector<Impl::Span> spans = m_impl->spansOf(board.hash());
+    spans.push_back({lo, hi, prefix->size()});
+    Impl::dropNested(spans);
+    return m_impl->bestOf(spans, limit, filter);
+}
+
+std::vector<GameInfo> Database::gamesAtPosition(const core::Position& position, std::size_t limit,
+                                                const ExploreFilter& filter) const {
+    std::vector<Impl::Span> spans = m_impl->spansOf(boardOf(position).hash());
+    Impl::dropNested(spans);
+    return m_impl->bestOf(spans, limit, filter);
 }
 
 std::optional<std::string> pgnDatePrefix(std::string_view typed) {

@@ -31,6 +31,7 @@ const std::map<std::string_view, QVariant>& defaults() {
         {Settings::kGapShare, 5},
         {Settings::kGapGames, 20},
         {Settings::kSounds, true},
+        {Settings::kCheckUpdates, true},
         {Settings::kVolume, 70},
         {Settings::kSoundSet, QStringLiteral("standard")},
     };

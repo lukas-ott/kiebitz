@@ -14,6 +14,7 @@ add_executable(kiebitz_tests
     test_san.cpp
     test_training.cpp
     test_types.cpp
+    test_setup.cpp
     test_version.cpp)
 target_link_libraries(kiebitz_tests PRIVATE kiebitz::engine kiebitz::gamedb kiebitz::library
     kiebitz::repertoire kiebitz::puzzles kiebitz::training kiebitz::pgn thirdparty::zstd
@@ -37,12 +38,14 @@ if(KIEBITZ_BUILD_APP)
         ui/test_main_window.cpp
         ui/test_migration.cpp
         ui/test_piece_set.cpp
+        ui/test_problem_report.cpp
         ui/test_profiles.cpp
         ui/test_puzzles.cpp
         ui/test_settings.cpp
         ui/test_tablebase.cpp
         ui/test_training.cpp
-        ui/test_translations.cpp)
+        ui/test_translations.cpp
+        ui/test_updates.cpp)
     find_package(Qt6 REQUIRED COMPONENTS Test)
     target_link_libraries(kiebitz_ui_tests PRIVATE kiebitz_ui Qt6::Test GTest::gtest)
     # zstd's header, to make Lichess-like downloads (the library comes with kiebitz_ui).

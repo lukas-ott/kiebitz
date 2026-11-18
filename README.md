@@ -12,12 +12,17 @@ Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**
 ## What it does
 
 - **Board and PGN editor:** games in tabs; variations, comments, NAGs, arrows and clocks, as
-  flowing text or in rows. Changes save themselves.
+  flowing text or in rows. Changes save themselves. A ⇄ marks a move whose position also comes
+  up by another move order (click it, or press T, to go there). Set up any position on a board
+  editor (pieces, side to move, castling, en passant) or from a FEN.
 - **Library:** every PGN file in your library folder (`~/Documents/Kiebitz` by default) as a tree,
-  searchable (players, events, openings) and filterable by type: game, repertoire (also by
-  colour), tournament, puzzle, other. A file shows its games with a preview; every list sorts by any column and
-  filters by date.
-- **Repertoires:** a repertoire file opens from its side and has a starting position (right-click
+  searchable (players, events, openings) and filterable by type: game, opening (also by colour),
+  tournament, puzzle, other. Files take their type and side from their folder (Openings/White,
+  Games, Puzzles, ...) unless their headers say otherwise. Folders can be made, renamed and
+  moved. A file shows its games with a preview; every list sorts by any column and filters by
+  date. An intro tour (Help → Intro Tour) shows a sample Library the first time.
+- **Openings and your repertoire:** every opening file is an opening; the ones you play now are
+  your repertoire (right-click a folder or file: In Repertoire). An opening file opens from its side and has a starting position (right-click
   a move). Practice the whole file, from any position, just the positions you got wrong, or
   every file of a side together, with the app playing the opponent. `[%depth n]` in a comment
   ends the lines below it at move n. Other games are checked against your repertoire as you go
@@ -32,7 +37,8 @@ Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**
   theme, starting around your own rating, or the puzzle files of your Library. Hints, the
   solution, and stats for solved, clean, streak and time.
 - **Game databases and Explorer:** millions of games (Lumbra's Gigabase, Caissabase or your own
-  PGN, also .7z/.zip); the Explorer shows what's played, how it scores and both sides' average
+  PGN, also .7z/.zip); the Explorer finds a position by any move order (transpositions) or set
+  up from a FEN, and shows what's played, how it scores and both sides' average
   rating, filtered by rating, years, time control and players (each source keeps its own
   filter). Signed in to Lichess, it also shows Lichess's and the masters' games. With 7 pieces
   or fewer, it shows Lichess's endgame tablebase: who wins, and every move's result, DTZ and DTM.
@@ -42,6 +48,9 @@ Website: **[lukas-ott.github.io/kiebitz](https://lukas-ott.github.io/kiebitz/)**
 - **Engine:** Stockfish (one-click download) or the Lichess cloud.
 - **Settings:** board, pieces, moves, appearance, language (English, Deutsch, Norsk), sounds
   and your own keyboard shortcuts.
+- **Updates and problems:** once a day Kiebitz asks GitHub whether a newer version is out (it
+  can be switched off). Help → Report a Problem… opens a GitHub issue with the version filled
+  in, and after a crash Kiebitz offers to report it.
 
 ## Requirements (macOS)
 
@@ -88,8 +97,13 @@ Mac that built it, because Homebrew builds Qt for that version (see the top of `
 in the bundle still loads from outside it. CI builds the same DMG on every push and attaches it
 to the run as a download.
 
-The app is signed ad hoc, not with an Apple Developer ID, so on another Mac the first launch
-needs right-click → Open. Proper signing and notarisation need a paid Apple Developer account.
+To release: set the version in `CMakeLists.txt`, commit, and push a tag for it
+(`git tag v1.0.0 && git push origin v1.0.0`). `.github/workflows/release.yml` then builds,
+tests and packages Kiebitz and drafts a GitHub release with the DMG; publish it on GitHub after
+checking its notes. Tags below 1.0 or with a suffix (`v1.1.0-beta`) become pre-releases.
+
+The app is signed ad hoc, not with an Apple Developer ID, so on another Mac macOS refuses the
+first launch until you click Open Anyway in System Settings → Privacy & Security. Proper signing and notarisation need a paid Apple Developer account.
 
 The `debug` preset compiles with Homebrew's clang (`/opt/homebrew/opt/llvm`) because Apple's
 AddressSanitizer hangs at startup on macOS 26. All other presets use Apple's compiler.
@@ -99,7 +113,8 @@ In CLion or VS Code (CMake Tools + clangd), just open the folder: both pick up t
 ## Layout
 
 ```
-core/     Pure C++ chess logic: positions, FEN, SAN, game tree, annotations. No Qt.
+core/     Pure C++ chess logic: positions, FEN, SAN, game tree, annotations, setting up a
+          position by hand, version numbers. No Qt.
 pgn/      Reading, indexing and writing PGN files (fast game index, round-trip safe). No Qt.
 engine/   The UCI protocol (engine output, scores, lines as moves) and picking the Stockfish
           download for this Mac. No Qt.
@@ -109,11 +124,13 @@ library/  The library's cache of game indexes (SQLite), so unchanged files are n
 repertoire/ Repertoire trees (games merged by position), practice drills and opening names.
           No Qt.
 gamedb/   Game databases of millions of games: a compact store (one byte per move), a
-          streaming parallel PGN import and an opening explorer over it. No Qt.
+          streaming parallel PGN import, an opening explorer over it and a positions index
+          (transpositions, set-up positions). No Qt.
 puzzles/  Tactics puzzles: solving one, the Lichess puzzle database (imported into one
           compact file, picked by rating and theme) and your puzzle history. No Qt.
 training/ The training plan run in order, and the minutes trained per day. No Qt.
-app/      Qt Widgets application: main window, board/ (board widget, themes, piece sets),
+app/      Qt Widgets application: main window, board/ (board widget, themes, piece sets,
+          the position editor),
           library/ (library folder scan and Library tab), repertoire/ (repertoire files,
           practice, the Repertoire tab), puzzles/ (Puzzles page, the Lichess download),
           databases/ (Databases page, imports), explorer/ (Explorer tab), profiles/ (Profiles
@@ -124,7 +141,8 @@ app/      Qt Widgets application: main window, board/ (board widget, themes, pie
           editor), panels/ (game info),
           engine/ (engine processes, Lichess cloud, Stockfish download, Engines page and
           Engine tab),
-          style/ (app colours and style sheet, light and dark),
+          style/ (app colours and style sheet, light and dark), widgets/ (shared widgets, the
+          intro tour), util/ (update check, problem reports),
           resources/pieces/ (bundled SVG piece sets, with their licences).
 tests/    GoogleTest unit tests; tests/ui/ drives the board and window offscreen.
 bench/    Google Benchmark micro-benchmarks.
@@ -140,7 +158,10 @@ website/  The website: one static page (HTML, CSS, a little JavaScript for the b
 - **v1:** board, PGN viewer and editor, UCI engine analysis (done)
 - **v2:** repertoires, practice, game databases, Explorer, profiles, gap check, puzzles (done)
 - **0.3:** the endgame tablebase in the Explorer, the training plan, German and Norwegian (done)
-- **Next:** game review (your own mistakes as puzzles), position search in big databases
+- **Since 0.3:** transpositions, the intro tour, openings and In Repertoire, the board editor,
+  position search in databases, update check and problem reports (done)
+- **1.0:** the first proper release; then maybe signing with an Apple Developer ID, older
+  macOS versions, game review
 
 ## Why "Kiebitz"?
 

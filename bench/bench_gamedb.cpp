@@ -11,6 +11,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include <chrono>
 #include <filesystem>
 #include <random>
 #include <string>
@@ -119,6 +120,29 @@ void gamedbExplore(benchmark::State& state) {
     }
 }
 BENCHMARK(gamedbExplore)->Unit(benchmark::kMicrosecond);
+
+void gamedbPositions(benchmark::State& state) {
+    // positions.bin for the import benchmark's database, then a position looked up in it
+    // (transpositions included). On Caissabase (5.4M games): about 2 minutes, 124 MB.
+    const std::string folder =
+        (std::filesystem::temp_directory_path() / "kiebitz-bench-gamedb").string();
+    for ([[maybe_unused]] const auto _ : state) {
+        benchmark::DoNotOptimize(gamedb::addPositions(folder));
+    }
+    auto db = gamedb::Database::open(folder);
+    if (!db.ok()) {
+        state.SkipWithError("run gamedbImport first");
+        return;
+    }
+    core::Position position;
+    position.play(position.parseSan("e4").value());
+    position.play(position.parseSan("e5").value());
+    const auto start = std::chrono::steady_clock::now();
+    benchmark::DoNotOptimize((*db)->explorePosition(position));
+    state.counters["lookup_us"] =
+        std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count();
+}
+BENCHMARK(gamedbPositions)->Unit(benchmark::kMillisecond)->Iterations(1)->UseRealTime();
 
 void gamedbSearch(benchmark::State& state) {
     // A player by two words, in the other order than stored ("Player 123" as "123 player"),

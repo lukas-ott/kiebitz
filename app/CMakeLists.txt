@@ -20,6 +20,8 @@ qt_add_library(kiebitz_ui STATIC
     board/BoardTheme.cpp
     board/BoardTheme.hpp
     board/BoardView.cpp
+    board/PositionEditor.cpp
+    board/PositionEditor.hpp
     board/BoardView.hpp
     board/EvalBar.cpp
     board/EvalBar.hpp
@@ -166,6 +168,10 @@ qt_add_library(kiebitz_ui STATIC
     widgets/Toggle.cpp
     widgets/Toggle.hpp
     notify/Notifications.hpp
+    util/ProblemReport.cpp
+    util/ProblemReport.hpp
+    util/UpdateCheck.cpp
+    util/UpdateCheck.hpp
     util/WhenReady.hpp
     widgets/Stepper.hpp)
 target_include_directories(kiebitz_ui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

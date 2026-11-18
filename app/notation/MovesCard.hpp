@@ -63,6 +63,8 @@ signals:
     /// The preview's "Merge into ...": its moves up to the current one, into that file.
     void mergeRequested();
     void previewCloseRequested();
+    /// "Set Up…": the position editor, from the position shown.
+    void setUpRequested();
 
 private:
     AppStyle& m_style;

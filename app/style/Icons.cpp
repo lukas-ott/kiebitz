@@ -311,6 +311,36 @@ void draw(QPainter& painter, IconKind kind, const QColor& color, int size) {
         painter.drawPath(head);
         break;
     }
+    case IconKind::Pointer: { // a mouse pointer: an arrow head with a tail
+        painter.setPen(QPen(color, 1.3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        QPainterPath arrow;
+        arrow.moveTo(4.0, 2.5);
+        arrow.lineTo(4.0, 12.5);
+        arrow.lineTo(6.6, 10.2);
+        arrow.lineTo(8.6, 14.0);
+        arrow.lineTo(10.2, 13.2);
+        arrow.lineTo(8.3, 9.5);
+        arrow.lineTo(11.8, 9.3);
+        arrow.closeSubpath();
+        painter.drawPath(arrow);
+        break;
+    }
+    case IconKind::Download: { // an arrow down into a tray
+        painter.setPen(QPen(color, 1.3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.drawLine(QPointF(8.0, 2.5), QPointF(8.0, 10.0));
+        QPainterPath head;
+        head.moveTo(4.8, 7.0);
+        head.lineTo(8.0, 10.2);
+        head.lineTo(11.2, 7.0);
+        painter.drawPath(head);
+        QPainterPath tray;
+        tray.moveTo(2.8, 10.5);
+        tray.lineTo(2.8, 13.2);
+        tray.lineTo(13.2, 13.2);
+        tray.lineTo(13.2, 10.5);
+        painter.drawPath(tray);
+        break;
+    }
     case IconKind::Trash: { // a lid with a handle, and a bin with two lines
         painter.setPen(QPen(color, 1.3, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
         painter.drawLine(QPointF(3.0, 4.5), QPointF(13.0, 4.5));

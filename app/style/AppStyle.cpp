@@ -500,6 +500,32 @@ QPushButton[role="segment"] {
 }
 QPushButton[role="segment"]:hover { color: @text; background: @raised; }
 QPushButton[role="segment"]:checked { color: @text; background: @border; }
+QWidget[role="palette"] {
+    background: @window;
+    border: 1px solid @border;
+    border-radius: 10px;
+}
+QPushButton[role="pieceTool"] {
+    background: transparent;
+    color: @muted;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 0;
+}
+QPushButton[role="pieceTool"]:hover { background: @raised; }
+QPushButton[role="pieceTool"]:checked { background: @accentTint; border-color: @accent; }
+QPushButton[role="chip"] {
+    background: transparent;
+    color: @muted;
+    border: 1px solid @border;
+    border-radius: 7px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-weight: 600;
+}
+QPushButton[role="chip"]:hover { color: @text; background: @raised; }
+QPushButton[role="chip"]:checked { color: @accent; background: @accentTint; border-color: @accent; }
+QPushButton[role="chip"]:disabled { color: @dimmed; border-color: @border; background: transparent; }
 QLineEdit[role="stepperValue"] {
     background: transparent;
     border: none;

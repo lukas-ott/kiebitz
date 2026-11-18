@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 #include "board/BoardView.hpp"
+#include "board/PositionEditor.hpp"
 #include "document/GameDocument.hpp"
 #include "library/Library.hpp"
 #include "notation/NotationView.hpp"
@@ -11,12 +12,14 @@
 #include <QApplication>
 #include <QDir>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenuBar>
 #include <QPushButton>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTabBar>
 #include <QTest>
+#include <QTimer>
 #include <QToolButton>
 #include <gtest/gtest.h>
 
@@ -469,3 +472,90 @@ TEST_F(MainWindowTest, ContinuationHintShowsOnlyUntilFirstUse) {
 }
 
 } // namespace
+
+TEST_F(MainWindowTest, TheBoardEditorSetsUpAPositionToStartFrom) {
+    play("e4");
+    ASSERT_NE(window.findChild<QAction*>(QStringLiteral("setUpPosition")), nullptr);
+    const QString dir = qEnvironmentVariable("KIEBITZ_SNAPSHOT_DIR");
+    bool checked = false;
+    QTimer::singleShot(0, &window, [&] {
+        auto* editor = window.findChild<kiebitz::app::PositionEditor*>();
+        ASSERT_NE(editor, nullptr);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(editor));
+        auto* setupBoard = editor->board();
+        const auto* fen = editor->findChild<QLineEdit*>(QStringLiteral("setupFen"));
+        auto* start = editor->findChild<QPushButton*>(QStringLiteral("setupStart"));
+        const auto* problems = editor->findChild<QLabel*>(QStringLiteral("setupProblems"));
+        // It starts with the board's position: after 1.e4, Black to move.
+        EXPECT_EQ(fen->text(),
+                  QStringLiteral("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"));
+        const auto click = [](QWidget* widget, QPoint at = {},
+                              Qt::MouseButton button = Qt::LeftButton) {
+            QTest::mouseClick(widget, button, {}, at.isNull() ? widget->rect().center() : at);
+        };
+        const auto at = [&](const char* name) {
+            return setupBoard->squareCenter(*Square::parse(name));
+        };
+        if (!dir.isEmpty()) {
+            editor->grab().save(QDir(dir).filePath(QStringLiteral("position-editor-start.png")));
+        }
+        // Empty board: no kings, nothing can start.
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupClear")));
+        EXPECT_EQ(fen->text(), QStringLiteral("8/8/8/8/8/8/8/8 b - - 0 1"));
+        EXPECT_FALSE(start->isEnabled());
+        EXPECT_TRUE(problems->text().contains(QStringLiteral("White needs a king")));
+        // Kings from the palette, a white queen on d7 that checks Black: Black to move is fine.
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupPiece:K")));
+        click(setupBoard, at("g1"));
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupPiece:k")));
+        click(setupBoard, at("e8"));
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupPiece:Q")));
+        click(setupBoard, at("d7"));
+        click(setupBoard, at("a1")); // a second one…
+        click(setupBoard, at("a1")); // …and off again
+        click(setupBoard, at("h1"));
+        click(setupBoard, at("h1"), Qt::RightButton); // right-click removes too
+        EXPECT_EQ(fen->text(), QStringLiteral("4k3/3Q4/8/8/8/8/8/6K1 b - - 0 1"));
+        EXPECT_TRUE(start->isEnabled());
+        // White to move would leave Black in check: refused, and said why.
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupSide:w")));
+        EXPECT_FALSE(start->isEnabled());
+        EXPECT_TRUE(problems->text().contains(QStringLiteral("Black is in check")));
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupSide:b")));
+        // Dragging the queen to d6.
+        QTest::mousePress(setupBoard, Qt::LeftButton, {}, at("d7"));
+        QTest::mouseMove(setupBoard, at("d6"));
+        QTest::mouseRelease(setupBoard, Qt::LeftButton, {}, at("d6"));
+        EXPECT_EQ(fen->text(), QStringLiteral("4k3/8/3Q4/8/8/8/8/6K1 b - - 0 1"));
+        // The Remove tool takes a piece off with a click.
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupPiece:N")));
+        click(setupBoard, at("b1"));
+        EXPECT_EQ(fen->text(), QStringLiteral("4k3/8/3Q4/8/8/8/8/1N4K1 b - - 0 1"));
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupRemove")));
+        click(setupBoard, at("b1"));
+        EXPECT_EQ(fen->text(), QStringLiteral("4k3/8/3Q4/8/8/8/8/6K1 b - - 0 1"));
+        // Flipped, each side's pieces stay next to its side of the board.
+        const auto* whitePalette = editor->findChild<QWidget*>(QStringLiteral("whitePalette"));
+        const auto* blackPalette = editor->findChild<QWidget*>(QStringLiteral("blackPalette"));
+        EXPECT_GT(whitePalette->y(), blackPalette->y());
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupFlip")));
+        QApplication::processEvents();
+        EXPECT_TRUE(setupBoard->isFlipped());
+        EXPECT_LT(whitePalette->y(), blackPalette->y());
+        click(editor->findChild<QPushButton*>(QStringLiteral("setupFlip")));
+        QApplication::processEvents();
+        if (!dir.isEmpty()) {
+            editor->grab().save(QDir(dir).filePath(QStringLiteral("position-editor.png")));
+        }
+        checked = true;
+        click(start);
+    });
+    // From the Board page: the button under the moves (the menu does the same).
+    auto* setUpButton = window.findChild<QPushButton*>(QStringLiteral("setUpButton"));
+    ASSERT_NE(setUpButton, nullptr);
+    ASSERT_TRUE(setUpButton->isVisible());
+    QTest::mouseClick(setUpButton, Qt::LeftButton);
+    ASSERT_TRUE(checked);
+    // A new game from there.
+    EXPECT_EQ(fen(), "4k3/8/3Q4/8/8/8/8/6K1 b - - 0 1");
+}

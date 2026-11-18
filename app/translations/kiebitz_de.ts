@@ -921,8 +921,8 @@
         <translation>Nicht aus der Grundstellung</translation>
     </message>
     <message>
-        <source>The explorer follows games from the usual starting position.</source>
-        <translation>Der Explorer folgt Partien aus der normalen Grundstellung.</translation>
+        <source>Lichess&apos;s explorer follows games from the usual starting position. Choose a game database: it finds this position in its games.</source>
+        <translation>Der Explorer von Lichess folgt Partien aus der normalen Anfangsstellung. Wähle eine Partiedatenbank: Sie findet diese Stellung in ihren Partien.</translation>
     </message>
     <message>
         <source>Lichess</source>
@@ -1781,18 +1781,6 @@
         <translation>Stellung als FEN kopiert</translation>
     </message>
     <message>
-        <source>Set Up Position</source>
-        <translation>Stellung aufbauen</translation>
-    </message>
-    <message>
-        <source>FEN:</source>
-        <translation>FEN:</translation>
-    </message>
-    <message>
-        <source>Invalid FEN</source>
-        <translation>Ungültige FEN</translation>
-    </message>
-    <message>
         <source>MOVES</source>
         <translation>ZÜGE</translation>
     </message>
@@ -1863,6 +1851,10 @@
     <message>
         <source>Kiebitz on &amp;GitHub</source>
         <translation>Kiebitz auf &amp;GitHub</translation>
+    </message>
+    <message>
+        <source>Check for &amp;Updates…</source>
+        <translation>Nach &amp;Updates suchen…</translation>
     </message>
     <message>
         <source>&amp;Report a Problem…</source>
@@ -1965,8 +1957,8 @@
         <translation>&amp;Einfügen</translation>
     </message>
     <message>
-        <source>Set Up Position from FEN…</source>
-        <translation>Stellung aus FEN aufbauen …</translation>
+        <source>Set Up &amp;Position…</source>
+        <translation>Stellung &amp;aufbauen…</translation>
     </message>
     <message>
         <source>&amp;Game</source>
@@ -2069,6 +2061,18 @@
         <translation>Geladene Engines</translation>
     </message>
     <message>
+        <source>Kiebitz quit unexpectedly</source>
+        <translation>Kiebitz wurde unerwartet beendet</translation>
+    </message>
+    <message>
+        <source>Last time, Kiebitz ended without being quit. If it crashed, a report helps fix it: it opens a new issue on GitHub (you need a GitHub account), and Finder shows macOS&apos;s crash report to add to it.</source>
+        <translation>Beim letzten Mal endete Kiebitz, ohne beendet zu werden. Falls es abgestürzt ist, hilft ein Bericht bei der Behebung: Er öffnet ein neues Issue auf GitHub (du brauchst ein GitHub-Konto), und der Finder zeigt den Absturzbericht von macOS, den du anhängen kannst.</translation>
+    </message>
+    <message>
+        <source>Report It…</source>
+        <translation>Melden…</translation>
+    </message>
+    <message>
         <source>About Kiebitz</source>
         <translation>Über Kiebitz</translation>
     </message>
@@ -2131,6 +2135,42 @@
     <message>
         <source>Engines (⇧⌘E)</source>
         <translation>Engines (⇧⌘E)</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>Update</translation>
+    </message>
+    <message>
+        <source>Kiebitz %1 is out: open its download page</source>
+        <translation>Kiebitz %1 ist erschienen: Download-Seite öffnen</translation>
+    </message>
+    <message>
+        <source>Kiebitz %1 is out</source>
+        <translation>Kiebitz %1 ist erschienen</translation>
+    </message>
+    <message>
+        <source>You have %1. The download page shows what&apos;s new.</source>
+        <translation>Du hast %1. Die Download-Seite zeigt, was neu ist.</translation>
+    </message>
+    <message>
+        <source>Open Download Page</source>
+        <translation>Download-Seite öffnen</translation>
+    </message>
+    <message>
+        <source>Kiebitz is up to date</source>
+        <translation>Kiebitz ist aktuell</translation>
+    </message>
+    <message>
+        <source>Kiebitz %1 is the newest version.</source>
+        <translation>Kiebitz %1 ist die neueste Version.</translation>
+    </message>
+    <message>
+        <source>Couldn&apos;t check for updates</source>
+        <translation>Updates konnten nicht geprüft werden</translation>
+    </message>
+    <message>
+        <source>GitHub couldn&apos;t be reached. Check the connection and try again.</source>
+        <translation>GitHub war nicht erreichbar. Prüfe die Verbindung und versuche es noch einmal.</translation>
     </message>
     <message>
         <source>Settings (⌘,)</source>
@@ -2375,6 +2415,14 @@
         <translation>Ende (Ende)</translation>
     </message>
     <message>
+        <source>Set Up…</source>
+        <translation>Aufbauen…</translation>
+    </message>
+    <message>
+        <source>Set up a position on a board, starting from this one</source>
+        <translation>Eine Stellung auf einem Brett aufbauen, ausgehend von dieser</translation>
+    </message>
+    <message>
         <source>Merge into %1</source>
         <translation>In %1 übernehmen</translation>
     </message>
@@ -2552,6 +2600,121 @@
     <message>
         <source>Starting Position</source>
         <translation>Anfangsstellung</translation>
+    </message>
+</context>
+<context>
+    <name>kiebitz::app::PositionEditor</name>
+    <message>
+        <source>Set Up Position</source>
+        <translation>Stellung aufbauen</translation>
+    </message>
+    <message>
+        <source>FEN</source>
+        <translation>FEN</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Start From Here</source>
+        <translation>Von hier starten</translation>
+    </message>
+    <message>
+        <source>TO MOVE</source>
+        <translation>AM ZUG</translation>
+    </message>
+    <message>
+        <source>White</source>
+        <translation>Weiß</translation>
+    </message>
+    <message>
+        <source>Black</source>
+        <translation>Schwarz</translation>
+    </message>
+    <message>
+        <source>CASTLING</source>
+        <translation>ROCHADE</translation>
+    </message>
+    <message>
+        <source>EN PASSANT</source>
+        <translation>EN PASSANT</translation>
+    </message>
+    <message>
+        <source>Starting Position</source>
+        <translation>Anfangsstellung</translation>
+    </message>
+    <message>
+        <source>Empty Board</source>
+        <translation>Leeres Brett</translation>
+    </message>
+    <message>
+        <source>Flip Board</source>
+        <translation>Brett drehen</translation>
+    </message>
+    <message>
+        <source>Copy FEN</source>
+        <translation>FEN kopieren</translation>
+    </message>
+    <message>
+        <source>Click to put the chosen piece down · drag to move · drag off the board or right-click to remove</source>
+        <translation>Klicken, um die gewählte Figur hinzustellen · ziehen, um sie zu versetzen · vom Brett ziehen oder Rechtsklick zum Entfernen</translation>
+    </message>
+    <message>
+        <source>Move: clicks only pick pieces up, to drag them</source>
+        <translation>Bewegen: Klicks nehmen Figuren nur auf, um sie zu ziehen</translation>
+    </message>
+    <message>
+        <source>Remove: clicks take pieces off</source>
+        <translation>Entfernen: Klicks nehmen Figuren vom Brett</translation>
+    </message>
+    <message>
+        <source>MOVE</source>
+        <translation>ZUG</translation>
+    </message>
+    <message>
+        <source>BOARD</source>
+        <translation>BRETT</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>Keins</translation>
+    </message>
+    <message>
+        <source>White needs a king.</source>
+        <translation>Weiß braucht einen König.</translation>
+    </message>
+    <message>
+        <source>Black needs a king.</source>
+        <translation>Schwarz braucht einen König.</translation>
+    </message>
+    <message>
+        <source>White has more than one king.</source>
+        <translation>Weiß hat mehr als einen König.</translation>
+    </message>
+    <message>
+        <source>Black has more than one king.</source>
+        <translation>Schwarz hat mehr als einen König.</translation>
+    </message>
+    <message>
+        <source>Pawns can&apos;t stand on the first or the eighth rank.</source>
+        <translation>Bauern können nicht auf der ersten oder achten Reihe stehen.</translation>
+    </message>
+    <message>
+        <source>White has more than 16 pieces.</source>
+        <translation>Weiß hat mehr als 16 Figuren.</translation>
+    </message>
+    <message>
+        <source>Black has more than 16 pieces.</source>
+        <translation>Schwarz hat mehr als 16 Figuren.</translation>
+    </message>
+    <message>
+        <source>Black is in check, so it can&apos;t be White&apos;s move.</source>
+        <translation>Schwarz steht im Schach, also kann Weiß nicht am Zug sein.</translation>
+    </message>
+    <message>
+        <source>White is in check, so it can&apos;t be Black&apos;s move.</source>
+        <translation>Weiß steht im Schach, also kann Schwarz nicht am Zug sein.</translation>
     </message>
 </context>
 <context>
@@ -3983,6 +4146,14 @@
     <message>
         <source>App</source>
         <translation>App</translation>
+    </message>
+    <message>
+        <source>Check for updates</source>
+        <translation>Nach Updates suchen</translation>
+    </message>
+    <message>
+        <source>Once a day, Kiebitz asks GitHub whether a newer version is out.</source>
+        <translation>Einmal am Tag fragt Kiebitz bei GitHub nach, ob eine neuere Version erschienen ist.</translation>
     </message>
     <message>
         <source>Dark themes</source>

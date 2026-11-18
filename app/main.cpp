@@ -4,6 +4,7 @@
 #include "settings/Language.hpp"
 #include "settings/Settings.hpp"
 #include "style/AppStyle.hpp"
+#include "util/ProblemReport.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -82,13 +83,24 @@ int main(int argc, char* argv[]) {
         });
     }
 
-    // The intro tour, the first time only; a moment after the window is up, never in the way
-    // of a startup measurement.
+    // The intro tour, the first time only, or after a run that didn't end normally an offer to
+    // report it; a moment after the window is up, never in the way of a startup measurement.
+    QSettings runs;
+    const bool crashed = kiebitz::app::problems::startRun(runs);
     if (!envFlag("KIEBITZ_STARTUP_EXIT")) {
-        QTimer::singleShot(400, &window, [&window] { window.startTourOnce(); });
+        QTimer::singleShot(400, &window, [&window, crashed] {
+            if (crashed) {
+                window.offerCrashReport();
+            } else {
+                window.startTourOnce();
+            }
+        });
+        // Newer versions: well after the start, in the background.
+        QTimer::singleShot(5000, &window, [&window] { window.checkForUpdatesIfDue(); });
     }
 
     const int result = QApplication::exec();
+    kiebitz::app::problems::finishRun(runs);
     if (restart) { // the language changed: the same app again, which reads it at its start
         QProcess::startDetached(QApplication::applicationFilePath(),
                                 QApplication::arguments().mid(1));

@@ -7,6 +7,7 @@ add_library(kiebitz_core
     src/game.cpp
     src/perft.cpp
     src/position.cpp
+    src/setup.cpp
     src/types.cpp
     src/version.cpp)
 add_library(kiebitz::core ALIAS kiebitz_core)

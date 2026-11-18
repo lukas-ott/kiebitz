@@ -16,9 +16,10 @@ public:
     // Appearance
     /// AppStyle::Theme id; "" follows macOS (Graphite or Daylight).
     static constexpr auto kAppTheme = "app/colourTheme";
-    static constexpr auto kAccent = "app/accent";     ///< "#rrggbb", or "" for the default
-    static constexpr auto kTextSize = "app/textSize"; ///< percent: 90, 100, 110, 120
-    static constexpr auto kLanguage = "app/language"; ///< "system", "en", "de", "nb"
+    static constexpr auto kAccent = "app/accent";             ///< "#rrggbb", or "" for the default
+    static constexpr auto kTextSize = "app/textSize";         ///< percent: 90, 100, 110, 120
+    static constexpr auto kLanguage = "app/language";         ///< "system", "en", "de", "nb"
+    static constexpr auto kCheckUpdates = "app/checkUpdates"; ///< ask GitHub once a day
     // Board
     static constexpr auto kTheme = "board/theme";
     static constexpr auto kPieces = "board/pieces";

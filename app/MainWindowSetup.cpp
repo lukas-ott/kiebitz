@@ -42,6 +42,8 @@
 #include "training/TrainingHistory.hpp"
 #include "training/TrainingSession.hpp"
 #include "training/TrainingView.hpp"
+#include "util/ProblemReport.hpp"
+#include "util/UpdateCheck.hpp"
 #include "widgets/Card.hpp"
 #include "widgets/Message.hpp"
 
@@ -58,6 +60,7 @@
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QMenuBar>
+#include <QProcess>
 #include <QScrollArea>
 #include <QSettings>
 #include <QStackedWidget>
@@ -84,6 +87,7 @@ MainWindow::MainWindow(AppStyle& style, QWidget* parent)
     // Smaller than this and the tabs, the game list and the board no longer fit side by side.
     setMinimumSize(960, 620);
     setAcceptDrops(true);
+    m_updates = new UpdateCheck(this);
     m_notationRefresh.setSingleShot(true);
     m_notationRefresh.setInterval(300);
     connect(&m_notationRefresh, &QTimer::timeout, this, &MainWindow::refreshNotation);
@@ -179,10 +183,17 @@ void MainWindow::buildMenus() {
     helpMenu->addAction(tr("Kiebitz on &GitHub"), this, [] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/lukas-ott/kiebitz")));
     });
-    helpMenu->addAction(tr("&Report a Problem…"), this, [] {
-        QDesktopServices::openUrl(
-            QUrl(QStringLiteral("https://github.com/lukas-ott/kiebitz/issues/new")));
-    });
+    helpMenu
+        ->addAction(tr("Check for &Updates…"), this,
+                    [this] {
+                        m_updateAsked = true;
+                        m_updates->check();
+                    })
+        ->setObjectName(QStringLiteral("checkUpdates"));
+    helpMenu
+        ->addAction(tr("&Report a Problem…"), this,
+                    [] { QDesktopServices::openUrl(problems::reportUrl(problems::Kind::Problem)); })
+        ->setObjectName(QStringLiteral("reportProblem"));
     auto* aboutAction = helpMenu->addAction(tr("&About Kiebitz"), this, &MainWindow::showAbout);
     aboutAction->setMenuRole(QAction::AboutRole);
 }
@@ -249,7 +260,8 @@ void MainWindow::buildEditMenu() {
                         this, &MainWindow::copyFen);
     menu->addAction(tr("&Paste"), QKeySequence::Paste, this, &MainWindow::paste);
     menu->addSeparator();
-    menu->addAction(tr("Set Up Position from FEN…"), this, &MainWindow::setUpPosition);
+    menu->addAction(tr("Set Up &Position…"), this, &MainWindow::setUpPosition)
+        ->setObjectName(QStringLiteral("setUpPosition"));
     m_gameActions.insert(m_gameActions.end(), {copyPgnAction, copyFenAction});
 }
 
@@ -439,6 +451,25 @@ void MainWindow::showFolders() {
         {tr("Profiles"), m_profiles->root()},
         {tr("Downloaded engines"), engines::downloadFolder()},
     });
+}
+
+void MainWindow::checkForUpdatesIfDue() {
+    m_updates->checkIfDue();
+}
+
+void MainWindow::offerCrashReport() {
+    const QString report = problems::latestCrashReport();
+    if (!confirm(this, tr("Kiebitz quit unexpectedly"),
+                 tr("Last time, Kiebitz ended without being quit. If it crashed, a report helps "
+                    "fix it: it opens a new issue on GitHub (you need a GitHub account), and "
+                    "Finder shows macOS's crash report to add to it."),
+                 tr("Report It…"))) {
+        return;
+    }
+    QDesktopServices::openUrl(problems::reportUrl(problems::Kind::Crash));
+    if (!report.isEmpty()) {
+        QProcess::startDetached(QStringLiteral("/usr/bin/open"), {QStringLiteral("-R"), report});
+    }
 }
 
 void MainWindow::showAbout() {
@@ -748,6 +779,44 @@ QWidget* MainWindow::buildSidebar() {
         sideLayout->addWidget(addButton(section, name, text, tip));
     }
     sideLayout->addStretch();
+    // A newer version is out: a button to its download page, above Settings.
+    m_updateButton = new QToolButton;
+    m_updateButton->setObjectName(QStringLiteral("sideUpdate"));
+    m_updateButton->setProperty("role", "sideNav");
+    m_updateButton->setText(tr("Update"));
+    m_updateButton->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    m_updateButton->setFocusPolicy(Qt::NoFocus);
+    m_updateButton->setIconSize(QSize(20, 20));
+    m_updateButton->setFixedSize(kWidth, 52);
+    m_updateButton->hide();
+    connect(m_updateButton, &QToolButton::clicked, this,
+            [this] { QDesktopServices::openUrl(m_updatePage); });
+    sideLayout->addWidget(m_updateButton);
+    connect(m_updates, &UpdateCheck::available, this,
+            [this](const QString& version, const QUrl& page) {
+                m_updatePage = page;
+                m_updateButton->setToolTip(
+                    tr("Kiebitz %1 is out: open its download page").arg(version));
+                m_updateButton->show();
+                updateSidebarIcons();
+                if (std::exchange(m_updateAsked, false) &&
+                    confirm(this, tr("Kiebitz %1 is out").arg(version),
+                            tr("You have %1. The download page shows what's new.")
+                                .arg(QApplication::applicationVersion()),
+                            tr("Open Download Page"))) {
+                    QDesktopServices::openUrl(page);
+                }
+            });
+    connect(m_updates, &UpdateCheck::upToDate, this, [this] {
+        m_updateAsked = false;
+        notice(this, tr("Kiebitz is up to date"),
+               tr("Kiebitz %1 is the newest version.").arg(QApplication::applicationVersion()));
+    });
+    connect(m_updates, &UpdateCheck::failed, this, [this] {
+        m_updateAsked = false;
+        notice(this, tr("Couldn't check for updates"),
+               tr("GitHub couldn't be reached. Check the connection and try again."));
+    });
     // Settings: at the bottom, apart from the sections.
     sideLayout->addWidget(
         addButton(Section::Settings, "sideSettings", tr("Settings"), tr("Settings (⌘,)")));
@@ -802,6 +871,7 @@ QWidget* MainWindow::buildBoardPage() {
     connect(m_moves, &MovesCard::commentEdited, this, &MainWindow::onCommentEdited);
     connect(m_moves, &MovesCard::mergeRequested, this, &MainWindow::mergePreview);
     connect(m_moves, &MovesCard::previewCloseRequested, this, &MainWindow::closePreview);
+    connect(m_moves, &MovesCard::setUpRequested, this, &MainWindow::setUpPosition);
     connect(m_moves, &MovesCard::symbolClicked, this, [this](std::uint8_t nag) {
         if (const GameDocument* d = doc()) {
             toggleNag(d->current, nag);

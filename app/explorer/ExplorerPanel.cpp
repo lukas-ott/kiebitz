@@ -305,7 +305,9 @@ ExplorerPanel::ExplorerPanel(DatabaseManager& databases, ProfileStore& profiles,
     setUpBox->setContentsMargins(0, 0, 0, 0);
     setUpBox->addWidget(label(tr("Not from the starting position"), "emptyTitle"));
     setUpBox->addWidget(
-        label(tr("The explorer follows games from the usual starting position."), "emptyHint"));
+        label(tr("Lichess's explorer follows games from the usual starting position. Choose a "
+                 "game database: it finds this position in its games."),
+              "emptyHint"));
     setUpBox->addStretch();
     m_pages->addWidget(setUp);
 
@@ -458,7 +460,11 @@ void ExplorerPanel::refresh() {
         m_pages->setCurrentIndex(0);
         return;
     }
-    if (m_game != nullptr && m_game->startPosition().hash() != core::Position().hash()) {
+    // A game from a set-up position: a database finds the position itself (its positions
+    // index); Lichess's explorer here only knows lines from the start.
+    const bool setUp =
+        m_game != nullptr && m_game->startPosition().hash() != core::Position().hash();
+    if (setUp && onlineSource()) {
         m_pages->setCurrentIndex(2);
         return;
     }
@@ -536,7 +542,7 @@ void ExplorerPanel::refresh() {
         m_sideRow->setVisible(profile);
         m_sideTitle->setVisible(profile);
     }
-    if (profile) {
+    if (profile && !setUp) {
         askTheory(line, request);
     } else {
         m_moves->setColumnHidden(kTheoryColumn, true);
@@ -550,7 +556,12 @@ void ExplorerPanel::refresh() {
     } else {
         filter.side = gamedb::ExploreFilter::Side::Any;
     }
-    watcher->setFuture(QtConcurrent::run([db, line = std::move(line), filter] {
+    const core::Position here =
+        m_game != nullptr ? m_game->positionAt(m_current) : core::Position();
+    watcher->setFuture(QtConcurrent::run([db, line = std::move(line), filter, setUp, here] {
+        if (setUp) {
+            return Answer{db->explorePosition(here, filter), db->gamesAtPosition(here, 20, filter)};
+        }
         return Answer{db->explore(line, filter), db->gamesAt(line, 20, filter)};
     }));
 } // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)

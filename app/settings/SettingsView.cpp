@@ -425,6 +425,9 @@ QWidget* SettingsView::appearanceSection() {
                                   {QStringLiteral("de"), QStringLiteral("Deutsch")},
                                   {QStringLiteral("nb"), QStringLiteral("Norsk")}},
                                  QStringLiteral("settingsLanguage"))));
+    look->addWidget(row(tr("Check for updates"),
+                        tr("Once a day, Kiebitz asks GitHub whether a newer version is out."),
+                        toggle(Settings::kCheckUpdates, QStringLiteral("settingsCheckUpdates"))));
 
     // The accent colour: round swatches, and one of your own.
     auto* colours = new QWidget;
